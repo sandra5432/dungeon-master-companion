@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seekarten der Zeit</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css?v=14">
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <div class="nav-brand" onclick="showPage('timeline')">
+    <div class="nav-compass">
+      <svg viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="17" stroke="var(--gold)" stroke-width="1.2" opacity=".4"/>
+        <circle cx="20" cy="20" r="10" stroke="var(--gold)" stroke-width=".6" opacity=".22"/>
+        <g class="compass-needle">
+          <polygon points="20,4 22,20 20,22 18,20" fill="var(--blue2)" opacity=".9"/>
+          <polygon points="20,36 22,20 20,18 18,20" fill="var(--gold)" opacity=".9"/>
+        </g>
+        <circle cx="20" cy="20" r="2" fill="var(--gold)"/>
+      </svg>
+    </div>
+    <span class="nav-title">Astral Library</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" id="nav-timeline" onclick="showPage('timeline')">Chronik</button>
+    <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-sm admin-only" id="btn-login" onclick="showLoginModal()" style="display:none">Anmelden</button>
+    <span class="admin-only" id="nav-user" style="display:none;font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.06em;color:var(--gold);text-transform:uppercase"></span>
+    <button class="btn btn-sm admin-only" id="btn-logout" onclick="doLogout()" style="display:none">Abmelden</button>
+    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
+    <button class="btn btn-primary admin-only" id="btn-add" onclick="openAddModal()" style="display:none">+ Eintragen</button>
+  </div>
+</nav>
+
+<!-- ══ TIMELINE PAGE ══ -->
+<div class="page" id="page-timeline">
+  <aside class="sidebar sidebar-left">
+    <div class="sb-title">Welten <button class="admin-only" onclick="openAddWorldModal()" style="display:none">+</button></div>
+    <div id="world-selector" style="margin-bottom:16px"></div>
+    <div class="sb-title">Typ <button onclick="clearTypes()">Alle</button></div>
+    <div class="tag-filter-list" id="type-filter-list"></div>
+    <div style="margin-top:16px">
+      <div class="sb-title">Tags <button onclick="clearTags()">Alle</button></div>
+      <div class="tag-filter-list" id="tag-list"></div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="sb-title">Ersteller <button onclick="clearCreators()">Alle</button></div>
+      <div id="creator-list"></div>
+    </div>
+    <div class="compact-wrap">
+      <span class="compact-lbl">Ansicht</span>
+      <div class="tog-row" onclick="toggleCompact()">
+        <div class="tog-track" id="tog-track"><div class="tog-thumb"></div></div>
+        <span class="tog-txt">Kompakt</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="tl-center">
+    <div class="page-hdr">
+      <h1 id="page-title">Aufzeichnung</h1>
+      <p>Ereignisse der bekannten Welt</p>
+      <div class="divider"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+    </div>
+    <p class="tl-hint admin-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <aside class="sidebar sidebar-right">
+    <div class="sb-title">Datum Unbekannt <button class="admin-only" onclick="openUndatedAdd()" style="display:none">+</button></div>
+    <p style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.78rem;color:var(--t3);line-height:1.4;margin-bottom:10px">Auf Seil ziehen zum Einordnen</p>
+    <div class="undated-list" id="undated-list"></div>
+    <div class="undated-hint admin-only" style="display:none">⠿ Ziehen zum Einordnen</div>
+  </aside>
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" onclick="closeDetail()">✕</button>
+  <div class="detail-inner">
+    <div class="detail-title" id="dp-title"></div>
+    <div class="detail-date" id="dp-date"></div>
+    <div class="detail-divider"></div>
+    <div class="detail-desc" id="dp-desc"></div>
+    <div class="detail-tags" id="dp-tags"></div>
+    <div id="dp-chars" style="display:none;margin-bottom:16px"></div>
+    <div class="detail-meta" id="dp-meta"></div>
+    <div class="detail-actions admin-only" id="dp-actions" style="display:none">
+      <button class="btn" id="dp-edit">Bearbeiten</button>
+      <button class="btn btn-danger" id="dp-del">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ITEMS PAGE ══ -->
+<div class="page" id="page-items">
+  <div class="pg-hdr">
+    <h1>Marktplatz</h1>
+    <p>Gegenstände und Artefakte der bekannten Welt</p>
+    <div class="divider" style="margin:10px auto 0"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+  </div>
+  <div class="toolbar">
+    <div class="fg"><label class="fl">Suche</label><input class="fi" id="s-search" type="text" placeholder="Gegenstand…" oninput="renderItems()"></div>
+    <div class="fg">
+      <label class="fl">Tags</label>
+      <div class="rarity-filter" id="item-tag-filter">
+        <div class="rf-trigger" id="itf-trigger" onclick="toggleItemTagDd(event)">
+          <div class="rf-label" id="itf-label"><span class="placeholder">Alle Tags</span></div>
+          <span class="rf-arrow">▾</span>
+        </div>
+        <div class="rf-dropdown" id="itf-dropdown">
+          <!-- populated dynamically by renderItemTagFilter() -->
+        </div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Min. Preis ⚜</label><input class="fi" id="s-min" type="number" placeholder="0" oninput="renderItems()"></div>
+    <div class="fg"><label class="fl">Max. Preis ⚜</label><input class="fi" id="s-max" type="number" placeholder="∞" oninput="renderItems()"></div>
+  </div>
+  <div class="items-wrap">
+    <table class="it">
+      <thead><tr>
+        <th onclick="sortBy('name')">Name ⇅</th>
+        <th onclick="sortBy('price')" class="col-price">Preis ⚜ ⇅</th>
+        <th>Tags</th>
+        <th>Link</th><th class="admin-only" id="th-actions" style="display:none">Aktionen</th>
+      </tr></thead>
+      <tbody id="items-body"></tbody>
+    </table>
+    <div class="t-footer">
+      <span class="t-count" id="item-count"></span>
+      <button class="btn btn-sm admin-only" onclick="openAddModal()" style="display:none">+ Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EVENT MODAL ══ -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="m-title" id="m-title">Ereignis eintragen</div>
+    <button class="m-close" onclick="closeModal()">✕</button>
+    <div class="f-grid" id="f-tl">
+      <div id="m-world-info" style="font-family:'Cinzel',serif;font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:6px 10px;background:var(--bg-s);border:1px solid var(--bd);border-radius:3px;">Welt: <span id="m-world-name" style="color:var(--gold)"></span></div>
+      <div class="f-grp"><label class="f-lbl">Titel *</label><input class="f-inp" id="f-ti" type="text" placeholder="z.B. Die Schwarze Flut"></div>
+      <div class="f-grp"><label class="f-lbl">Datum / Zeitraum — leer = unbekannt</label><input class="f-inp" id="f-da" type="text" placeholder="z.B. Jahr 500, Zeitalter der Stürme, Frühling 1203…"></div>
+      <div class="f-grp"><label class="f-lbl">Typ</label>
+        <select class="f-inp f-sel" id="f-ty"><option value="world">Weltereignis</option><option value="local">Lokales Ereignis</option></select>
+      </div>
+      <div class="f-grp"><label class="f-lbl">Tags (kommagetrennt)</label><input class="f-inp" id="f-tg" type="text" placeholder="Magie, Ozean, Krieg"></div>
+      <div class="f-grp"><label class="f-lbl">Charaktere (kommagetrennt, optional)</label><input class="f-inp" id="f-chars" type="text" placeholder="Aela, Thorin, Mira…"></div>
+      <div class="f-grp"><label class="f-lbl">Beschreibung</label>
+        <textarea class="f-inp" id="f-desc" rows="3" placeholder="Was geschah? Details, Personen, Auswirkungen…" style="resize:vertical;min-height:68px"></textarea>
+      </div>
+      <div class="f-grp"><label class="f-lbl">Ersteller-Kürzel *</label><input class="f-inp" id="f-cr" type="text" placeholder="MM" maxlength="3" style="text-transform:uppercase"></div>
+    </div>
+    <div class="f-grid" id="f-it" style="display:none">
+      <div class="f-grp"><label class="f-lbl">Gegenstand *</label><input class="f-inp" id="fi-n" type="text" placeholder="Name"></div>
+      <div class="f-grp"><label class="f-lbl">Preis ⚜</label><input class="f-inp" id="fi-p" type="number" placeholder="0"></div>
+      <div class="f-grp"><label class="f-lbl">Tags (kommagetrennt)</label><input class="f-inp" id="fi-tags" type="text" placeholder="z.B. rare, melee, warrior"></div>
+      <div class="f-grp"><label class="f-lbl">Link</label><input class="f-inp" id="fi-u" type="url" placeholder="https://…"></div>
+    </div>
+    <div id="f-del" style="display:none">
+      <div class="del-confirm"><div class="del-confirm-txt" id="del-txt"></div></div>
+    </div>
+    <div id="f-drop" style="display:none">
+      <div class="f-grid">
+        <div style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.95rem;color:var(--t2);line-height:1.5" id="drop-intro"></div>
+      </div>
+    </div>
+    <div id="f-world" style="display:none">
+      <div class="f-grid">
+        <div class="f-grp"><label class="f-lbl">Weltname *</label><input class="f-inp" id="fw-n" type="text" placeholder="z.B. Die Bekannte Welt"></div>
+        <div class="f-grp"><label class="f-lbl">Beschreibung</label><textarea class="f-inp" id="fw-d" rows="2" placeholder="Kurze Beschreibung der Welt…" style="resize:vertical;min-height:52px"></textarea></div>
+      </div>
+    </div>
+    <div id="f-login" style="display:none">
+      <div class="f-grid">
+        <div class="f-grp"><label class="f-lbl">Benutzername</label><input class="f-inp" id="fl-u" type="text" placeholder="admin" autocomplete="username"></div>
+        <div class="f-grp"><label class="f-lbl">Passwort</label><input class="f-inp" id="fl-p" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+        <div id="fl-err" style="display:none;color:#e07070;font-family:'Crimson Pro',serif;font-size:.88rem"></div>
+      </div>
+    </div>
+    <div class="m-actions">
+      <button class="btn" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" id="m-save" onclick="saveEntry()">Eintragen</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>

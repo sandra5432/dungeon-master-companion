@@ -1,8 +1,11 @@
 package com.pardur.controller;
 
+import com.pardur.dto.request.ChangePasswordRequest;
 import com.pardur.dto.request.LoginRequest;
 import com.pardur.dto.response.AuthStatusResponse;
+import com.pardur.security.PardurUserDetails;
 import com.pardur.service.AuthService;
+import com.pardur.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -20,10 +23,14 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final AuthService authService;
+    private final UserService userService;
 
-    public AuthController(AuthenticationManager authenticationManager, AuthService authService) {
+    public AuthController(AuthenticationManager authenticationManager,
+                          AuthService authService,
+                          UserService userService) {
         this.authenticationManager = authenticationManager;
         this.authService = authService;
+        this.userService = userService;
     }
 
     @PostMapping("/login")
@@ -42,5 +49,13 @@ public class AuthController {
     @GetMapping("/auth/status")
     public ResponseEntity<AuthStatusResponse> status(Authentication authentication) {
         return ResponseEntity.ok(authService.getAuthStatus(authentication));
+    }
+
+    @PostMapping("/auth/change-password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req,
+                                                Authentication authentication) {
+        PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
+        userService.changePassword(details.getUserId(), req.getCurrentPassword(), req.getNewPassword());
+        return ResponseEntity.ok().build();
     }
 }

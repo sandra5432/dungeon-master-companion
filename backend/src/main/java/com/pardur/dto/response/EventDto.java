@@ -15,9 +15,9 @@ public class EventDto {
     private List<String> tags;
     private List<String> characters;
     private String description;
-    private String creatorCode;
-    private String creatorName;
-    private String creatorColor;
+    private Integer createdByUserId;
+    private String creatorUsername;
+    private String creatorColorHex;
     private LocalDateTime createdAt;
 
     public EventDto() {}
@@ -42,12 +42,12 @@ public class EventDto {
     public void setCharacters(List<String> characters) { this.characters = characters; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public String getCreatorCode() { return creatorCode; }
-    public void setCreatorCode(String creatorCode) { this.creatorCode = creatorCode; }
-    public String getCreatorName() { return creatorName; }
-    public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
-    public String getCreatorColor() { return creatorColor; }
-    public void setCreatorColor(String creatorColor) { this.creatorColor = creatorColor; }
+    public Integer getCreatedByUserId() { return createdByUserId; }
+    public void setCreatedByUserId(Integer createdByUserId) { this.createdByUserId = createdByUserId; }
+    public String getCreatorUsername() { return creatorUsername; }
+    public void setCreatorUsername(String creatorUsername) { this.creatorUsername = creatorUsername; }
+    public String getCreatorColorHex() { return creatorColorHex; }
+    public void setCreatorColorHex(String creatorColorHex) { this.creatorColorHex = creatorColorHex; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

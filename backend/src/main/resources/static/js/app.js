@@ -6,8 +6,7 @@ const state = {
   events: [],
   undated: [],
   items: [],
-  creators: {},
-  auth: { isAdmin: false, username: null },
+  auth: { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false },
   ui: {
     activeWorldId: null,
     activeTags: new Set(),
@@ -77,38 +76,39 @@ function showPage(p) {
   state.ui.currentPage = p;
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
-  document.getElementById('page-' + p).classList.add('active');
-  document.getElementById('nav-' + p).classList.add('active');
+  const pageEl = document.getElementById('page-' + p);
+  if (pageEl) pageEl.classList.add('active');
+  const navEl = document.getElementById('nav-' + p);
+  if (navEl) navEl.classList.add('active');
   if (p !== 'timeline') closeDetail();
   if (p === 'items') renderItems();
+  if (p === 'users') renderUsers();
 }
 
 /* ══════════════════════════════════════
-   ADMIN VISIBILITY
+   AUTH VISIBILITY
 ══════════════════════════════════════ */
-function updateAdminVisibility() {
-  const isAdmin = state.auth.isAdmin;
+function applyAuthUI() {
+  const { loggedIn, isAdmin, username } = state.auth;
+
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? '' : 'none';
   });
+  document.querySelectorAll('.user-action-only').forEach(el => {
+    el.style.display = loggedIn ? '' : 'none';
+  });
 
-  const btnLogin  = document.getElementById('btn-login');
-  const btnLogout = document.getElementById('btn-logout');
-  const navUser   = document.getElementById('nav-user');
-
-  if (isAdmin) {
-    if (btnLogin)  btnLogin.style.display  = 'none';
-    if (btnLogout) btnLogout.style.display = '';
-    if (navUser) {
-      navUser.style.display = '';
-      navUser.textContent   = state.auth.username || '';
-    }
-  } else {
-    if (btnLogin)  btnLogin.style.display  = '';
-    if (btnLogout) btnLogout.style.display = 'none';
-    if (navUser)   navUser.style.display   = 'none';
+  const btnLogin = document.getElementById('btn-login');
+  const navUser  = document.getElementById('nav-user');
+  if (btnLogin) btnLogin.style.display = loggedIn ? 'none' : '';
+  if (navUser) {
+    navUser.style.display = loggedIn ? '' : 'none';
+    navUser.textContent   = username || '';
   }
 }
+
+// keep old name as alias so nothing else breaks
+function updateAdminVisibility() { applyAuthUI(); }
 
 /* ══════════════════════════════════════
    WORLD SELECTOR
@@ -162,7 +162,7 @@ async function selectWorld(worldId) {
 ══════════════════════════════════════ */
 function isVisible(ev) {
   if (state.ui.activeTags.size > 0 && !ev.tags.some(t => state.ui.activeTags.has(t))) return false;
-  if (state.ui.activeCreators.size > 0 && !state.ui.activeCreators.has(ev.creatorCode)) return false;
+  if (state.ui.activeCreators.size > 0 && !state.ui.activeCreators.has(ev.createdByUserId)) return false;
   if (state.ui.activeTypes.size > 0 && !state.ui.activeTypes.has(ev.type)) return false;
   return true;
 }
@@ -266,7 +266,7 @@ function renderTimeline() {
     }
     const predStr = predecessorId !== null ? predecessorId : 'null';
 
-    if (isAdmin) {
+    if (state.auth.loggedIn) {
       html += `<div class="rope-gap" data-gap="${gi}" data-predecessor="${predStr}" onclick="onRopeClick(event,${predStr})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
     } else {
       html += `<div class="rope-gap" style="pointer-events:none"></div>`;
@@ -278,7 +278,7 @@ function renderTimeline() {
       const dateLbl = ev.displayDate || ev.dateLabel || '';
       const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'tl';
       const dateBadge = dateLbl ? `<span class="ev-date-badge">${escHtml(dateLbl)}</span>` : '';
-      const dragAttrs = isAdmin ? `draggable="true" ondragstart="onTLDragStart(event,${ev.id})" ondragend="onTLDragEnd(event)"` : '';
+      const dragAttrs = state.auth.loggedIn ? `draggable="true" ondragstart="onTLDragStart(event,${ev.id})" ondragend="onTLDragEnd(event)"` : '';
       html += `<div class="event-row ${side}${vis ? '' : ' hidden'}" data-id="${ev.id}">
         <div class="event-node ${escHtml(ev.type)}">${ev.type === 'world' ? wSVG() : lSVG()}</div>
         <div class="event-conn"></div>
@@ -295,7 +295,7 @@ function renderTimeline() {
       const itemsHtml = grp.events.map(ev => {
         const vis = isVisible(ev);
         const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'tl';
-        const dragAttrs = isAdmin ? `draggable="true" ondragstart="onTLDragStart(event,${ev.id})" ondragend="onTLDragEnd(event)"` : '';
+        const dragAttrs = state.auth.loggedIn ? `draggable="true" ondragstart="onTLDragStart(event,${ev.id})" ondragend="onTLDragEnd(event)"` : '';
         return `<div class="group-ev-item${vis ? '' : ' hidden'}${isAct ? ' active' : ''}" ${dragAttrs} onclick="onTLCardClick(event,${ev.id})">
           <span class="group-ev-dot ${escHtml(ev.type)}"></span>
           <div class="group-ev-content">
@@ -319,7 +319,7 @@ function renderTimeline() {
   // Final rope gap (after all events)
   const lastPredecessor = state.events.length > 0 ? state.events[state.events.length - 1].id : null;
   const lastPredStr = lastPredecessor !== null ? lastPredecessor : 'null';
-  if (isAdmin) {
+  if (state.auth.loggedIn) {
     html += `<div class="rope-gap" data-gap="${groups.length}" data-predecessor="${lastPredStr}" onclick="onRopeClick(event,${lastPredStr})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
   } else {
     html += `<div class="rope-gap" style="pointer-events:none"></div>`;
@@ -328,8 +328,8 @@ function renderTimeline() {
   tl.innerHTML = html;
   tl.classList.toggle('compact', state.ui.compact);
 
-  // Wire drag-over for rope gaps (admin only)
-  if (isAdmin) {
+  // Wire drag-over for rope gaps (any logged-in user)
+  if (state.auth.loggedIn) {
     tl.querySelectorAll('.rope-gap').forEach(gap => {
       gap.addEventListener('dragover', e => {
         if (state.ui.dragId === null) return;
@@ -398,19 +398,26 @@ function renderTagList() {
 }
 
 function renderCreatorList() {
-  const used = [...new Set(state.events.map(e => e.creatorCode).filter(Boolean))];
-  document.getElementById('creator-list').innerHTML = used.map(c => {
-    const cr = state.creators[c] || { name: c, color: '#888' };
-    return `<button class="creator-fb${state.ui.activeCreators.has(c) ? ' on' : ''}" onclick="toggleCreator('${escHtml(c)}')">
-      <span class="creator-nm">${escHtml(cr.name || c)}</span>
-    </button>`;
-  }).join('');
+  const seen = new Map(); // userId → {username, colorHex}
+  state.events.forEach(e => {
+    if (e.createdByUserId != null && !seen.has(e.createdByUserId)) {
+      seen.set(e.createdByUserId, { username: e.creatorUsername || '?', colorHex: e.creatorColorHex || '#888888' });
+    }
+  });
+  const el = document.getElementById('creator-list');
+  if (!el) return;
+  el.innerHTML = [...seen.entries()].map(([uid, cr]) =>
+    `<button class="creator-fb${state.ui.activeCreators.has(uid) ? ' on' : ''}" onclick="toggleCreator(${uid})">
+      <span class="creator-dot" style="background:${escHtml(cr.colorHex)}"></span>
+      <span class="creator-nm">${escHtml(cr.username)}</span>
+    </button>`
+  ).join('');
 }
 
 function toggleTag(t)     { state.ui.activeTags.has(t) ? state.ui.activeTags.delete(t) : state.ui.activeTags.add(t); renderTimeline(); }
 function clearTags()      { state.ui.activeTags.clear(); renderTimeline(); }
-function toggleCreator(c) { state.ui.activeCreators.has(c) ? state.ui.activeCreators.delete(c) : state.ui.activeCreators.add(c); renderTimeline(); }
-function clearCreators()  { state.ui.activeCreators.clear(); renderTimeline(); }
+function toggleCreator(uid) { state.ui.activeCreators.has(uid) ? state.ui.activeCreators.delete(uid) : state.ui.activeCreators.add(uid); renderTimeline(); }
+function clearCreators()   { state.ui.activeCreators.clear(); renderTimeline(); }
 
 function toggleCompact() {
   state.ui.compact = !state.ui.compact;
@@ -425,11 +432,11 @@ function renderUndated() {
   const el = document.getElementById('undated-list');
   if (!el) return;
   if (!state.undated.length) { el.innerHTML = '<div class="undated-empty">Keine Einträge</div>'; return; }
-  const isAdmin = state.auth.isAdmin;
   el.innerHTML = state.undated.map(ev => {
-    const cr    = state.creators[ev.creatorCode] || { name: ev.creatorCode || '?', color: '#888' };
-    const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'undated';
-    const draggable = isAdmin ? 'draggable="true"' : '';
+    const crName  = ev.creatorUsername  || 'Unbekannt';
+    const crColor = ev.creatorColorHex  || '#888888';
+    const isAct   = state.ui.detailId === ev.id && state.ui.detailSource === 'undated';
+    const draggable = state.auth.loggedIn ? 'draggable="true"' : '';
     return `<div class="undated-card${isAct ? ' active' : ''}"
               ${draggable}
               data-uid="${ev.id}"
@@ -439,7 +446,7 @@ function renderUndated() {
               onclick="onUndatedClick(event,${ev.id})">
       <div class="undated-ttl">${escHtml(ev.title)}</div>
       <div class="undated-tags">${(ev.tags || []).map(t => '<span class="undated-tag">' + escHtml(t) + '</span>').join('')}</div>
-      <div class="undated-cr"><div class="undated-av" style="background:${escHtml(cr.color || '#888')}">${escHtml(ev.creatorCode || '?')}</div>${escHtml(cr.name || ev.creatorCode || '?')}</div>
+      <div class="undated-cr"><div class="undated-av" style="background:${escHtml(crColor)}">${escHtml(crName.slice(0,2).toUpperCase())}</div>${escHtml(crName)}</div>
     </div>`;
   }).join('');
 }
@@ -454,7 +461,7 @@ function onUndatedMouseDown(e) {
 }
 
 function onUndatedDragStart(e, id) {
-  if (!state.auth.isAdmin) { e.preventDefault(); return; }
+  if (!state.auth.loggedIn) { e.preventDefault(); return; }
   didDrag = true;
   state.ui.dragId = id;
   e.dataTransfer.effectAllowed = 'move';
@@ -472,7 +479,7 @@ function onUndatedDragEnd(e) {
 }
 
 function onTLDragStart(e, id) {
-  if (!state.auth.isAdmin) { e.preventDefault(); return; }
+  if (!state.auth.loggedIn) { e.preventDefault(); return; }
   state.ui.dragId = id;
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', String(id));
@@ -501,7 +508,7 @@ function onUndatedClick(e, id) {
 ══════════════════════════════════════ */
 function onRopeClick(e, afterEventId) {
   if (state.ui.dragId !== null) return;
-  if (!state.auth.isAdmin) return;
+  if (!state.auth.loggedIn) return;
   // afterEventId is the predecessor event id (or null for top)
   openTLModal(afterEventId === 'null' ? null : afterEventId);
 }
@@ -526,7 +533,8 @@ function populateDetail(id, source) {
   if (!ev) return;
   state.ui.detailId     = id;
   state.ui.detailSource = source;
-  const cr      = state.creators[ev.creatorCode] || { name: ev.creatorCode || '?', color: '#888' };
+  const crName  = ev.creatorUsername  || 'Unbekannt';
+  const crColor = ev.creatorColorHex  || '#888888';
   const dateLbl = source === 'undated' ? 'Datum unbekannt' : (ev.displayDate || '');
   document.getElementById('dp-title').textContent = ev.title;
   document.getElementById('dp-date').textContent  = dateLbl;
@@ -551,10 +559,13 @@ function populateDetail(id, source) {
   }
   document.getElementById('dp-meta').innerHTML = `
     <div class="detail-type"><div class="detail-type-dot ${escHtml(ev.type)}"></div>${ev.type === 'world' ? 'Weltereignis' : 'Lokales Ereignis'}</div>
-    <div class="detail-creator">${escHtml(cr.name || ev.creatorCode || '?')}</div>`;
+    <div class="detail-creator"><span class="creator-dot" style="background:${escHtml(crColor)};width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px"></span>${escHtml(crName)}</div>`;
 
-  const dpEdit = document.getElementById('dp-edit');
-  const dpDel  = document.getElementById('dp-del');
+  const dpEdit    = document.getElementById('dp-edit');
+  const dpDel     = document.getElementById('dp-del');
+  const dpActions = document.getElementById('dp-actions');
+  const canEdit   = state.auth.isAdmin || ev.createdByUserId === state.auth.userId;
+  if (dpActions) dpActions.style.display = canEdit ? '' : 'none';
   if (dpEdit) dpEdit.onclick = () => { closeDetail(); openEditModal(id, source); };
   if (dpDel)  dpDel.onclick  = () => { closeDetail(); openDeleteConfirm(id, source); };
 
@@ -629,7 +640,7 @@ function openTLModal(afterEventId) {
   document.getElementById('m-title').textContent = 'Ereignis eintragen';
   showForms(true, false, false, false, false, false);
   setSaveBtn('Eintragen', false);
-  ['f-ti','f-tg','f-cr','f-chars'].forEach(id => document.getElementById(id).value = '');
+  ['f-ti','f-tg','f-chars'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-desc').value = '';
   document.getElementById('f-ty').value   = 'world';
   document.getElementById('f-da').value   = '';
@@ -664,7 +675,6 @@ function openEditModal(id, source) {
   document.getElementById('f-tg').value    = (ev.tags || []).join(', ');
   document.getElementById('f-chars').value = (ev.characters || []).join(', ');
   document.getElementById('f-desc').value  = ev.description || '';
-  document.getElementById('f-cr').value    = ev.creatorCode || '';
   setModalWorldInfo();
   openModal();
 }
@@ -766,13 +776,21 @@ async function doLogin(username, password) {
   try {
     const result = await api('POST', '/login', { username, password });
     state.auth = {
-      isAdmin: result.admin || result.isAdmin || false,
-      username: result.username || null
+      loggedIn: true,
+      isAdmin: result.admin || false,
+      userId: result.userId || null,
+      username: result.username || null,
+      colorHex: result.colorHex || null,
+      mustChangePassword: result.mustChangePassword || false,
     };
     hideLoginModal();
-    updateAdminVisibility();
+    applyAuthUI();
     renderTimeline();
     renderItems();
+    if (state.auth.mustChangePassword) {
+      showPasswordChangeOverlay();
+      return;
+    }
   } catch (e) {
     const errEl = document.getElementById('fl-err');
     if (errEl) { errEl.textContent = 'Anmeldung fehlgeschlagen: ' + e.message; errEl.style.display = 'block'; }
@@ -786,8 +804,8 @@ async function doLogout() {
   } catch (e) {
     // ignore logout errors
   }
-  state.auth = { isAdmin: false, username: null };
-  updateAdminVisibility();
+  state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
+  applyAuthUI();
   renderTimeline();
   renderItems();
 }
@@ -915,13 +933,11 @@ async function _saveEntry() {
   const tagsRaw    = document.getElementById('f-tg').value.trim();
   const charsRaw   = document.getElementById('f-chars').value.trim();
   const desc       = document.getElementById('f-desc').value.trim();
-  const creator    = document.getElementById('f-cr').value.trim().toUpperCase();
-  if (!title)   { alert('Titel ist Pflicht'); return; }
-  if (!creator) { alert('Ersteller-Kürzel ist Pflicht'); return; }
+  if (!title) { alert('Titel ist Pflicht'); return; }
   const tags       = tagsRaw  ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean)  : [];
   const characters = charsRaw ? charsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  const payload = { title, type, tags, characters, description: desc, creatorCode: creator, dateLabel: dateStr || null };
+  const payload = { title, type, tags, characters, description: desc, dateLabel: dateStr || null };
 
   try {
     if (editId != null) {
@@ -1097,17 +1113,18 @@ function sortBy(k) {
 async function init() {
   applyThemeFromStorage();
   try {
-    const [authStatus, creatorsArr, worlds] = await Promise.all([
+    const [authStatus, worlds] = await Promise.all([
       api('GET', '/auth/status'),
-      api('GET', '/creators'),
       api('GET', '/worlds'),
     ]);
     state.auth = {
-      isAdmin: authStatus.admin || authStatus.isAdmin || false,
-      username: authStatus.username || null
+      loggedIn: authStatus.loggedIn || false,
+      isAdmin: authStatus.admin || false,
+      userId: authStatus.userId || null,
+      username: authStatus.username || null,
+      colorHex: authStatus.colorHex || null,
+      mustChangePassword: authStatus.mustChangePassword || false,
     };
-    state.creators = {};
-    (creatorsArr || []).forEach(c => { state.creators[c.code] = c; });
     state.worlds = worlds || [];
 
     const savedWorldId = parseInt(localStorage.getItem('activeWorldId'));
@@ -1138,19 +1155,159 @@ async function init() {
     renderTimeline();
     renderItems();
     renderItemTagFilter();
-    updateAdminVisibility();
-    // Start on timeline page
+    applyAuthUI();
     showPage('timeline');
+    if (state.auth.mustChangePassword) showPasswordChangeOverlay();
   } catch (e) {
     console.error('Init failed', e);
-    // Still try to render what we have
     renderWorldSelector();
     renderTimeline();
     renderItems();
     renderItemTagFilter();
-    updateAdminVisibility();
+    applyAuthUI();
     showPage('timeline');
   }
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+/* ══════════════════════════════════════
+   PASSWORD CHANGE OVERLAY
+══════════════════════════════════════ */
+function showPasswordChangeOverlay() {
+  const overlay = document.getElementById('pw-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    ['pw-current','pw-new','pw-confirm'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const errEl = document.getElementById('pw-err');
+    if (errEl) errEl.style.display = 'none';
+  }
+}
+
+function hidePasswordChangeOverlay() {
+  const overlay = document.getElementById('pw-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function submitPasswordChange() {
+  const currentPw = document.getElementById('pw-current').value;
+  const newPw     = document.getElementById('pw-new').value;
+  const confirmPw = document.getElementById('pw-confirm').value;
+  const errEl     = document.getElementById('pw-err');
+
+  if (!currentPw || !newPw || !confirmPw) {
+    if (errEl) { errEl.textContent = 'Alle Felder sind Pflicht.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (newPw !== confirmPw) {
+    if (errEl) { errEl.textContent = 'Neue Passwörter stimmen nicht überein.'; errEl.style.display = 'block'; }
+    return;
+  }
+  try {
+    await api('POST', '/auth/change-password', { currentPassword: currentPw, newPassword: newPw });
+    state.auth.mustChangePassword = false;
+    hidePasswordChangeOverlay();
+  } catch (e) {
+    if (errEl) { errEl.textContent = e.message || 'Fehler beim Ändern des Passworts.'; errEl.style.display = 'block'; }
+  }
+}
+
+/* ══════════════════════════════════════
+   USER MANAGEMENT
+══════════════════════════════════════ */
+let userModalMode = 'create'; // 'create' | 'edit'
+let userModalId   = null;
+
+async function renderUsers() {
+  try {
+    const users = await api('GET', '/admin/users');
+    const tbody = document.getElementById('users-body');
+    if (!tbody) return;
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>${escHtml(u.username)}</td>
+        <td>${escHtml(u.role)}</td>
+        <td><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${escHtml(u.colorHex)};vertical-align:middle"></span> ${escHtml(u.colorHex)}</td>
+        <td>
+          <button class="act-btn" onclick="openEditUserModal(${u.id})">✎</button>
+          <button class="act-btn del" onclick="deleteUser(${u.id})">✕</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    console.error('Failed to load users', e);
+  }
+}
+
+function openCreateUserModal() {
+  userModalMode = 'create';
+  userModalId   = null;
+  document.getElementById('um-title').textContent = 'Nutzer anlegen';
+  document.getElementById('um-username').value    = '';
+  document.getElementById('um-username').disabled = false;
+  document.getElementById('um-username-grp').style.display = '';
+  document.getElementById('um-role').value    = 'USER';
+  document.getElementById('um-color').value   = '#888888';
+  document.getElementById('um-reset-grp').style.display = 'none';
+  const errEl = document.getElementById('um-err');
+  if (errEl) errEl.style.display = 'none';
+  document.getElementById('user-modal').style.display = 'flex';
+}
+
+function openEditUserModal(id) {
+  userModalMode = 'edit';
+  userModalId   = id;
+  // Re-fetch fresh list to get current values
+  api('GET', '/admin/users').then(users => {
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+    document.getElementById('um-title').textContent = 'Nutzer bearbeiten';
+    document.getElementById('um-username-grp').style.display = 'none';
+    document.getElementById('um-role').value  = u.role;
+    document.getElementById('um-color').value = u.colorHex;
+    document.getElementById('um-reset-pw').checked = false;
+    document.getElementById('um-reset-grp').style.display = '';
+    const errEl = document.getElementById('um-err');
+    if (errEl) errEl.style.display = 'none';
+    document.getElementById('user-modal').style.display = 'flex';
+  });
+}
+
+function closeUserModal() {
+  document.getElementById('user-modal').style.display = 'none';
+}
+
+async function saveUser() {
+  const errEl = document.getElementById('um-err');
+  if (errEl) errEl.style.display = 'none';
+
+  const role     = document.getElementById('um-role').value;
+  const colorHex = document.getElementById('um-color').value;
+
+  try {
+    if (userModalMode === 'create') {
+      const username = document.getElementById('um-username').value.trim();
+      if (!username) { if (errEl) { errEl.textContent = 'Benutzername ist Pflicht.'; errEl.style.display = 'block'; } return; }
+      await api('POST', '/admin/users', { username, role, colorHex });
+    } else {
+      const resetPassword = document.getElementById('um-reset-pw').checked;
+      await api('PUT', '/admin/users/' + userModalId, { role, colorHex, resetPassword });
+    }
+    closeUserModal();
+    renderUsers();
+  } catch (e) {
+    if (errEl) { errEl.textContent = e.message || 'Fehler.'; errEl.style.display = 'block'; }
+  }
+}
+
+async function deleteUser(id) {
+  if (!confirm('Nutzer wirklich löschen?')) return;
+  try {
+    await api('DELETE', '/admin/users/' + id);
+    renderUsers();
+  } catch (e) {
+    alert('Fehler: ' + e.message);
+  }
+}

@@ -30,11 +30,12 @@
     <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
   </div>
   <div class="nav-right">
-    <button class="btn btn-sm admin-only" id="btn-login" onclick="showLoginModal()" style="display:none">Anmelden</button>
-    <span class="admin-only" id="nav-user" style="display:none;font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.06em;color:var(--gold);text-transform:uppercase"></span>
-    <button class="btn btn-sm admin-only" id="btn-logout" onclick="doLogout()" style="display:none">Abmelden</button>
+    <button class="btn btn-sm" id="btn-login" onclick="showLoginModal()" style="display:none">Anmelden</button>
+    <span class="user-action-only" id="nav-user" style="display:none;font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.06em;color:var(--gold);text-transform:uppercase"></span>
+    <button class="btn btn-sm user-action-only" id="btn-logout" onclick="doLogout()" style="display:none">Abmelden</button>
     <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
-    <button class="btn btn-primary admin-only" id="btn-add" onclick="openAddModal()" style="display:none">+ Eintragen</button>
+    <button class="btn btn-sm admin-only" id="btn-gear" onclick="showPage('users')" style="display:none" title="Nutzerverwaltung">⚙</button>
+    <button class="btn btn-primary user-action-only" id="btn-add" onclick="openAddModal()" style="display:none">+ Eintragen</button>
   </div>
 </nav>
 
@@ -68,15 +69,15 @@
       <p>Ereignisse der bekannten Welt</p>
       <div class="divider"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
     </div>
-    <p class="tl-hint admin-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
+    <p class="tl-hint user-action-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
     <div class="timeline" id="timeline"></div>
   </div>
 
   <aside class="sidebar sidebar-right">
-    <div class="sb-title">Datum Unbekannt <button class="admin-only" onclick="openUndatedAdd()" style="display:none">+</button></div>
+    <div class="sb-title">Datum Unbekannt <button class="user-action-only" onclick="openUndatedAdd()" style="display:none">+</button></div>
     <p style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.78rem;color:var(--t3);line-height:1.4;margin-bottom:10px">Auf Seil ziehen zum Einordnen</p>
     <div class="undated-list" id="undated-list"></div>
-    <div class="undated-hint admin-only" style="display:none">⠿ Ziehen zum Einordnen</div>
+    <div class="undated-hint user-action-only" style="display:none">⠿ Ziehen zum Einordnen</div>
   </aside>
 </div>
 
@@ -91,7 +92,7 @@
     <div class="detail-tags" id="dp-tags"></div>
     <div id="dp-chars" style="display:none;margin-bottom:16px"></div>
     <div class="detail-meta" id="dp-meta"></div>
-    <div class="detail-actions admin-only" id="dp-actions" style="display:none">
+    <div class="detail-actions" id="dp-actions" style="display:none">
       <button class="btn" id="dp-edit">Bearbeiten</button>
       <button class="btn btn-danger" id="dp-del">Löschen</button>
     </div>
@@ -156,7 +157,6 @@
       <div class="f-grp"><label class="f-lbl">Beschreibung</label>
         <textarea class="f-inp" id="f-desc" rows="3" placeholder="Was geschah? Details, Personen, Auswirkungen…" style="resize:vertical;min-height:68px"></textarea>
       </div>
-      <div class="f-grp"><label class="f-lbl">Ersteller-Kürzel *</label><input class="f-inp" id="f-cr" type="text" placeholder="MM" maxlength="3" style="text-transform:uppercase"></div>
     </div>
     <div class="f-grid" id="f-it" style="display:none">
       <div class="f-grp"><label class="f-lbl">Gegenstand *</label><input class="f-inp" id="fi-n" type="text" placeholder="Name"></div>
@@ -188,6 +188,82 @@
     <div class="m-actions">
       <button class="btn" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" id="m-save" onclick="saveEntry()">Eintragen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ USERS PAGE ══ -->
+<div class="page" id="page-users" style="display:none">
+  <div class="pg-hdr">
+    <h1>Nutzerverwaltung</h1>
+    <p>Nutzer anlegen, Rollen vergeben, Passwörter zurücksetzen</p>
+    <div class="divider" style="margin:10px auto 0"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+  </div>
+  <div style="max-width:800px;margin:0 auto;padding:0 16px">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openCreateUserModal()">+ Nutzer anlegen</button>
+    </div>
+    <table class="it" id="users-table">
+      <thead><tr>
+        <th>Benutzername</th>
+        <th>Rolle</th>
+        <th>Farbe</th>
+        <th>Aktionen</th>
+      </tr></thead>
+      <tbody id="users-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ USER MODAL ══ -->
+<div class="modal-bg" id="user-modal" style="display:none">
+  <div class="modal">
+    <div class="m-title" id="um-title">Nutzer anlegen</div>
+    <button class="m-close" onclick="closeUserModal()">✕</button>
+    <div class="f-grid">
+      <div class="f-grp" id="um-username-grp">
+        <label class="f-lbl">Benutzername *</label>
+        <input class="f-inp" id="um-username" type="text" placeholder="z.B. spieler1">
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Rolle *</label>
+        <select class="f-inp f-sel" id="um-role">
+          <option value="USER">USER</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Farbe</label>
+        <input class="f-inp" id="um-color" type="color" value="#888888">
+      </div>
+      <div class="f-grp" id="um-reset-grp" style="display:none">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="um-reset-pw">
+          <span class="f-lbl" style="margin:0">Passwort zurücksetzen (wird auf Benutzername gesetzt)</span>
+        </label>
+      </div>
+      <div id="um-err" style="display:none;color:#e07070;font-family:'Crimson Pro',serif;font-size:.88rem"></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn" onclick="closeUserModal()">Abbrechen</button>
+      <button class="btn btn-primary" id="um-save" onclick="saveUser()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PASSWORD CHANGE OVERLAY ══ -->
+<div id="pw-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div class="modal" style="max-width:420px;width:100%;position:relative">
+    <div class="m-title">Passwort ändern</div>
+    <p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;margin-bottom:16px">Du musst dein Passwort ändern, bevor du fortfahren kannst.</p>
+    <div class="f-grid">
+      <div class="f-grp"><label class="f-lbl">Aktuelles Passwort</label><input class="f-inp" id="pw-current" type="password" autocomplete="current-password"></div>
+      <div class="f-grp"><label class="f-lbl">Neues Passwort</label><input class="f-inp" id="pw-new" type="password" autocomplete="new-password"></div>
+      <div class="f-grp"><label class="f-lbl">Neues Passwort bestätigen</label><input class="f-inp" id="pw-confirm" type="password" autocomplete="new-password"></div>
+      <div id="pw-err" style="display:none;color:#e07070;font-family:'Crimson Pro',serif;font-size:.88rem"></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-primary" onclick="submitPasswordChange()">Passwort setzen</button>
     </div>
   </div>
 </div>

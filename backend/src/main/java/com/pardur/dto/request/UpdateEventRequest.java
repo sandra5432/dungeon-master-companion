@@ -23,9 +23,6 @@ public class UpdateEventRequest {
 
     private List<String> characters;
 
-    @NotBlank
-    private String creatorCode;
-
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDateLabel() { return dateLabel; }
@@ -40,6 +37,4 @@ public class UpdateEventRequest {
     public void setDescription(String description) { this.description = description; }
     public List<String> getCharacters() { return characters; }
     public void setCharacters(List<String> characters) { this.characters = characters; }
-    public String getCreatorCode() { return creatorCode; }
-    public void setCreatorCode(String creatorCode) { this.creatorCode = creatorCode; }
 }

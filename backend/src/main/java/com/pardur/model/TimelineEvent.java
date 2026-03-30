@@ -39,9 +39,9 @@ public class TimelineEvent {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "creator_code", nullable = false)
-    private Creator creator;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EventTag> tags = new ArrayList<>();
@@ -72,8 +72,8 @@ public class TimelineEvent {
     public void setType(EventType type) { this.type = type; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public Creator getCreator() { return creator; }
-    public void setCreator(Creator creator) { this.creator = creator; }
+    public User getCreatedBy() { return createdBy; }
+    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
     public List<EventTag> getTags() { return tags; }
     public String getCharacters() { return characters; }
     public void setCharacters(String characters) { this.characters = characters; }

@@ -2,6 +2,7 @@ package com.pardur.service;
 
 import com.pardur.dto.response.AuthStatusResponse;
 import com.pardur.repository.UserRepository;
+import com.pardur.security.PardurUserDetails;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,10 +25,14 @@ public class AuthService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
-                .map(user -> new org.springframework.security.core.userdetails.User(
+                .map(user -> new PardurUserDetails(
+                        user.getId(),
                         user.getUsername(),
                         user.getPassword(),
-                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                        user.getRole(),
+                        user.getColorHex(),
+                        user.isMustChangePassword(),
+                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
                 ))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
@@ -35,10 +40,17 @@ public class AuthService implements UserDetailsService {
     public AuthStatusResponse getAuthStatus(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            return new AuthStatusResponse(false, null);
+            return new AuthStatusResponse(false, false, null, null, null, false);
         }
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        return new AuthStatusResponse(isAdmin, authentication.getName());
+        PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
+        boolean isAdmin = "ADMIN".equals(details.getRole());
+        return new AuthStatusResponse(
+                true,
+                isAdmin,
+                details.getUserId(),
+                details.getUsername(),
+                details.getColorHex(),
+                details.mustChangePassword()
+        );
     }
 }

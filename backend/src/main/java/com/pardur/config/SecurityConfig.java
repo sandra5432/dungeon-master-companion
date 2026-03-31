@@ -14,7 +14,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -27,16 +26,7 @@ public class SecurityConfig {
 
     @Bean
     public RoleHierarchy roleHierarchy() {
-        RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
-        hierarchy.setHierarchy("ROLE_ADMIN > ROLE_USER");
-        return hierarchy;
-    }
-
-    @Bean
-    public DefaultWebSecurityExpressionHandler webSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
-        DefaultWebSecurityExpressionHandler handler = new DefaultWebSecurityExpressionHandler();
-        handler.setRoleHierarchy(roleHierarchy);
-        return handler;
+        return RoleHierarchyImpl.fromHierarchy("ROLE_ADMIN > ROLE_USER");
     }
 
     @Bean
@@ -49,15 +39,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http,
-                                           DefaultWebSecurityExpressionHandler webSecurityExpressionHandler) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .expressionHandler(webSecurityExpressionHandler)
                 .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/worlds/**").permitAll()
                 .requestMatchers("/api/login", "/api/logout", "/api/auth/status", "/api/auth/change-password").permitAll()
-                .requestMatchers("/", "/index.html", "/app.js", "/app.css", "/favicon.ico").permitAll()
+                .requestMatchers("/", "/index.html", "/js/**", "/css/**", "/favicon.ico").permitAll()
                 // Admin-only: world management (create/edit/delete), item management, user management
                 .requestMatchers(HttpMethod.POST,   "/api/worlds").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/worlds/{id:[0-9]+}").hasRole("ADMIN")

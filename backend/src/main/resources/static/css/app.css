@@ -360,7 +360,18 @@ nav {
 }
 
 .sidebar-left  { border-right: 1px solid var(--bd); }
-.sidebar-right { border-left:  1px solid var(--bd);  background: var(--bg-un); }
+.sidebar-right { border-left:  1px solid var(--bd);  background: var(--bg-un); transition: border-color var(--transition), background var(--transition); }
+
+.sidebar-right.unplace-target {
+  border-left-color: var(--gold);
+  border-left-width: 2px;
+}
+
+.sidebar-right.unplace-over {
+  background: color-mix(in srgb, var(--gold) 8%, var(--bg-un));
+  border-left-color: var(--gold);
+  border-left-width: 2px;
+}
 
 .sb-title {
   font-family: 'Cinzel', serif;
@@ -1058,7 +1069,7 @@ nav {
 
 .ev-tag {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: calc(var(--fs-grn) * 0.88);
+  font-size: calc(var(--fs-grn) * 0.70);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 2px 8px;
@@ -1107,7 +1118,7 @@ nav {
 .ev-date-badge {
   display: inline-block;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 0.68em;
+  font-size: 0.78em;
   font-weight: 600;
   color: var(--gold);
   background: color-mix(in srgb, var(--gold) 12%, transparent);
@@ -1116,7 +1127,7 @@ nav {
   border-radius: var(--radius-pill);
   letter-spacing: 0.05em;
   margin-right: 7px;
-  vertical-align: middle;
+  vertical-align: 0.1em;
   white-space: nowrap;
 }
 
@@ -1590,6 +1601,12 @@ nav {
   background: color-mix(in srgb, var(--gold) 7%, transparent) !important;
 }
 
+.it-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
 .i-name {
   font-family: 'Cinzel', serif;
   font-size: var(--fs-grn);
@@ -1686,8 +1703,47 @@ nav {
   align-items: center;
   justify-content: space-between;
   padding: 11px 18px;
-  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
   background: var(--bg-s);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 0;
+}
+
+.pag-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  background: var(--bg-s);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-sm);
+  color: var(--t2);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.pag-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.pag-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.pag-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .t-count {
@@ -1793,6 +1849,13 @@ nav {
 
 .f-inp::placeholder { color: var(--t3); }
 .f-sel { appearance: none; cursor: pointer; }
+
+.f-inp[type="color"] {
+  width: 48px;
+  height: 36px;
+  padding: 2px;
+  cursor: pointer;
+}
 
 /* Danger confirm box */
 .del-confirm {

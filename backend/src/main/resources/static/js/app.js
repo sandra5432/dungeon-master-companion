@@ -23,6 +23,8 @@ const state = {
     minPrice: 0,
     maxPrice: Infinity,
     dragId: null,
+    dragSource: null,
+    itemPage: 0,
   }
 };
 
@@ -386,6 +388,45 @@ async function placeEventOnTimeline(eventId, afterEventId) {
   }
 }
 
+async function unplaceEvent(eventId) {
+  if (!state.ui.activeWorldId) return;
+  try {
+    await api('DELETE', `/worlds/${state.ui.activeWorldId}/events/${eventId}/position`);
+    const [events, undated] = await Promise.all([
+      api('GET', `/worlds/${state.ui.activeWorldId}/events`),
+      api('GET', `/worlds/${state.ui.activeWorldId}/events/unpositioned`),
+    ]);
+    state.events  = events;
+    state.undated = undated;
+    renderTimeline();
+  } catch (e) {
+    console.error('Failed to unplace event', e);
+    alert('Fehler beim Entfernen: ' + e.message);
+  }
+}
+
+function wireUndatedDropZone() {
+  const sidebar = document.querySelector('.sidebar-right');
+  if (!sidebar) return;
+  sidebar.addEventListener('dragover', e => {
+    if (state.ui.dragSource !== 'tl') return;
+    e.preventDefault();
+    sidebar.classList.add('unplace-over');
+  });
+  sidebar.addEventListener('dragleave', e => {
+    if (!sidebar.contains(e.relatedTarget)) sidebar.classList.remove('unplace-over');
+  });
+  sidebar.addEventListener('drop', e => {
+    e.preventDefault();
+    sidebar.classList.remove('unplace-over', 'unplace-target');
+    if (state.ui.dragSource !== 'tl' || state.ui.dragId === null) return;
+    const id = state.ui.dragId;
+    state.ui.dragId = null;
+    state.ui.dragSource = null;
+    unplaceEvent(id);
+  });
+}
+
 /* ══════════════════════════════════════
    FILTERS
 ══════════════════════════════════════ */
@@ -433,8 +474,6 @@ function renderUndated() {
   if (!el) return;
   if (!state.undated.length) { el.innerHTML = '<div class="undated-empty">Keine Einträge</div>'; return; }
   el.innerHTML = state.undated.map(ev => {
-    const crName  = ev.creatorUsername  || 'Unbekannt';
-    const crColor = ev.creatorColorHex  || '#888888';
     const isAct   = state.ui.detailId === ev.id && state.ui.detailSource === 'undated';
     const draggable = state.auth.loggedIn ? 'draggable="true"' : '';
     return `<div class="undated-card${isAct ? ' active' : ''}"
@@ -446,7 +485,6 @@ function renderUndated() {
               onclick="onUndatedClick(event,${ev.id})">
       <div class="undated-ttl">${escHtml(ev.title)}</div>
       <div class="undated-tags">${(ev.tags || []).map(t => '<span class="undated-tag">' + escHtml(t) + '</span>').join('')}</div>
-      <div class="undated-cr"><div class="undated-av" style="background:${escHtml(crColor)}">${escHtml(crName.slice(0,2).toUpperCase())}</div>${escHtml(crName)}</div>
     </div>`;
   }).join('');
 }
@@ -464,6 +502,7 @@ function onUndatedDragStart(e, id) {
   if (!state.auth.loggedIn) { e.preventDefault(); return; }
   didDrag = true;
   state.ui.dragId = id;
+  state.ui.dragSource = 'undated';
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', String(id));
   setTimeout(() => {
@@ -474,6 +513,7 @@ function onUndatedDragStart(e, id) {
 
 function onUndatedDragEnd(e) {
   state.ui.dragId = null;
+  state.ui.dragSource = null;
   document.querySelectorAll('.undated-card.dragging').forEach(c => c.classList.remove('dragging'));
   document.querySelectorAll('.rope-gap.drop-over').forEach(g => g.classList.remove('drop-over'));
 }
@@ -481,16 +521,25 @@ function onUndatedDragEnd(e) {
 function onTLDragStart(e, id) {
   if (!state.auth.loggedIn) { e.preventDefault(); return; }
   state.ui.dragId = id;
+  state.ui.dragSource = 'tl';
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', String(id));
   const target = e.target.closest('.event-card, .group-ev-item');
   if (target) setTimeout(() => target.classList.add('tl-dragging'), 0);
+  // highlight sidebar as drop zone
+  setTimeout(() => {
+    const sidebar = document.querySelector('.sidebar-right');
+    if (sidebar) sidebar.classList.add('unplace-target');
+  }, 0);
 }
 
 function onTLDragEnd(e) {
   state.ui.dragId = null;
+  state.ui.dragSource = null;
   document.querySelectorAll('.tl-dragging').forEach(c => c.classList.remove('tl-dragging'));
   document.querySelectorAll('.rope-gap.drop-over').forEach(g => g.classList.remove('drop-over'));
+  const sidebar = document.querySelector('.sidebar-right');
+  if (sidebar) sidebar.classList.remove('unplace-target', 'unplace-over');
 }
 
 function onUndatedClick(e, id) {
@@ -1027,6 +1076,7 @@ function toggleItemTagDd(e) {
 function onItemTagChange() {
   const checked = [...document.querySelectorAll('#itf-dropdown input:checked')].map(cb => cb.value);
   state.ui.activeItemTags = new Set(checked);
+  state.ui.itemPage = 0;
   updateItemTagLabel();
   renderItems();
 }
@@ -1045,6 +1095,7 @@ function updateItemTagLabel() {
 
 function clearItemTags() {
   state.ui.activeItemTags.clear();
+  state.ui.itemPage = 0;
   updateItemTagLabel();
   renderItemTagFilter();
   renderItems();
@@ -1085,12 +1136,18 @@ function renderItems() {
     return va < vb ? -sortDir : va > vb ? sortDir : 0;
   });
 
+  const PAGE_SIZE = 50;
+  const totalPages = Math.max(1, Math.ceil(f.length / PAGE_SIZE));
+  if (state.ui.itemPage >= totalPages) state.ui.itemPage = totalPages - 1;
+  const page = state.ui.itemPage;
+  const pageItems = f.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   const isAdmin = state.auth.isAdmin;
-  document.getElementById('items-body').innerHTML = f.map((it, i) => `
+  document.getElementById('items-body').innerHTML = pageItems.map((it, i) => `
     <tr style="animation-delay:${i * .04}s">
       <td><span class="i-name">${escHtml(it.name)}</span></td>
       <td class="col-price"><span class="i-price">${(it.price || 0).toLocaleString('de-DE')} ⚜</span></td>
-      <td>${(it.tags || []).map(t => `<span class="ev-tag">${escHtml(t)}</span>`).join('')}</td>
+      <td><div class="it-tags">${(it.tags || []).map(t => `<span class="ev-tag">${escHtml(t)}</span>`).join('')}</div></td>
       <td class="i-link"><a href="${escHtml(it.url || '#')}" target="_blank">${escHtml(it.url || '—')}</a></td>
       ${isAdmin ? `<td><div class="act-btns">
         <button class="act-btn" title="Bearbeiten" onclick="openEditItem(${it.id})">✎</button>
@@ -1098,12 +1155,34 @@ function renderItems() {
       </div></td>` : ''}
     </tr>`).join('');
 
-  document.getElementById('item-count').textContent = f.length + ' Eintr' + (f.length === 1 ? 'ag' : 'äge');
+  const start = f.length === 0 ? 0 : page * PAGE_SIZE + 1;
+  const end   = Math.min((page + 1) * PAGE_SIZE, f.length);
+  document.getElementById('item-count').textContent =
+    f.length === 0 ? '0 Einträge' : `${start}–${end} von ${f.length} Eintr${f.length === 1 ? 'ag' : 'ägen'}`;
+
+  const pagEl = document.getElementById('item-pagination');
+  if (totalPages <= 1) {
+    pagEl.innerHTML = '';
+  } else {
+    pagEl.innerHTML = `<div class="pagination">
+      <button class="pag-btn" onclick="gotoItemPage(${page - 1})" ${page === 0 ? 'disabled' : ''}>‹</button>
+      ${Array.from({length: totalPages}, (_, i) =>
+        `<button class="pag-btn${i === page ? ' active' : ''}" onclick="gotoItemPage(${i})">${i + 1}</button>`
+      ).join('')}
+      <button class="pag-btn" onclick="gotoItemPage(${page + 1})" ${page === totalPages - 1 ? 'disabled' : ''}>›</button>
+    </div>`;
+  }
+}
+
+function gotoItemPage(p) {
+  state.ui.itemPage = p;
+  renderItems();
 }
 
 function sortBy(k) {
   if (state.ui.sortKey === k) state.ui.sortDir *= -1;
   else { state.ui.sortKey = k; state.ui.sortDir = 1; }
+  state.ui.itemPage = 0;
   renderItems();
 }
 
@@ -1169,7 +1248,7 @@ async function init() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => { init(); wireUndatedDropZone(); });
 
 /* ══════════════════════════════════════
    PASSWORD CHANGE OVERLAY

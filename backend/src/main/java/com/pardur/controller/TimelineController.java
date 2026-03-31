@@ -72,6 +72,13 @@ public class TimelineController {
         return ResponseEntity.ok(timelineService.assignPosition(worldId, id, req));
     }
 
+    @DeleteMapping("/{id}/position")
+    public ResponseEntity<Void> unplace(@PathVariable Integer worldId,
+                                        @PathVariable Integer id) {
+        timelineService.unplaceEvent(worldId, id);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer worldId,
                                        @PathVariable Integer id,

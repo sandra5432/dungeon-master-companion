@@ -162,6 +162,18 @@ public class TimelineService {
     }
 
     @Transactional
+    public void unplaceEvent(Integer worldId, Integer id) {
+        requireWorld(worldId);
+        TimelineEvent event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+        if (!event.getWorld().getId().equals(worldId)) {
+            throw new ResourceNotFoundException("Event " + id + " does not belong to world " + worldId);
+        }
+        event.setSequenceOrder(null);
+        eventRepository.save(event);
+    }
+
+    @Transactional
     public void deleteEvent(Integer worldId, Integer id, Integer currentUserId, boolean isAdmin) {
         requireWorld(worldId);
         TimelineEvent event = eventRepository.findById(id)

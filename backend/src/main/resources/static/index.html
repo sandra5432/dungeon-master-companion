@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seekarten der Zeit</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/app.css?v=14">
 </head>
 <body>
@@ -35,7 +35,6 @@
     <button class="btn btn-sm user-action-only" id="btn-logout" onclick="doLogout()" style="display:none">Abmelden</button>
     <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
     <button class="btn btn-sm admin-only" id="btn-gear" onclick="showPage('users')" style="display:none" title="Nutzerverwaltung">⚙</button>
-    <button class="btn btn-primary user-action-only" id="btn-add" onclick="openAddModal()" style="display:none">+ Eintragen</button>
   </div>
 </nav>
 
@@ -75,7 +74,6 @@
 
   <aside class="sidebar sidebar-right">
     <div class="sb-title">Datum Unbekannt <button class="user-action-only" onclick="openUndatedAdd()" style="display:none">+</button></div>
-    <p style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.78rem;color:var(--t3);line-height:1.4;margin-bottom:10px">Auf Seil ziehen zum Einordnen</p>
     <div class="undated-list" id="undated-list"></div>
     <div class="undated-hint user-action-only" style="display:none">⠿ Ziehen zum Einordnen</div>
   </aside>
@@ -107,7 +105,7 @@
     <div class="divider" style="margin:10px auto 0"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
   </div>
   <div class="toolbar">
-    <div class="fg"><label class="fl">Suche</label><input class="fi" id="s-search" type="text" placeholder="Gegenstand…" oninput="renderItems()"></div>
+    <div class="fg"><label class="fl">Suche</label><input class="fi" id="s-search" type="text" placeholder="Gegenstand…" oninput="state.ui.itemPage=0;renderItems()"></div>
     <div class="fg">
       <label class="fl">Tags</label>
       <div class="rarity-filter" id="item-tag-filter">
@@ -120,10 +118,14 @@
         </div>
       </div>
     </div>
-    <div class="fg"><label class="fl">Min. Preis ⚜</label><input class="fi" id="s-min" type="number" placeholder="0" oninput="renderItems()"></div>
-    <div class="fg"><label class="fl">Max. Preis ⚜</label><input class="fi" id="s-max" type="number" placeholder="∞" oninput="renderItems()"></div>
+    <div class="fg"><label class="fl">Min. Preis ⚜</label><input class="fi" id="s-min" type="number" placeholder="0" oninput="state.ui.itemPage=0;renderItems()"></div>
+    <div class="fg"><label class="fl">Max. Preis ⚜</label><input class="fi" id="s-max" type="number" placeholder="∞" oninput="state.ui.itemPage=0;renderItems()"></div>
   </div>
   <div class="items-wrap">
+    <div class="t-footer">
+      <span class="t-count" id="item-count"></span>
+      <button class="btn btn-sm admin-only" onclick="openAddModal()" style="display:none">+ Hinzufügen</button>
+    </div>
     <table class="it">
       <thead><tr>
         <th onclick="sortBy('name')">Name ⇅</th>
@@ -133,10 +135,7 @@
       </tr></thead>
       <tbody id="items-body"></tbody>
     </table>
-    <div class="t-footer">
-      <span class="t-count" id="item-count"></span>
-      <button class="btn btn-sm admin-only" onclick="openAddModal()" style="display:none">+ Hinzufügen</button>
-    </div>
+    <div id="item-pagination"></div>
   </div>
 </div>
 
@@ -193,7 +192,7 @@
 </div>
 
 <!-- ══ USERS PAGE ══ -->
-<div class="page" id="page-users" style="display:none">
+<div class="page" id="page-users">
   <div class="pg-hdr">
     <h1>Nutzerverwaltung</h1>
     <p>Nutzer anlegen, Rollen vergeben, Passwörter zurücksetzen</p>
@@ -252,7 +251,7 @@
 </div>
 
 <!-- ══ PASSWORD CHANGE OVERLAY ══ -->
-<div id="pw-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center">
+<div id="pw-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center">
   <div class="modal" style="max-width:420px;width:100%;position:relative">
     <div class="m-title">Passwort ändern</div>
     <p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;margin-bottom:16px">Du musst dein Passwort ändern, bevor du fortfahren kannst.</p>

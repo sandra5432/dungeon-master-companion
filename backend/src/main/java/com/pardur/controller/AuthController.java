@@ -56,6 +56,6 @@ public class AuthController {
                                                 Authentication authentication) {
         PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
         userService.changePassword(details.getUserId(), req.getCurrentPassword(), req.getNewPassword());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

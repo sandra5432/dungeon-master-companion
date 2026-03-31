@@ -3,10 +3,8 @@
 
 -- ── Users ────────────────────────────────────────────────────────────────────
 -- id=1: admin, id=2: user1
-INSERT INTO users (username, password, role, must_change_password, color_hex, created_at)
-VALUES ('admin', '$2a$12$IbgLOMbHcChHpfmF/ZnTs.LtH1X4lWjsEvFlnsMFOIEAQpF.l19f.', 'ADMIN', TRUE, '#9a4aaa', CURRENT_TIMESTAMP);
-INSERT INTO users (username, password, role, must_change_password, color_hex, created_at)
-VALUES ('user1', '$2a$12$gJxi9C6LUcSGarLiDt/qzubriHjzA8uXkh/cRPr93tiiH76VHtOsG', 'USER', FALSE, '#2a9a68', CURRENT_TIMESTAMP);
+INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('admin', '$2a$12$IbgLOMbHcChHpfmF/ZnTs.LtH1X4lWjsEvFlnsMFOIEAQpF.l19f.', 'ADMIN', TRUE, '#9a4aaa', CURRENT_TIMESTAMP);
+INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('user1', '$2a$12$gJxi9C6LUcSGarLiDt/qzubriHjzA8uXkh/cRPr93tiiH76VHtOsG', 'USER', FALSE, '#2a9a68', CURRENT_TIMESTAMP);
 
 -- ── Worlds ───────────────────────────────────────────────────────────────────
 -- id=1: Pardur, id=2: Eldorheim
@@ -239,41 +237,20 @@ INSERT INTO item_tags (item_id, tag_name) VALUES (90,'common'),(90,'non-magic'),
 -- ── Timeline events (world_id=1 = Pardur) ────────────────────────────────────
 -- IDs assigned in insert order starting at 1.
 
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Ankunft der Erbauer', 1.0, 'Vor langer Zeit', 'WORLD',
-  'Die sogenannten Erbauer erscheinen auf dem Planeten und errichten in der Region, die später als Nerathis bekannt wird, einen gewaltigen Obelisken. In dessen eingelassenen Tafeln berichten sie von einem wilden, ungezähmten Planeten voller Wälder, unbekannter Kreaturen und chaotischer Prozesse. Sie geben ihm den Namen Pardur. Der Obelisk scheint nicht nur ein Denkmal, sondern auch ein Werkzeug oder Wissensspeicher zu sein.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Ankunft der Erbauer', 1.0, 'Vor langer Zeit', 'WORLD', 'Die sogenannten Erbauer erscheinen auf dem Planeten und errichten in der Region, die später als Nerathis bekannt wird, einen gewaltigen Obelisken. In dessen eingelassenen Tafeln berichten sie von einem wilden, ungezähmten Planeten voller Wälder, unbekannter Kreaturen und chaotischer Prozesse. Sie geben ihm den Namen Pardur. Der Obelisk scheint nicht nur ein Denkmal, sondern auch ein Werkzeug oder Wissensspeicher zu sein.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Der Aufbruch', 2.0, 'Vor weniger langer Zeit', 'WORLD',
-  'Die Erbauer verlassen Nerathis ebenso plötzlich, wie sie erschienen sind. Laut den Tafeln erklären sie ihre Aufgabe für erfüllt. Zurück bleiben ihre Bauwerke und der weiterhin aktive Obelisk. Einige Interpretationen vermuten, dass etwas bewusst zurückgelassen wurde.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Der Aufbruch', 2.0, 'Vor weniger langer Zeit', 'WORLD', 'Die Erbauer verlassen Nerathis ebenso plötzlich, wie sie erschienen sind. Laut den Tafeln erklären sie ihre Aufgabe für erfüllt. Zurück bleiben ihre Bauwerke und der weiterhin aktive Obelisk. Einige Interpretationen vermuten, dass etwas bewusst zurückgelassen wurde.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Die große Flutung', 3.0, '-1000', 'WORLD',
-  'Gewaltige Wassermassen erscheinen. Meere bilden sich und bedecken große Teile der Oberfläche. Ganze Landstriche verschwinden. Der Ursprung ist ungeklärt – Theorien reichen von kosmischen Einschlägen bis zu einem Effekt der Erbauer-Aktivitäten. Mit dem Wasser entstehen neue Lebensräume.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Die große Flutung', 3.0, '-1000', 'WORLD', 'Gewaltige Wassermassen erscheinen. Meere bilden sich und bedecken große Teile der Oberfläche. Ganze Landstriche verschwinden. Der Ursprung ist ungeklärt – Theorien reichen von kosmischen Einschlägen bis zu einem Effekt der Erbauer-Aktivitäten. Mit dem Wasser entstehen neue Lebensräume.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Die Gründung und Blüte von Nerathis', 4.0, '-800 bis -500', 'WORLD',
-  'In den Jahrhunderten nach der Flutung bildet sich in der Nähe des Obelisken die Stadt Nerathis.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Die Gründung und Blüte von Nerathis', 4.0, '-800 bis -500', 'WORLD', 'In den Jahrhunderten nach der Flutung bildet sich in der Nähe des Obelisken die Stadt Nerathis.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Die ersten magischen Stürme', 5.0, '-500', 'WORLD',
-  'Die ersten magischen Stürme treten auf – selten und lokal, aber anders als normale Naturphänomene. Sie verzerren Raum, beeinflussen Lebewesen und verändern die Wirkung von Magie. Mit der Zeit nehmen sie an Intensität zu.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Die ersten magischen Stürme', 5.0, '-500', 'WORLD', 'Die ersten magischen Stürme treten auf – selten und lokal, aber anders als normale Naturphänomene. Sie verzerren Raum, beeinflussen Lebewesen und verändern die Wirkung von Magie. Mit der Zeit nehmen sie an Intensität zu.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Unpositioned (unknown date) — sequence_order NULL
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Das Verschwinden von Nerathis', NULL, NULL, 'WORLD',
-  'Innerhalb kurzer Zeit verschwindet die gesamte Bevölkerung von Nerathis. Die Stadt bleibt zurück.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Das Verschwinden von Nerathis', NULL, NULL, 'WORLD', 'Innerhalb kurzer Zeit verschwindet die gesamte Bevölkerung von Nerathis. Die Stadt bleibt zurück.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
-VALUES (1, 'Die Expedition nach Pardur', 6.0, '0', 'WORLD',
-  'Eine Gruppe von Abenteurern bricht im Auftrag der Astral Library auf, um die Ruinen von Nerathis zu erforschen. Während der Untersuchung des Obelisken lösen sie unbeabsichtigt einen Mechanismus aus. Eine uralte Entität erwacht – ein Wesen, das seit der Zeit der Erbauer eingeschlossen war. Ob sie Wächter, Relikt oder Gefahr ist, bleibt unklar.',
-  1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at) VALUES (1, 'Die Expedition nach Pardur', 6.0, '0', 'WORLD', 'Eine Gruppe von Abenteurern bricht im Auftrag der Astral Library auf, um die Ruinen von Nerathis zu erforschen. Während der Untersuchung des Obelisken lösen sie unbeabsichtigt einen Mechanismus aus. Eine uralte Entität erwacht – ein Wesen, das seit der Zeit der Erbauer eingeschlossen war. Ob sie Wächter, Relikt oder Gefahr ist, bleibt unklar.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- ── Event Tags ────────────────────────────────────────────────────────────────
 INSERT INTO event_tags (event_id, tag_name) VALUES (1,'erbauer'),(1,'obelisk'),(1,'ankunft');

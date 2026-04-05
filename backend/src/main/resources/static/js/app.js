@@ -1628,12 +1628,12 @@ function renderWikiArticle(entry) {
     <div class="wiki-article-header">
       <span class="wiki-type-badge wiki-type-${entry.type.toLowerCase()}">${escHtml(entry.type)}</span>
       <h2 class="wiki-article-title">${escHtml(entry.title)}</h2>
+      ${canEdit ? `
+        <button class="wiki-icon-btn" title="Bearbeiten" onclick="openWikiEditor(${entry.id})">✎</button>
+        <button class="wiki-icon-btn wiki-icon-btn--del" title="Löschen" onclick="deleteWikiEntry(${entry.id})">🗑</button>
+      ` : ''}
       <span class="wiki-article-world">${escHtml(entry.worldName)}</span>
     </div>
-    ${canEdit ? `<div class="wiki-article-actions">
-      <button class="btn btn-sm" onclick="openWikiEditor(${entry.id})">Bearbeiten</button>
-      <button class="btn btn-sm" style="color:var(--red,#e05555);border-color:var(--red,#e05555)" onclick="deleteWikiEntry(${entry.id})">Löschen</button>
-    </div>` : ''}
     <div class="wiki-article-body">
       <div class="wiki-images-float">${imagesHtml}</div>
       <div class="wiki-body-text">${bodyHtml}</div>

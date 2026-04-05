@@ -1974,6 +1974,7 @@ nav {
   white-space: nowrap;
 }
 .wiki-type-person       { background: #f0c04030; color: #f0c040; border: 1px solid #f0c04060; }
+.wiki-type-volk         { background: #d4884a30; color: #d4884a; border: 1px solid #d4884a60; }
 .wiki-type-location     { background: #4a90d930; color: #4a90d9; border: 1px solid #4a90d960; }
 .wiki-type-term         { background: #88888830; color: #aaaaaa; border: 1px solid #88888860; }
 .wiki-type-resource     { background: #2bb5a030; color: #2bb5a0; border: 1px solid #2bb5a060; }

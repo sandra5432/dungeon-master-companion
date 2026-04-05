@@ -20,6 +20,7 @@ A wiki module is integrated into the Pardur application as a third top-level tab
 - Images: stored as WebP BLOBs in the database; server converts uploads to WebP and compresses to ≤ 10 MB
 - Auto-linking: computed at runtime via SQL LIKE / FULLTEXT queries — no persistent link table
 - No new external auth or storage dependencies
+- **First version: no cross-world entries.** Every wiki entry belongs to exactly one world. Cross-world references are out of scope.
 
 ---
 
@@ -48,14 +49,14 @@ A wiki module is integrated into the Pardur application as a third top-level tab
 |---|---|---|
 | `id` | INT PK AUTO_INCREMENT | |
 | `title` | VARCHAR(255) NOT NULL | Unique per world (and separately unique among world-spanning entries) |
-| `world_id` | INT FK → `worlds.id` nullable | NULL = world-spanning entry |
+| `world_id` | INT FK → `worlds.id` NOT NULL | Every entry belongs to exactly one world |
 | `type` | ENUM NOT NULL | See §4.4 |
 | `body` | TEXT | Markdown content; spoiler blocks embedded as `:::spoiler` syntax (see §6.2) |
 | `created_by_user_id` | INT FK → `users.id` NOT NULL | |
 | `created_at` | TIMESTAMP NOT NULL | |
 | `updated_at` | TIMESTAMP NOT NULL | |
 
-Fulltext index on `title` and `body` for auto-linking queries.
+Unique constraint on `(world_id, LOWER(title))`. Fulltext index on `title` and `body` for auto-linking queries.
 
 ### 4.2 `wiki_images`
 
@@ -110,7 +111,7 @@ When a `wiki_entry` is deleted:
 |---|---|---|---|
 | `GET` | `/api/wiki/{id}/linked-events` | public | Timeline events whose `title` or `description` contains the entry's title (case-insensitive). |
 | `GET` | `/api/wiki/{id}/linked-entries` | public | Other wiki entries whose `body` or `title` contains this entry's title, or whose title appears in this entry's body. |
-| `GET` | `/api/wiki/graph?worldId=` | public | Returns all entries for the given world (plus world-spanning entries) and their pairwise links as `{ nodes: [], edges: [] }` for the graph renderer. |
+| `GET` | `/api/wiki/graph?worldId=` | public | Returns all entries for the given world and their pairwise links as `{ nodes: [], edges: [] }` for the graph renderer. `worldId` is required. |
 
 ### 5.3 Images
 
@@ -150,7 +151,7 @@ Auto-linking is computed at read time — no link table is persisted.
 Results returned via `GET /api/wiki/{id}/linked-events`.
 
 **Entry → Entries (graph edges):**
-For the graph, the backend collects all entry titles for the selected world (plus world-spanning entries), then for each pair `(A, B)` checks whether `A.body` contains `B.title` or `B.body` contains `A.title` (case-insensitive). An edge is created if either direction matches.
+For the graph, the backend collects all entry titles for the selected world, then for each pair `(A, B)` checks whether `A.body` contains `B.title` or `B.body` contains `A.title` (case-insensitive). An edge is created if either direction matches.
 
 **In Event text (frontend):**
 When rendering an event's description in the timeline detail panel, the frontend replaces occurrences of known wiki titles with `<a>` tags pointing to the wiki entry. Matching is case-insensitive; longer titles take precedence over shorter ones to avoid partial matches.
@@ -177,9 +178,7 @@ On upload:
 
 ### 6.4 Title Uniqueness
 
-- Within a world: no two entries may share the same title (case-insensitive)
-- Among world-spanning entries: no two world-spanning entries may share the same title
-- A world-spanning entry and a world-specific entry may share the same title (they are separate concepts)
+Within a world: no two entries may share the same title (case-insensitive). Enforced by a unique constraint on `(world_id, LOWER(title))`. The same title may exist in different worlds independently.
 
 ### 6.5 Ownership for Edit/Delete
 
@@ -226,13 +225,14 @@ The `Wiki` tab is added to the main navigation alongside `Zeitleiste` and `Markt
 - Node colour by type (exact palette defined at implementation time; indicative: PERSON=yellow, FLORA=green, FAUNA=red, LOCATION=blue, ORGANISATION=purple, ENTITAET=orange, TERM=grey, RESOURCE=teal, OTHER=white)
 - Clicking a node opens the article view (same as clicking a list item)
 - Graph supports zoom and drag
+- Only entries belonging to the selected world are shown; no cross-world nodes
 
 ### 7.3 Article View
 
 Opens as a side panel or overlay (consistent with existing modal patterns in the app).
 
 Contents:
-- Title + type badge + world name (or "Weltübergreifend")
+- Title + type badge + world name
 - Images floated to the right of the text, with text caption label below each image
 - Markdown-rendered body (tables, lists, bold, italic supported via marked.js)
 - Spoiler blocks: visible with red-bordered box + spoiler name as heading for authorised users; hidden entirely for others
@@ -249,7 +249,7 @@ Used for both create and edit flows.
 Fields:
 - Title (text input, required)
 - Type (dropdown: all enum values)
-- World (dropdown: all worlds + "Weltübergreifend")
+- World (dropdown: all worlds — required, no world-spanning option in v1)
 - Body (textarea with Markdown toolbar)
 - Image upload area (drag & drop or file dialog; multiple images; each gets a caption field and drag-to-reorder)
 
@@ -285,3 +285,4 @@ When an event's detail panel is rendered in the Zeitleiste, the frontend fetches
 - Export (PDF, HTML)
 - Notification when a spoiler is shared with you
 - Drag-and-drop graph layout persistence (positions reset on reload)
+- Cross-world entries (every entry belongs to exactly one world in v1)

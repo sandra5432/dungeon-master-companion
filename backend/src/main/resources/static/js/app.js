@@ -1511,13 +1511,13 @@ function onWikiSearch(value) {
 ══════════════════════════════════════ */
 const WIKI_TYPE_COLORS = {
   PERSON:       '#f0c040',
-  VOLK:         '#d4884a',
+  SPEZIES:      '#d4884a',
   LOCATION:     '#4a90d9',
   TERM:         '#888888',
   RESOURCE:     '#2bb5a0',
   FAUNA:        '#e05555',
   FLORA:        '#4caf50',
-  ORGANISATION: '#9c5fb5',
+  FRAKTION:     '#9c5fb5',
   ENTITAET:     '#e07b30',
   OTHER:        '#cccccc'
 };

@@ -1974,13 +1974,13 @@ nav {
   white-space: nowrap;
 }
 .wiki-type-person       { background: #f0c04030; color: #f0c040; border: 1px solid #f0c04060; }
-.wiki-type-volk         { background: #d4884a30; color: #d4884a; border: 1px solid #d4884a60; }
+.wiki-type-spezies      { background: #d4884a30; color: #d4884a; border: 1px solid #d4884a60; }
 .wiki-type-location     { background: #4a90d930; color: #4a90d9; border: 1px solid #4a90d960; }
 .wiki-type-term         { background: #88888830; color: #aaaaaa; border: 1px solid #88888860; }
 .wiki-type-resource     { background: #2bb5a030; color: #2bb5a0; border: 1px solid #2bb5a060; }
 .wiki-type-fauna        { background: #e0555530; color: #e05555; border: 1px solid #e0555560; }
 .wiki-type-flora        { background: #4caf5030; color: #4caf50; border: 1px solid #4caf5060; }
-.wiki-type-organisation { background: #9c5fb530; color: #9c5fb5; border: 1px solid #9c5fb560; }
+.wiki-type-fraktion     { background: #9c5fb530; color: #9c5fb5; border: 1px solid #9c5fb560; }
 .wiki-type-entitaet     { background: #e07b3030; color: #e07b30; border: 1px solid #e07b3060; }
 .wiki-type-other        { background: #cccccc20; color: #cccccc; border: 1px solid #cccccc40; }
 

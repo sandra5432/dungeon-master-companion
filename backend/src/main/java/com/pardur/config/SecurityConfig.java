@@ -54,6 +54,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,    "/api/items/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/items/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
+                // Wiki: public reads, any logged-in user can create/edit/delete own entries
+                .requestMatchers(HttpMethod.GET,    "/api/wiki/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/wiki").hasRole("USER")
+                .requestMatchers(HttpMethod.PUT,    "/api/wiki/**").hasRole("USER")
+                .requestMatchers(HttpMethod.DELETE, "/api/wiki/**").hasRole("USER")
                 // Timeline events: any authenticated user can create/edit/delete; ownership enforced in service
                 .requestMatchers(HttpMethod.POST,   "/api/worlds/*/events").hasRole("USER")
                 .requestMatchers(HttpMethod.PUT,    "/api/worlds/*/events/**").hasRole("USER")

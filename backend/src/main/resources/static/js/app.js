@@ -30,6 +30,7 @@ const state = {
     wikiSearchTimer: null,
     wikiEditId: null,
     wikiPendingImages: [],
+    wikiExistingImages: [],
   },
   wikiTitles: [],
 };
@@ -1765,14 +1766,15 @@ Weiterer Text mit *kursiver* und **fetter** Formatierung.
 function openWikiEditor(entryId) {
   state.ui.wikiEditId = entryId;
   state.ui.wikiPendingImages = [];
+  state.ui.wikiExistingImages = [];
 
-  const panel     = document.getElementById('wiki-editor-panel');
-  const titleEl    = document.getElementById('wiki-editor-title');
-  const titleInput = document.getElementById('wiki-ed-title');
-  const typeSelect = document.getElementById('wiki-ed-type');
+  const panel       = document.getElementById('wiki-editor-panel');
+  const titleEl     = document.getElementById('wiki-editor-title');
+  const titleInput  = document.getElementById('wiki-ed-title');
+  const typeSelect  = document.getElementById('wiki-ed-type');
   const worldSelect = document.getElementById('wiki-ed-world');
-  const bodyArea   = document.getElementById('wiki-ed-body');
-  const errEl      = document.getElementById('wiki-editor-error');
+  const bodyArea    = document.getElementById('wiki-ed-body');
+  const errEl       = document.getElementById('wiki-editor-error');
   if (!panel) return;
 
   worldSelect.innerHTML = state.worlds.map(w =>
@@ -1787,6 +1789,10 @@ function openWikiEditor(entryId) {
       typeSelect.value  = entry.type;
       worldSelect.value = entry.worldId;
       bodyArea.value    = entry.body || '';
+      state.ui.wikiExistingImages = (entry.images || []).map(img => ({
+        id: img.id, caption: img.caption || '', sortOrder: img.sortOrder
+      }));
+      renderWikiImagePreviews();
     }).catch(e => alert('Fehler: ' + e.message));
   } else {
     titleEl.textContent = 'Neuer Wiki-Eintrag';
@@ -1799,7 +1805,6 @@ function openWikiEditor(entryId) {
 
   renderWikiImagePreviews();
   if (errEl) errEl.style.display = 'none';
-  // Close article panel if open, then show editor
   document.getElementById('wiki-article-panel').style.display = 'none';
   panel.style.display = '';
 }
@@ -1808,6 +1813,7 @@ function closeWikiEditor() {
   const panel = document.getElementById('wiki-editor-panel');
   if (panel) panel.style.display = 'none';
   state.ui.wikiPendingImages = [];
+  state.ui.wikiExistingImages = [];
 }
 
 async function saveWikiEntry() {
@@ -1832,6 +1838,11 @@ async function saveWikiEntry() {
       saved = await api('PUT', `/wiki/${state.ui.wikiEditId}`, payload);
     } else {
       saved = await api('POST', '/wiki', payload);
+    }
+
+    for (const img of state.ui.wikiExistingImages) {
+      try { await api('PUT', `/wiki/images/${img.id}`, { caption: img.caption }); }
+      catch(e) { /* caption update failure is non-fatal */ }
     }
 
     for (const pending of state.ui.wikiPendingImages) {
@@ -1870,14 +1881,36 @@ function onWikiImageSelect(event) {
 function renderWikiImagePreviews() {
   const list = document.getElementById('wiki-img-preview-list');
   if (!list) return;
-  list.innerHTML = state.ui.wikiPendingImages.map((img, i) => `
+
+  const existingHtml = state.ui.wikiExistingImages.map((img, i) => `
+    <div class="wiki-img-preview-item">
+      <img src="/api/wiki/images/${img.id}" class="wiki-img-preview-thumb">
+      <input type="text" placeholder="Beschriftung" value="${escHtml(img.caption)}"
+             oninput="state.ui.wikiExistingImages[${i}].caption=this.value">
+      <button onclick="removeWikiExistingImage(${i})" title="Bild löschen">✕</button>
+    </div>
+  `).join('');
+
+  const pendingHtml = state.ui.wikiPendingImages.map((img, i) => `
     <div class="wiki-img-preview-item">
       <img src="${URL.createObjectURL(img.file)}" class="wiki-img-preview-thumb">
       <input type="text" placeholder="Beschriftung" value="${escHtml(img.caption)}"
              oninput="state.ui.wikiPendingImages[${i}].caption=this.value">
-      <button onclick="removeWikiPendingImage(${i})">✕</button>
+      <button onclick="removeWikiPendingImage(${i})" title="Bild entfernen">✕</button>
     </div>
   `).join('');
+
+  list.innerHTML = existingHtml + pendingHtml;
+}
+
+async function removeWikiExistingImage(i) {
+  const img = state.ui.wikiExistingImages[i];
+  if (!img) return;
+  try {
+    await api('DELETE', `/wiki/images/${img.id}`);
+    state.ui.wikiExistingImages.splice(i, 1);
+    renderWikiImagePreviews();
+  } catch(e) { alert('Fehler beim Löschen: ' + e.message); }
 }
 
 function removeWikiPendingImage(i) {

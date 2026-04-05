@@ -1741,18 +1741,38 @@ async function deleteWikiEntry(id) {
 /* ══════════════════════════════════════
    WIKI — EDITOR
 ══════════════════════════════════════ */
+const WIKI_DEFAULT_MARKDOWN = `## Übersicht
+
+Hier eine kurze Beschreibung des Eintrags.
+
+## Details
+
+- **Eigenschaft 1:** Wert
+- **Eigenschaft 2:** Wert
+
+## Hintergrund
+
+Weiterer Text mit *kursiver* und **fetter** Formatierung.
+
+## Tabelle (Beispiel)
+
+| Spalte A | Spalte B |
+|----------|----------|
+| Wert 1   | Wert 2   |
+`;
+
 function openWikiEditor(entryId) {
   state.ui.wikiEditId = entryId;
   state.ui.wikiPendingImages = [];
 
-  const modal      = document.getElementById('wiki-editor-modal');
+  const panel     = document.getElementById('wiki-editor-panel');
   const titleEl    = document.getElementById('wiki-editor-title');
   const titleInput = document.getElementById('wiki-ed-title');
   const typeSelect = document.getElementById('wiki-ed-type');
   const worldSelect = document.getElementById('wiki-ed-world');
   const bodyArea   = document.getElementById('wiki-ed-body');
   const errEl      = document.getElementById('wiki-editor-error');
-  if (!modal) return;
+  if (!panel) return;
 
   worldSelect.innerHTML = state.worlds.map(w =>
     `<option value="${w.id}">${escHtml(w.name)}</option>`
@@ -1773,17 +1793,19 @@ function openWikiEditor(entryId) {
     typeSelect.value    = 'TERM';
     worldSelect.disabled = false;
     if (state.ui.wikiActiveWorldId) worldSelect.value = state.ui.wikiActiveWorldId;
-    bodyArea.value = '';
+    bodyArea.value = WIKI_DEFAULT_MARKDOWN;
   }
 
   renderWikiImagePreviews();
   if (errEl) errEl.style.display = 'none';
-  modal.style.display = '';
+  // Close article panel if open, then show editor
+  document.getElementById('wiki-article-panel').style.display = 'none';
+  panel.style.display = '';
 }
 
 function closeWikiEditor() {
-  const modal = document.getElementById('wiki-editor-modal');
-  if (modal) modal.style.display = 'none';
+  const panel = document.getElementById('wiki-editor-panel');
+  if (panel) panel.style.display = 'none';
   state.ui.wikiPendingImages = [];
 }
 

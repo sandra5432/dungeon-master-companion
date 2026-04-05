@@ -2124,9 +2124,46 @@ nav {
   margin: 2px;
 }
 
-/* ── Editor modal ── */
-.wiki-editor-modal-box { max-width: 740px; width: 95vw; }
-.wiki-toolbar { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; }
+/* ── Editor panel ── */
+.wiki-editor-panel {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-s);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wiki-editor-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 24px 16px;
+  overflow: hidden;
+}
+
+.wiki-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+.wiki-editor-header h2 { margin: 0; font-size: 1.2rem; }
+
+.wiki-editor-fields { flex-shrink: 0; }
+
+.wiki-editor-body-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin: 8px 0 6px;
+}
+.wiki-editor-body-wrap label { flex-shrink: 0; margin-bottom: 4px; display: block; }
+
+.wiki-toolbar { display: flex; gap: 4px; margin-bottom: 4px; flex-wrap: wrap; flex-shrink: 0; }
 .wiki-toolbar button {
   padding: 2px 8px;
   border: 1px solid var(--border);
@@ -2138,7 +2175,22 @@ nav {
 }
 .wiki-toolbar button:hover { background: var(--bg-h); }
 
-#wiki-ed-body { width: 100%; box-sizing: border-box; font-family: monospace; font-size: .85rem; resize: vertical; }
+#wiki-ed-body {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: .85rem;
+  resize: none;
+  min-height: 0;
+}
+
+.wiki-editor-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  flex-shrink: 0;
+}
 
 .wiki-image-upload-area {
   border: 2px dashed var(--border);

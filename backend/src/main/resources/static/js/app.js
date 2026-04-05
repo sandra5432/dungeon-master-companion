@@ -1610,7 +1610,7 @@ function renderWikiArticle(entry) {
   `).join('');
 
   const bodyHtml = entry.body
-    ? renderWikiMarkdown(entry.body)
+    ? linkifyWikiTitles(renderWikiMarkdown(entry.body), entry.id)
     : '<em>Kein Inhalt.</em>';
 
   const spoilerSection = canEdit
@@ -1964,12 +1964,14 @@ function wikiToolbar(action) {
 /* ══════════════════════════════════════
    WIKI — AUTO-LINKING IN EVENTS
 ══════════════════════════════════════ */
-function linkifyWikiTitles(html) {
+function linkifyWikiTitles(html, excludeId) {
   if (!state.wikiTitles || !state.wikiTitles.length) return html;
-  const sorted = [...state.wikiTitles].sort((a, b) => b.title.length - a.title.length);
+  const sorted = [...state.wikiTitles]
+    .filter(t => t.id !== excludeId)
+    .sort((a, b) => b.title.length - a.title.length);
   for (const { id, title } of sorted) {
     const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`(?<![\\w>])${escaped}(?![\\w<])`, 'gi');
+    const re = new RegExp(`(?<![\\w>"])${escaped}(?![\\w<])`, 'gi');
     html = html.replace(re, match =>
       `<a class="wiki-inline-link" href="#" onclick="openWikiFromEvent(${id});return false">${match}</a>`
     );

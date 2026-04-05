@@ -1,5 +1,11 @@
 # CLAUDE.md — Pardur App
 
+## Build Tools
+
+- **Maven:** `/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/plugins/maven/lib/maven3/bin/mvn`
+  - Use this full path for all `mvn` commands (not on PATH)
+  - Always run from `backend/` directory: `cd backend && "/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/plugins/maven/lib/maven3/bin/mvn" <goal>`
+
 ## Project Overview
 
 Web application for managing D&D/tabletop RPG items. Currently has a Node.js/Express prototype (`item-management-list/`). The target architecture is a **Java Spring Boot backend** with a vanilla JS/HTML frontend.

@@ -2105,7 +2105,7 @@ nav {
 
 .wiki-article-body { margin-bottom: 16px; }
 
-.wiki-images-float { float: right; margin-left: 14px; max-width: 200px; }
+.wiki-images-float { float: right; margin-left: 20px; max-width: 300px; }
 .wiki-img-figure { margin: 0 0 10px 0; }
 .wiki-img { width: 100%; border-radius: var(--radius-sm); display: block; }
 .wiki-img-figure figcaption {
@@ -2122,6 +2122,16 @@ nav {
   line-height: 1.7;
   color: var(--t1);
 }
+.wiki-body-text h1, .wiki-body-text h2, .wiki-body-text h3,
+.wiki-body-text h4, .wiki-body-text h5, .wiki-body-text h6 {
+  margin-top: 1.6em;
+  margin-bottom: 0.3em;
+}
+.wiki-body-text ul, .wiki-body-text ol {
+  padding-left: 2em;
+  margin: 0.4em 0;
+}
+.wiki-body-text li { margin: 0.15em 0; }
 .wiki-body-text table { border-collapse: collapse; width: 100%; margin: 8px 0; }
 .wiki-body-text th, .wiki-body-text td { border: 1px solid var(--bd); padding: 4px 8px; }
 .wiki-body-text th { background: var(--bg-s); }

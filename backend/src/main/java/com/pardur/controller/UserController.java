@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/users")
@@ -26,6 +27,11 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<UserDto>> listUsers() {
         return ResponseEntity.ok(userService.listUsers());
+    }
+
+    @GetMapping("/names")
+    public ResponseEntity<List<Map<String, Object>>> listNames() {
+        return ResponseEntity.ok(userService.listNames());
     }
 
     @PostMapping

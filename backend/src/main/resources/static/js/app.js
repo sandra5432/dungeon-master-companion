@@ -31,8 +31,12 @@ const state = {
     wikiEditId: null,
     wikiPendingImages: [],
     wikiExistingImages: [],
+    wikiTypeFilter: new Set(),
+    wikiFilterPanelOpen: false,
   },
   wikiTitles: [],
+  wikiAllEntries: [],
+  wikiFullGraph: null,
 };
 
 // Modal edit state
@@ -149,9 +153,9 @@ function renderWorldSelector() {
            <button class="world-edit-btn del" title="Löschen" onclick="openDeleteWorldConfirm(${w.id},event)">✕</button>
          </span>`
       : '';
-    return `<button class="world-btn${isActive ? ' active' : ''}" onclick="selectWorld(${w.id})">
+    return `<div class="world-btn${isActive ? ' active' : ''}" onclick="selectWorld(${w.id})">
       <span>${escHtml(w.name)}</span>${editBtns}
-    </button>`;
+    </div>`;
   }).join('');
 }
 
@@ -224,6 +228,26 @@ function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function openImageLightbox(src, caption) {
+  const lb = document.getElementById('img-lightbox');
+  document.getElementById('lightbox-img').src = src;
+  const cap = document.getElementById('lightbox-caption');
+  cap.textContent = caption || '';
+  cap.style.display = caption ? '' : 'none';
+  lb.style.display = 'flex';
+  document.addEventListener('keydown', _lightboxKeyHandler);
+}
+
+function closeImageLightbox() {
+  document.getElementById('img-lightbox').style.display = 'none';
+  document.getElementById('lightbox-img').src = '';
+  document.removeEventListener('keydown', _lightboxKeyHandler);
+}
+
+function _lightboxKeyHandler(e) {
+  if (e.key === 'Escape') closeImageLightbox();
+}
+
 // Renders plain text with [label](url) markdown links → clickable <a> tags.
 // Only http/https URLs are allowed; other [text](url) patterns are left as escaped text.
 function renderDesc(text) {
@@ -275,16 +299,20 @@ function renderTimeline() {
   }
 
   const isAdmin = state.auth.isAdmin;
-  const groups = groupEvents(state.events);
+  // Reversed: newest events on top
+  const groups = groupEvents(state.events).reverse();
   let html = '';
+
+  function lastEventId(grp) {
+    return grp.type === 'single' ? grp.event.id : grp.events[grp.events.length - 1].id;
+  }
 
   groups.forEach((grp, gi) => {
     const side = gi % 2 === 0 ? 'right' : 'left';
-    let predecessorId = null;
-    if (gi > 0) {
-      const prev = groups[gi - 1];
-      predecessorId = prev.type === 'single' ? prev.event.id : prev.events[prev.events.length - 1].id;
-    }
+    // In reversed display the gap at gi sits above grp[gi].
+    // Predecessor = last event of grp[gi] (the group directly below = older in timeline),
+    // except for the very top gap which uses grp[0] (newest group = insert after newest).
+    const predecessorId = lastEventId(groups[gi]);
     const predStr = predecessorId !== null ? predecessorId : 'null';
 
     if (state.auth.loggedIn) {
@@ -337,11 +365,9 @@ function renderTimeline() {
     }
   });
 
-  // Final rope gap (after all events)
-  const lastPredecessor = state.events.length > 0 ? state.events[state.events.length - 1].id : null;
-  const lastPredStr = lastPredecessor !== null ? lastPredecessor : 'null';
+  // Final rope gap (bottom = oldest slot, predecessor null = insert before everything)
   if (state.auth.loggedIn) {
-    html += `<div class="rope-gap" data-gap="${groups.length}" data-predecessor="${lastPredStr}" onclick="onRopeClick(event,${lastPredStr})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
+    html += `<div class="rope-gap" data-gap="${groups.length}" data-predecessor="null" onclick="onRopeClick(event,null)"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
   } else {
     html += `<div class="rope-gap" style="pointer-events:none"></div>`;
   }
@@ -604,7 +630,7 @@ function populateDetail(id, source) {
   const crName  = ev.creatorUsername  || 'Unbekannt';
   const crColor = ev.creatorColorHex  || '#888888';
   const dateLbl = source === 'undated' ? 'Datum unbekannt' : (ev.displayDate || '');
-  document.getElementById('dp-title').textContent = ev.title;
+  document.getElementById('dp-title').innerHTML = linkifyWikiTitles(escHtml(ev.title));
   document.getElementById('dp-date').textContent  = dateLbl;
   const descEl = document.getElementById('dp-desc');
   if (ev.description && ev.description.trim()) {
@@ -619,7 +645,7 @@ function populateDetail(id, source) {
   if (charsEl) {
     if (ev.characters && ev.characters.length > 0) {
       charsEl.innerHTML = '<div style="font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Charaktere</div>' +
-        ev.characters.map(c => '<span class="detail-tag" style="color:var(--gold2);border-color:rgba(200,168,75,.38)">' + escHtml(c) + '</span>').join(' ');
+        ev.characters.map(c => '<span class="detail-tag" style="color:var(--gold2);border-color:rgba(200,168,75,.38);background:rgba(200,168,75,.10)">' + escHtml(c) + '</span>').join(' ');
       charsEl.style.display = '';
     } else {
       charsEl.style.display = 'none';
@@ -632,8 +658,11 @@ function populateDetail(id, source) {
   const dpEdit    = document.getElementById('dp-edit');
   const dpDel     = document.getElementById('dp-del');
   const dpActions = document.getElementById('dp-actions');
-  const canEdit   = state.auth.isAdmin || ev.createdByUserId === state.auth.userId;
-  if (dpActions) dpActions.style.display = canEdit ? '' : 'none';
+  const canEdit   = state.auth.loggedIn && (state.auth.isAdmin || ev.createdByUserId === state.auth.userId);
+  const canDelete = state.auth.loggedIn && (state.auth.isAdmin || ev.createdByUserId === state.auth.userId);
+  if (dpActions) dpActions.style.display = (canEdit || canDelete) ? '' : 'none';
+  if (dpEdit) dpEdit.style.display = canEdit ? '' : 'none';
+  if (dpDel)  dpDel.style.display  = canDelete ? '' : 'none';
   if (dpEdit) dpEdit.onclick = () => { closeDetail(); openEditModal(id, source); };
   if (dpDel)  dpDel.onclick  = () => { closeDetail(); openDeleteConfirm(id, source); };
 
@@ -815,7 +844,7 @@ function openDeleteWorldConfirm(worldId, e) {
   editWorldId = worldId; editSource = 'world-del';
   document.getElementById('m-title').textContent = 'Welt löschen';
   document.getElementById('del-txt').innerHTML =
-    'Soll die Welt <span class="del-confirm-name">„' + escHtml(w.name) + '"</span> und alle darin enthaltenen Ereignisse wirklich entfernt werden?';
+    'Soll die Welt <span class="del-confirm-name">„' + escHtml(w.name) + '"</span> und alle darin enthaltenen Ereignisse und Wiki-Einträge wirklich entfernt werden?';
   showForms(false, false, true, false, false, false);
   setSaveBtn('Endgültig löschen', true);
   openModal();
@@ -873,9 +902,24 @@ async function doLogout() {
     // ignore logout errors
   }
   state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
+  // Clear all cached wiki data fetched under the previous session so no
+  // privileged content (spoiler sections, ownership controls) leaks to the
+  // logged-out view.
+  state.wikiTitles = [];
+  state.wikiAllEntries = [];
+  state.wikiFullGraph = null;
+  const articlePanel = document.getElementById('wiki-article-panel');
+  if (articlePanel) {
+    articlePanel.style.display = 'none';
+    const content = document.getElementById('wiki-article-content');
+    if (content) content.innerHTML = '';
+  }
+  const editorPanel = document.getElementById('wiki-editor-panel');
+  if (editorPanel) editorPanel.style.display = 'none';
   applyAuthUI();
   renderTimeline();
   renderItems();
+  showPage('items');
 }
 
 /* ══════════════════════════════════════
@@ -1270,6 +1314,12 @@ async function init() {
 
 document.addEventListener('DOMContentLoaded', () => { init(); wireUndatedDropZone(); });
 
+document.addEventListener('click', e => {
+  if (!e.target.closest('#wiki-filter-toggle') && !e.target.closest('#wiki-filter-panel')) {
+    closeWikiFilterPanel();
+  }
+});
+
 /* ══════════════════════════════════════
    PASSWORD CHANGE OVERLAY
 ══════════════════════════════════════ */
@@ -1420,17 +1470,21 @@ async function loadWikiTitles() {
   } catch(e) { /* non-critical */ }
 }
 
-async function loadWikiRecent() {
+async function loadWikiEntries() {
+  const wid = state.ui.wikiActiveWorldId;
+  if (!wid) return;
   try {
-    const entries = await api('GET', '/wiki/recent');
-    renderWikiRecentList(entries);
+    const entries = await api('GET', `/wiki?worldId=${wid}`);
+    state.wikiAllEntries = entries;
+    applyWikiFilter();
   } catch(e) { console.error(e); }
 }
 
 async function loadWikiGraph(worldId) {
   try {
     const graph = await api('GET', `/wiki/graph?worldId=${worldId}`);
-    renderWikiGraph(graph);
+    state.wikiFullGraph = graph;
+    renderWikiGraph(filterWikiGraph(graph));
   } catch(e) { console.error(e); }
 }
 
@@ -1442,9 +1496,12 @@ async function loadWikiArticle(id) {
 }
 
 async function searchWiki(q) {
+  const wid = state.ui.wikiActiveWorldId;
+  const worldParam = wid ? `&worldId=${wid}` : '';
   try {
-    const entries = await api('GET', `/wiki?q=${encodeURIComponent(q)}`);
-    renderWikiRecentList(entries);
+    const entries = await api('GET', `/wiki?q=${encodeURIComponent(q)}${worldParam}`);
+    state.wikiAllEntries = entries;
+    applyWikiFilter();
   } catch(e) { console.error(e); }
 }
 
@@ -1452,14 +1509,25 @@ async function searchWiki(q) {
    WIKI — PAGE INIT
 ══════════════════════════════════════ */
 async function initWikiPage() {
-  renderWikiWorldTabs();
-  await loadWikiRecent();
-  if (state.worlds.length > 0) {
-    const wid = state.ui.wikiActiveWorldId || state.worlds[0].id;
-    state.ui.wikiActiveWorldId = wid;
-    renderWikiWorldTabs();
-    await loadWikiGraph(wid);
+  if (state.worlds.length > 0 && !state.ui.wikiActiveWorldId) {
+    state.ui.wikiActiveWorldId = state.worlds[0].id;
   }
+  renderWikiWorldTabs();
+
+  // Restore search input
+  const searchEl = document.getElementById('wiki-search');
+  if (searchEl) searchEl.value = state.ui.wikiSearchText;
+
+  // Restore type filter checkboxes and label
+  document.querySelectorAll('#wiki-filter-panel input[type=checkbox]').forEach(cb => {
+    cb.checked = state.ui.wikiTypeFilter.has(cb.value);
+  });
+  updateWikiFilterLabel();
+
+  const loadFn = state.ui.wikiSearchText.trim()
+    ? () => searchWiki(state.ui.wikiSearchText.trim())
+    : loadWikiEntries;
+  await Promise.all([loadFn(), loadWikiGraph(state.ui.wikiActiveWorldId)]);
   initWikiImageDrop();
 }
 
@@ -1475,7 +1543,10 @@ function renderWikiWorldTabs() {
 async function selectWikiWorld(worldId) {
   state.ui.wikiActiveWorldId = worldId;
   renderWikiWorldTabs();
-  await loadWikiGraph(worldId);
+  const loadFn = state.ui.wikiSearchText.trim()
+    ? () => searchWiki(state.ui.wikiSearchText.trim())
+    : loadWikiEntries;
+  await Promise.all([loadFn(), loadWikiGraph(worldId)]);
 }
 
 /* ══════════════════════════════════════
@@ -1488,11 +1559,15 @@ function renderWikiRecentList(entries) {
     el.innerHTML = '<div class="wiki-empty">Keine Einträge.</div>';
     return;
   }
-  el.innerHTML = entries.map(e => `
+  const sorted = [...entries].sort((a, b) => {
+    const ta = a.updatedAt || a.createdAt || '';
+    const tb = b.updatedAt || b.createdAt || '';
+    return tb.localeCompare(ta);
+  });
+  el.innerHTML = sorted.map(e => `
     <div class="wiki-list-item" onclick="loadWikiArticle(${e.id})">
-      <span class="wiki-type-badge wiki-type-${e.type.toLowerCase()}">${escHtml(e.type)}</span>
       <span class="wiki-list-title">${escHtml(e.title)}</span>
-      <span class="wiki-list-world">${escHtml(e.worldName)}</span>
+      <span class="wiki-type-badge wiki-type-${e.type.toLowerCase()} wiki-type-badge--sm">${escHtml(e.type)}</span>
     </div>
   `).join('');
 }
@@ -1501,10 +1576,76 @@ function onWikiSearch(value) {
   clearTimeout(state.ui.wikiSearchTimer);
   state.ui.wikiSearchText = value;
   if (!value.trim()) {
-    loadWikiRecent();
+    loadWikiEntries();
     return;
   }
   state.ui.wikiSearchTimer = setTimeout(() => searchWiki(value.trim()), 300);
+}
+
+/* ══════════════════════════════════════
+   WIKI — TYPE FILTER
+══════════════════════════════════════ */
+const WIKI_TYPE_LABELS = {
+  PERSON: 'Person', SPEZIES: 'Spezies', LOCATION: 'Ort', TERM: 'Begriff',
+  RESOURCE: 'Ressource', FAUNA: 'Fauna', FLORA: 'Flora',
+  FRAKTION: 'Fraktion', ENTITAET: 'Entität', OTHER: 'Sonstiges'
+};
+
+function toggleWikiFilterPanel() {
+  const panel = document.getElementById('wiki-filter-panel');
+  if (!panel) return;
+  state.ui.wikiFilterPanelOpen = !state.ui.wikiFilterPanelOpen;
+  panel.style.display = state.ui.wikiFilterPanelOpen ? '' : 'none';
+}
+
+function closeWikiFilterPanel() {
+  const panel = document.getElementById('wiki-filter-panel');
+  if (panel) panel.style.display = 'none';
+  state.ui.wikiFilterPanelOpen = false;
+}
+
+function toggleWikiTypeFilter(checkbox) {
+  const type = checkbox.value;
+  if (checkbox.checked) {
+    state.ui.wikiTypeFilter.add(type);
+  } else {
+    state.ui.wikiTypeFilter.delete(type);
+  }
+  updateWikiFilterLabel();
+  applyWikiFilter();
+}
+
+function updateWikiFilterLabel() {
+  const label = document.getElementById('wiki-filter-label');
+  if (!label) return;
+  const active = state.ui.wikiTypeFilter;
+  if (active.size === 0) {
+    label.textContent = 'Alle';
+  } else if (active.size === 1) {
+    label.textContent = WIKI_TYPE_LABELS[[...active][0]] || [...active][0];
+  } else {
+    label.textContent = active.size + ' Typen';
+  }
+}
+
+function applyWikiFilter() {
+  const active = state.ui.wikiTypeFilter;
+  const filtered = active.size === 0
+    ? state.wikiAllEntries
+    : state.wikiAllEntries.filter(e => active.has(e.type));
+  renderWikiRecentList(filtered);
+  if (state.wikiFullGraph) {
+    renderWikiGraph(filterWikiGraph(state.wikiFullGraph));
+  }
+}
+
+function filterWikiGraph(graph) {
+  const active = state.ui.wikiTypeFilter;
+  if (active.size === 0) return graph;
+  const nodes = graph.nodes.filter(n => active.has(n.type));
+  const ids = new Set(nodes.map(n => n.id));
+  const edges = graph.edges.filter(e => ids.has(e.source) && ids.has(e.target));
+  return { nodes, edges };
 }
 
 /* ══════════════════════════════════════
@@ -1598,13 +1739,15 @@ function renderWikiArticle(entry) {
   const content = document.getElementById('wiki-article-content');
   if (!panel || !content) return;
 
-  const isOwner = state.auth.loggedIn && entry.createdByUserId === state.auth.userId;
-  const isAdmin = state.auth.isAdmin;
-  const canEdit = isOwner || isAdmin;
+  const isOwner          = state.auth.loggedIn && entry.createdByUserId === state.auth.userId;
+  const isAdmin          = state.auth.isAdmin;
+  const canEdit          = state.auth.loggedIn;
+  const canManageSpoilers = isOwner || isAdmin;
 
   const imagesHtml = (entry.images || []).map(img => `
     <figure class="wiki-img-figure">
-      <img src="/api/wiki/images/${img.id}" alt="${escHtml(img.caption || '')}" class="wiki-img">
+      <img src="/api/wiki/images/${img.id}" alt="${escHtml(img.caption || '')}" class="wiki-img"
+           onclick="openImageLightbox('/api/wiki/images/${img.id}', '${escHtml(img.caption || '')}')">
       ${img.caption ? `<figcaption>${escHtml(img.caption)}</figcaption>` : ''}
     </figure>
   `).join('');
@@ -1613,7 +1756,7 @@ function renderWikiArticle(entry) {
     ? linkifyWikiTitles(renderWikiMarkdown(entry.body), entry.id)
     : '<em>Kein Inhalt.</em>';
 
-  const spoilerSection = canEdit
+  const spoilerSection = canManageSpoilers
     ? `<details class="wiki-spoiler-mgmt">
         <summary>Spoiler-Zugriff verwalten</summary>
         <div id="wiki-spoiler-readers-${entry.id}">Lade…</div>
@@ -1630,6 +1773,8 @@ function renderWikiArticle(entry) {
       <h2 class="wiki-article-title">${escHtml(entry.title)}</h2>
       ${canEdit ? `
         <button class="wiki-icon-btn" title="Bearbeiten" onclick="openWikiEditor(${entry.id})">✎</button>
+      ` : ''}
+      ${canManageSpoilers ? `
         <button class="wiki-icon-btn wiki-icon-btn--del" title="Löschen" onclick="deleteWikiEntry(${entry.id})">🗑</button>
       ` : ''}
       <span class="wiki-article-world">${escHtml(entry.worldName)}</span>
@@ -1671,20 +1816,46 @@ function renderWikiArticle(entry) {
     ).join('');
   }).catch(() => {});
 
-  if (canEdit) {
-    // Load user list for spoiler management
-    api('GET', '/admin/users').then(users => {
-      const sel = document.getElementById(`wiki-spoiler-select-${entry.id}`);
-      if (sel) sel.innerHTML = users.map(u => `<option value="${u.id}">${escHtml(u.username)}</option>`).join('');
-    }).catch(() => {});
+  if (canManageSpoilers) {
+    Promise.all([
+      api('GET', '/admin/users/names'),
+      api('GET', `/wiki/${entry.id}/spoiler-readers`)
+    ]).then(([users, readerIds]) => {
+      const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
+      const readerSet = new Set(readerIds);
 
-    api('GET', `/wiki/${entry.id}/spoiler-readers`).then(ids => {
+      // Render current readers with their usernames
       const el = document.getElementById(`wiki-spoiler-readers-${entry.id}`);
-      if (!el) return;
-      if (!ids.length) { el.innerHTML = '<em>Keine weiteren Leser.</em>'; return; }
-      el.innerHTML = ids.map(uid =>
-        `<span class="wiki-reader-tag">${uid} <button onclick="removeWikiSpoilerReader(${entry.id},${uid})">✕</button></span>`
-      ).join('');
+      if (el) {
+        if (!readerIds.length) {
+          el.innerHTML = '<em>Keine weiteren Leser.</em>';
+        } else {
+          el.innerHTML = readerIds.map(uid =>
+            `<span class="wiki-reader-tag">${escHtml(userMap[uid] || String(uid))} <button onclick="removeWikiSpoilerReader(${entry.id},${uid})">✕</button></span>`
+          ).join('');
+        }
+      }
+
+      // Build filtered select: exclude admins, creator, already-added readers
+      const eligible = users.filter(u =>
+        u.role !== 'ADMIN' &&
+        u.id !== entry.createdByUserId &&
+        !readerSet.has(u.id)
+      );
+
+      const sel = document.getElementById(`wiki-spoiler-select-${entry.id}`);
+      const btn = sel && sel.closest('.wiki-spoiler-add') && sel.closest('.wiki-spoiler-add').querySelector('button');
+      if (sel) {
+        if (!eligible.length) {
+          sel.innerHTML = '<option value="">— Alle haben bereits Zugriff —</option>';
+          sel.disabled = true;
+          if (btn) btn.disabled = true;
+        } else {
+          sel.innerHTML = eligible.map(u => `<option value="${u.id}">${escHtml(u.username)}</option>`).join('');
+          sel.disabled = false;
+          if (btn) btn.disabled = false;
+        }
+      }
     }).catch(() => {});
   }
 }
@@ -1714,8 +1885,9 @@ async function openEventFromWiki(eventId, worldId) {
 
 async function addWikiSpoilerReader(entryId) {
   const sel = document.getElementById(`wiki-spoiler-select-${entryId}`);
-  if (!sel) return;
+  if (!sel || !sel.value) return;
   const userId = parseInt(sel.value);
+  if (isNaN(userId)) return;
   try {
     await api('POST', `/wiki/${entryId}/spoiler-readers/${userId}`);
     loadWikiArticle(entryId);
@@ -1734,7 +1906,7 @@ async function deleteWikiEntry(id) {
   try {
     await api('DELETE', `/wiki/${id}`);
     closeWikiArticle();
-    await loadWikiRecent();
+    await loadWikiEntries();
     if (state.ui.wikiActiveWorldId) await loadWikiGraph(state.ui.wikiActiveWorldId);
     await loadWikiTitles();
   } catch(e) { alert('Fehler: ' + e.message); }
@@ -1781,6 +1953,7 @@ function openWikiEditor(entryId) {
     `<option value="${w.id}">${escHtml(w.name)}</option>`
   ).join('');
 
+  const spoilerBtn = document.getElementById('wiki-toolbar-spoiler');
   if (entryId) {
     titleEl.textContent = 'Eintrag bearbeiten';
     worldSelect.disabled = true;
@@ -1792,6 +1965,7 @@ function openWikiEditor(entryId) {
       state.ui.wikiExistingImages = (entry.images || []).map(img => ({
         id: img.id, caption: img.caption || '', sortOrder: img.sortOrder
       }));
+      if (spoilerBtn) spoilerBtn.style.display = entry.canReadSpoilers ? '' : 'none';
       renderWikiImagePreviews();
     }).catch(e => alert('Fehler: ' + e.message));
   } else {
@@ -1801,6 +1975,8 @@ function openWikiEditor(entryId) {
     worldSelect.disabled = false;
     if (state.ui.wikiActiveWorldId) worldSelect.value = state.ui.wikiActiveWorldId;
     bodyArea.value = WIKI_DEFAULT_MARKDOWN;
+    // New entries: creator always gets full access including spoilers
+    if (spoilerBtn) spoilerBtn.style.display = '';
   }
 
   renderWikiImagePreviews();
@@ -1857,7 +2033,7 @@ async function saveWikiEntry() {
     }
 
     closeWikiEditor();
-    await loadWikiRecent();
+    await loadWikiEntries();
     if (state.ui.wikiActiveWorldId) await loadWikiGraph(state.ui.wikiActiveWorldId);
     await loadWikiTitles();
     await loadWikiArticle(saved.id);
@@ -1920,17 +2096,26 @@ function removeWikiPendingImage(i) {
 
 function initWikiImageDrop() {
   const area = document.getElementById('wiki-img-area');
-  if (!area) return;
+  if (!area || area.dataset.dropInit) return;
+  area.dataset.dropInit = '1';
   area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
   area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
   area.addEventListener('drop', e => {
     e.preventDefault();
     area.classList.remove('drag-over');
+    const errors = [];
     for (const file of e.dataTransfer.files) {
-      if (file.type.startsWith('image/')) {
-        state.ui.wikiPendingImages.push({ file, caption: '' });
+      if (file.type !== 'image/webp') {
+        errors.push(`"${file.name}" ist kein WebP-Bild.`);
+        continue;
       }
+      if (file.size > 10 * 1024 * 1024) {
+        errors.push(`"${file.name}" ist größer als 10 MB.`);
+        continue;
+      }
+      state.ui.wikiPendingImages.push({ file, caption: '' });
     }
+    if (errors.length) alert('Fehler beim Hochladen:\n' + errors.join('\n'));
     renderWikiImagePreviews();
   });
 }
@@ -1969,14 +2154,47 @@ function linkifyWikiTitles(html, excludeId) {
   const sorted = [...state.wikiTitles]
     .filter(t => t.id !== excludeId)
     .sort((a, b) => b.title.length - a.title.length);
-  for (const { id, title } of sorted) {
-    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`(?<![\\w>"])${escaped}(?![\\w<])`, 'gi');
-    html = html.replace(re, match =>
-      `<a class="wiki-inline-link" href="#" onclick="openWikiFromEvent(${id});return false">${match}</a>`
-    );
+
+  // Work on DOM text nodes so bold/italic/other tags are handled correctly
+  // and we never accidentally match inside HTML attributes.
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+
+  const walker = document.createTreeWalker(temp, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      let p = node.parentNode;
+      while (p && p !== temp) {
+        if (p.tagName === 'A') return NodeFilter.FILTER_REJECT;
+        p = p.parentNode;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+
+  const textNodes = [];
+  let n;
+  while ((n = walker.nextNode())) textNodes.push(n);
+
+  for (const textNode of textNodes) {
+    const text = textNode.textContent;
+    let result = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let modified = false;
+    for (const { id, title } of sorted) {
+      const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`(?<!\\w)${escaped}(?!\\w)`, 'gi');
+      const next = result.replace(re, match =>
+        `<a class="wiki-inline-link" href="#" onclick="openWikiFromEvent(${id});return false">${match}</a>`
+      );
+      if (next !== result) { result = next; modified = true; }
+    }
+    if (modified) {
+      const span = document.createElement('span');
+      span.innerHTML = result;
+      textNode.parentNode.replaceChild(span, textNode);
+    }
   }
-  return html;
+
+  return temp.innerHTML;
 }
 
 function openWikiFromEvent(entryId) {

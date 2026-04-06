@@ -5,7 +5,7 @@ import java.util.List;
 public class WikiGraphDto {
 
     public record Node(Integer id, String title, String type) {}
-    public record Edge(Integer sourceId, Integer targetId) {}
+    public record Edge(Integer source, Integer target) {}
 
     private List<Node> nodes;
     private List<Edge> edges;

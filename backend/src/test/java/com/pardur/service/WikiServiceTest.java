@@ -118,8 +118,8 @@ class WikiServiceTest {
 
         WikiGraphDto graph = service.getGraph(1);
         assertThat(graph.getEdges()).hasSize(1);
-        assertThat(graph.getEdges().get(0).sourceId()).isEqualTo(1);
-        assertThat(graph.getEdges().get(0).targetId()).isEqualTo(2);
+        assertThat(graph.getEdges().get(0).source()).isEqualTo(1);
+        assertThat(graph.getEdges().get(0).target()).isEqualTo(2);
     }
 
     private WikiEntry buildEntry(int id, String title, String body, World w) throws Exception {

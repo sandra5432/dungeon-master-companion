@@ -53,6 +53,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST,   "/api/items/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/items/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/items/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/admin/users/names").hasRole("USER")
                 .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
                 // Wiki: public reads, any logged-in user can create/edit/delete own entries
                 .requestMatchers(HttpMethod.GET,    "/api/wiki/**").permitAll()

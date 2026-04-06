@@ -2,9 +2,9 @@
 -- Active only when spring.profiles.active=dev (H2, Flyway disabled)
 
 -- ── Users ────────────────────────────────────────────────────────────────────
--- id=1: admin, id=2: user1
+-- id=1: admin (pw: 4711), id=2: user (pw: user)
 INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('admin', '$2a$12$IbgLOMbHcChHpfmF/ZnTs.LtH1X4lWjsEvFlnsMFOIEAQpF.l19f.', 'ADMIN', TRUE, '#9a4aaa', CURRENT_TIMESTAMP);
-INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('user1', '$2a$12$gJxi9C6LUcSGarLiDt/qzubriHjzA8uXkh/cRPr93tiiH76VHtOsG', 'USER', FALSE, '#2a9a68', CURRENT_TIMESTAMP);
+INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('user', '$2a$12$nWCViL13pxuphLu7ffZp6.MkgEMCGfpNxkB6LXt9DXme7vr27sk7.', 'USER', FALSE, '#2a9a68', CURRENT_TIMESTAMP);
 
 -- ── Worlds ───────────────────────────────────────────────────────────────────
 -- id=1: Pardur, id=2: Eldorheim

@@ -5,10 +5,12 @@ spring:
     show-sql: false
   flyway:
     enabled: true
+    baseline-on-migrate: true   # required for first deployment: prod DB has tables but no flyway_schema_history
+    baseline-version: 0         # mark "before V1" as baseline so all migrations V1–V13 run
 
 server:
   servlet:
     session:
       cookie:
-        secure: true
+        secure: false
         same-site: strict

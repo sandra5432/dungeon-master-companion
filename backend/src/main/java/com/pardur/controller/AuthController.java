@@ -14,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,9 +54,20 @@ public class AuthController {
 
     @PostMapping("/auth/change-password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req,
-                                                Authentication authentication) {
+                                                Authentication authentication,
+                                                HttpServletRequest httpRequest) {
         PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
         userService.changePassword(details.getUserId(), req.getCurrentPassword(), req.getNewPassword());
+        // Refresh session principal so mustChangePassword is reflected immediately
+        UserDetails freshDetails = authService.loadUserByUsername(details.getUsername());
+        Authentication freshAuth = new UsernamePasswordAuthenticationToken(
+                freshDetails, authentication.getCredentials(), freshDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(freshAuth);
+        HttpSession session = httpRequest.getSession(false);
+        if (session != null) {
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                    SecurityContextHolder.getContext());
+        }
         return ResponseEntity.noContent().build();
     }
 }

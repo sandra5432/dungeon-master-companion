@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seekarten der Zeit</title>
+<title>Astral Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/app.css?v=22">
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="/js/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
@@ -28,13 +28,13 @@
     <span class="nav-title">Astral Library</span>
   </div>
   <div class="nav-links">
-    <button class="nav-link active" id="nav-timeline" onclick="showPage('timeline')">Chronik</button>
     <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
+    <button class="nav-link active" id="nav-timeline" onclick="showPage('timeline')">Chronik</button>
     <button class="nav-link" id="nav-wiki" onclick="showPage('wiki')">Wiki</button>
   </div>
   <div class="nav-right">
     <button class="btn btn-sm" id="btn-login" onclick="showLoginModal()" style="display:none">Anmelden</button>
-    <span class="user-action-only" id="nav-user" style="display:none;font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.06em;color:var(--gold);text-transform:uppercase"></span>
+    <span class="user-action-only" id="nav-user" style="display:none;font-family:'Inter',system-ui,sans-serif;font-size:.9rem;letter-spacing:.06em;color:var(--gold);text-transform:uppercase"></span>
     <button class="btn btn-sm user-action-only" id="btn-logout" onclick="doLogout()" style="display:none">Abmelden</button>
     <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
     <button class="btn btn-sm admin-only" id="btn-gear" onclick="showPage('users')" style="display:none" title="Nutzerverwaltung">⚙</button>
@@ -148,7 +148,7 @@
     <div class="m-title" id="m-title">Ereignis eintragen</div>
     <button class="m-close" onclick="closeModal()">✕</button>
     <div class="f-grid" id="f-tl">
-      <div id="m-world-info" style="font-family:'Cinzel',serif;font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:6px 10px;background:var(--bg-s);border:1px solid var(--bd);border-radius:3px;">Welt: <span id="m-world-name" style="color:var(--gold)"></span></div>
+      <div id="m-world-info" style="font-family:'Inter',system-ui,sans-serif;font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:6px 10px;background:var(--bg-s);border:1px solid var(--bd);border-radius:3px;">Welt: <span id="m-world-name" style="color:var(--gold)"></span></div>
       <div class="f-grp"><label class="f-lbl">Titel *</label><input class="f-inp" id="f-ti" type="text" placeholder="z.B. Die Schwarze Flut"></div>
       <div class="f-grp"><label class="f-lbl">Datum / Zeitraum — leer = unbekannt</label><input class="f-inp" id="f-da" type="text" placeholder="z.B. Jahr 500, Zeitalter der Stürme, Frühling 1203…"></div>
       <div class="f-grp"><label class="f-lbl">Typ</label>
@@ -171,7 +171,7 @@
     </div>
     <div id="f-drop" style="display:none">
       <div class="f-grid">
-        <div style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.95rem;color:var(--t2);line-height:1.5" id="drop-intro"></div>
+        <div style="font-family:'Inter',system-ui,sans-serif;font-style:italic;font-size:.95rem;color:var(--t2);line-height:1.5" id="drop-intro"></div>
       </div>
     </div>
     <div id="f-world" style="display:none">
@@ -183,8 +183,8 @@
     <div id="f-login" style="display:none">
       <div class="f-grid">
         <div class="f-grp"><label class="f-lbl">Benutzername</label><input class="f-inp" id="fl-u" type="text" placeholder="admin" autocomplete="username"></div>
-        <div class="f-grp"><label class="f-lbl">Passwort</label><input class="f-inp" id="fl-p" type="password" placeholder="••••••••" autocomplete="current-password"></div>
-        <div id="fl-err" style="display:none;color:#e07070;font-family:'Crimson Pro',serif;font-size:.88rem"></div>
+        <div class="f-grp"><label class="f-lbl">Passwort</label><input class="f-inp" id="fl-p" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('m-save').click()"></div>
+        <div id="fl-err" style="display:none;color:#e07070;font-family:'Inter',system-ui,sans-serif;font-size:.88rem"></div>
       </div>
     </div>
     <div class="m-actions">
@@ -244,7 +244,7 @@
           <span class="f-lbl" style="margin:0">Passwort zurücksetzen (wird auf Benutzername gesetzt)</span>
         </label>
       </div>
-      <div id="um-err" style="display:none;color:#e07070;font-family:'Crimson Pro',serif;font-size:.88rem"></div>
+      <div id="um-err" style="display:none;color:#e07070;font-family:'Inter',system-ui,sans-serif;font-size:.88rem"></div>
     </div>
     <div class="m-actions">
       <button class="btn" onclick="closeUserModal()">Abbrechen</button>
@@ -253,16 +253,23 @@
   </div>
 </div>
 
+<!-- ══ IMAGE LIGHTBOX ══ -->
+<div id="img-lightbox" style="display:none" onclick="closeImageLightbox()">
+  <button class="lightbox-close" onclick="closeImageLightbox()">&times;</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption"></div>
+</div>
+
 <!-- ══ PASSWORD CHANGE OVERLAY ══ -->
 <div id="pw-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center">
   <div class="modal" style="max-width:420px;width:100%;position:relative">
     <div class="m-title">Passwort ändern</div>
-    <p style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;margin-bottom:16px">Du musst dein Passwort ändern, bevor du fortfahren kannst.</p>
+    <p style="font-family:'Inter',system-ui,sans-serif;font-style:italic;color:var(--t3);font-size:.9rem;margin-bottom:16px">Du musst dein Passwort ändern, bevor du fortfahren kannst.</p>
     <div class="f-grid">
       <div class="f-grp"><label class="f-lbl">Aktuelles Passwort</label><input class="f-inp" id="pw-current" type="password" autocomplete="current-password"></div>
       <div class="f-grp"><label class="f-lbl">Neues Passwort</label><input class="f-inp" id="pw-new" type="password" autocomplete="new-password"></div>
       <div class="f-grp"><label class="f-lbl">Neues Passwort bestätigen</label><input class="f-inp" id="pw-confirm" type="password" autocomplete="new-password"></div>
-      <div id="pw-err" style="display:none;color:#e07070;font-family:'Crimson Pro',serif;font-size:.88rem"></div>
+      <div id="pw-err" style="display:none;color:#e07070;font-family:'Inter',system-ui,sans-serif;font-size:.88rem"></div>
     </div>
     <div class="m-actions">
       <button class="btn btn-primary" onclick="submitPasswordChange()">Passwort setzen</button>
@@ -272,22 +279,40 @@
 
 <!-- ══ WIKI PAGE ══ -->
 <div class="page" id="page-wiki">
+  <div class="wiki-world-tabs" id="wiki-world-tabs"></div>
   <div class="wiki-layout">
 
     <!-- Left panel -->
     <aside class="wiki-sidebar">
       <div class="wiki-search-wrap">
-        <input type="text" id="wiki-search" placeholder="Wiki durchsuchen…" oninput="onWikiSearch(this.value)" autocomplete="off">
+        <div class="wiki-search-row">
+          <input type="text" id="wiki-search" placeholder="Wiki durchsuchen…" oninput="onWikiSearch(this.value)" autocomplete="off">
+          <button class="wiki-filter-toggle" id="wiki-filter-toggle" onclick="toggleWikiFilterPanel()" title="Nach Typ filtern">
+            <span id="wiki-filter-label">Alle</span>
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" style="opacity:.7"><path d="M1 2h10L7 7v4l-2-1V7L1 2z"/></svg>
+          </button>
+        </div>
+        <div class="wiki-filter-panel" id="wiki-filter-panel" style="display:none">
+          <label class="wiki-filter-opt"><input type="checkbox" value="PERSON" onchange="toggleWikiTypeFilter(this)"> Person</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="SPEZIES" onchange="toggleWikiTypeFilter(this)"> Spezies</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="LOCATION" onchange="toggleWikiTypeFilter(this)"> Ort</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="TERM" onchange="toggleWikiTypeFilter(this)"> Begriff</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="RESOURCE" onchange="toggleWikiTypeFilter(this)"> Ressource</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="FAUNA" onchange="toggleWikiTypeFilter(this)"> Fauna</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="FLORA" onchange="toggleWikiTypeFilter(this)"> Flora</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="FRAKTION" onchange="toggleWikiTypeFilter(this)"> Fraktion</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="ENTITAET" onchange="toggleWikiTypeFilter(this)"> Entität</label>
+          <label class="wiki-filter-opt"><input type="checkbox" value="OTHER" onchange="toggleWikiTypeFilter(this)"> Sonstiges</label>
+        </div>
+      </div>
+      <div class="wiki-new-entry-wrap user-action-only" style="display:none">
+        <button class="btn btn-sm wiki-new-btn" onclick="openWikiEditor(null)">+ Neuer Eintrag</button>
       </div>
       <div id="wiki-recent-list" class="wiki-entry-list"></div>
-      <div class="wiki-sidebar-footer user-action-only" style="display:none">
-        <button class="btn btn-sm" onclick="openWikiEditor(null)">+ Neuer Eintrag</button>
-      </div>
     </aside>
 
-    <!-- Right panel: world tabs + graph -->
+    <!-- Right panel: graph -->
     <div class="wiki-main">
-      <div class="wiki-world-tabs" id="wiki-world-tabs"></div>
       <div class="wiki-graph-wrap">
         <svg id="wiki-graph"></svg>
         <div id="wiki-empty-hint" class="wiki-empty-hint" style="display:none">
@@ -343,7 +368,7 @@
               <button type="button" onclick="wikiToolbar('ul')" title="Liste">≡</button>
               <button type="button" onclick="wikiToolbar('ol')" title="Numm. Liste">1.</button>
               <button type="button" onclick="wikiToolbar('table')" title="Tabelle">⊞</button>
-              <button type="button" class="admin-only" style="display:none" onclick="wikiToolbar('spoiler')" title="Spoiler einfügen">🔒</button>
+              <button type="button" id="wiki-toolbar-spoiler" style="display:none" onclick="wikiToolbar('spoiler')" title="Spoiler einfügen">🔒</button>
             </div>
             <textarea id="wiki-ed-body" placeholder="Markdown-Inhalt…"></textarea>
           </div>
@@ -365,6 +390,7 @@
     </div>
 
   </div>
+</div><!-- #page-wiki -->
 
 <script src="/js/app.js"></script>
 </body>

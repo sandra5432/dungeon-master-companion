@@ -6,6 +6,7 @@ import com.pardur.dto.response.WorldDto;
 import com.pardur.exception.LastWorldException;
 import com.pardur.exception.ResourceNotFoundException;
 import com.pardur.model.World;
+import com.pardur.repository.WikiEntryRepository;
 import com.pardur.repository.WorldRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +17,11 @@ import java.util.List;
 public class WorldService {
 
     private final WorldRepository worldRepository;
+    private final WikiEntryRepository wikiEntryRepository;
 
-    public WorldService(WorldRepository worldRepository) {
+    public WorldService(WorldRepository worldRepository, WikiEntryRepository wikiEntryRepository) {
         this.worldRepository = worldRepository;
+        this.wikiEntryRepository = wikiEntryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -52,6 +55,8 @@ public class WorldService {
         }
         worldRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("World not found with id: " + id));
+        // Delete wiki entries (cascades to images and spoiler readers) before deleting the world
+        wikiEntryRepository.deleteAll(wikiEntryRepository.findAllByWorldIdOrderByTitleAsc(id));
         worldRepository.deleteById(id);
     }
 

@@ -88,7 +88,8 @@ public class ItemService {
         dto.setId(i.getId());
         dto.setName(i.getName());
         dto.setPrice(i.getPrice());
-        dto.setUrl(i.getUrl());
+        String url = (i.getUrl() != null && !i.getUrl().isBlank()) ? i.getUrl() : i.getDescription();
+        dto.setUrl(url);
         dto.setTags(i.getTags().stream().map(t -> t.getId().getTagName()).toList());
         return dto;
     }

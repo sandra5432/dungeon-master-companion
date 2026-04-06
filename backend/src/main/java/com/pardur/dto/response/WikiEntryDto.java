@@ -14,6 +14,7 @@ public class WikiEntryDto {
     private String createdByUsername;
     private List<WikiImageDto> images;
     private List<Integer> spoilerReaderUserIds;
+    private boolean canReadSpoilers;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -37,6 +38,8 @@ public class WikiEntryDto {
     public void setImages(List<WikiImageDto> images) { this.images = images; }
     public List<Integer> getSpoilerReaderUserIds() { return spoilerReaderUserIds; }
     public void setSpoilerReaderUserIds(List<Integer> spoilerReaderUserIds) { this.spoilerReaderUserIds = spoilerReaderUserIds; }
+    public boolean isCanReadSpoilers() { return canReadSpoilers; }
+    public void setCanReadSpoilers(boolean canReadSpoilers) { this.canReadSpoilers = canReadSpoilers; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

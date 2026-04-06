@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +30,13 @@ public class UserService {
     public List<UserDto> listUsers() {
         return userRepository.findAll().stream()
                 .map(u -> new UserDto(u.getId(), u.getUsername(), u.getRole(), u.getColorHex(), u.getCreatedAt()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listNames() {
+        return userRepository.findAll().stream()
+                .map(u -> Map.<String, Object>of("id", u.getId(), "username", u.getUsername(), "role", u.getRole()))
                 .collect(Collectors.toList());
     }
 

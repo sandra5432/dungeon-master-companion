@@ -275,7 +275,7 @@ nav {
    BUTTONS
 ══════════════════════════════════════════════ */
 .btn {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -416,7 +416,7 @@ nav {
   background: transparent;
   color: var(--t1);
   cursor: pointer;
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -574,7 +574,7 @@ nav {
 }
 
 .compact-lbl {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -721,7 +721,7 @@ nav {
 }
 
 .undated-hint {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -767,7 +767,7 @@ nav {
 }
 
 .page-hdr p {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   font-weight: 400;
   color: var(--t2);
@@ -812,7 +812,7 @@ nav {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1141,7 +1141,7 @@ nav {
 .event-group-card { cursor: default; }
 
 .event-group-date {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1313,7 +1313,7 @@ nav {
   font-size: var(--fs-grn);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-pill);
   background: var(--tag-bg);
   border: 1px solid var(--tag-bd);
@@ -1334,7 +1334,7 @@ nav {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1496,7 +1496,7 @@ nav {
 }
 
 .pg-hdr p {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   font-weight: 400;
   color: var(--t2);
@@ -1562,7 +1562,7 @@ nav {
 .it { width: 100%; border-collapse: collapse; }
 
 .it th {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1608,7 +1608,7 @@ nav {
 }
 
 .i-name {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   font-weight: 600;
   color: var(--t1);
@@ -1897,9 +1897,16 @@ nav {
 /* ══════════════════════════════════════
    WIKI
 ══════════════════════════════════════ */
+#page-wiki.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+}
+
 .wiki-layout {
   display: flex;
-  height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -1916,11 +1923,18 @@ nav {
 .wiki-search-wrap {
   padding: 10px;
   border-bottom: 1px solid var(--bd);
+  position: relative;
+}
+
+.wiki-search-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .wiki-search-wrap input {
-  width: 100%;
-  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
   background: var(--inp);
   border: 1px solid var(--bd);
   border-radius: var(--radius-sm);
@@ -1933,6 +1947,65 @@ nav {
 }
 .wiki-search-wrap input:focus { border-color: var(--gold); }
 .wiki-search-wrap input::placeholder { color: var(--t3); }
+
+.wiki-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--inp);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-sm);
+  color: var(--t2);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+.wiki-filter-toggle:hover,
+.wiki-filter-toggle.active { border-color: var(--gold); color: var(--gold); }
+
+.wiki-filter-panel {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  background: var(--bg-s);
+  border: 1px solid var(--bd);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  justify-items: start;
+  gap: 4px 8px;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+
+.wiki-filter-opt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  color: var(--t2);
+  cursor: pointer;
+  user-select: none;
+}
+.wiki-filter-opt:hover { color: var(--t1); }
+.wiki-filter-opt input[type="checkbox"] { cursor: pointer; accent-color: var(--gold); }
+
+.wiki-new-entry-wrap {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--bd);
+}
+.wiki-new-btn {
+  width: 100%;
+  text-align: center;
+}
 
 .wiki-entry-list {
   flex: 1;
@@ -1973,6 +2046,12 @@ nav {
   letter-spacing: .04em;
   white-space: nowrap;
 }
+.wiki-type-badge--sm {
+  font-size: calc(var(--fs-grn) * 0.72);
+  padding: 1px 5px;
+  align-self: center;
+  flex-shrink: 0;
+}
 .wiki-type-person       { background: #f0c04030; color: #f0c040; border: 1px solid #f0c04060; }
 .wiki-type-spezies      { background: #d4884a30; color: #d4884a; border: 1px solid #d4884a60; }
 .wiki-type-location     { background: #4a90d930; color: #4a90d9; border: 1px solid #4a90d960; }
@@ -1983,11 +2062,6 @@ nav {
 .wiki-type-fraktion     { background: #9c5fb530; color: #9c5fb5; border: 1px solid #9c5fb560; }
 .wiki-type-entitaet     { background: #e07b3030; color: #e07b30; border: 1px solid #e07b3060; }
 .wiki-type-other        { background: #cccccc20; color: #cccccc; border: 1px solid #cccccc40; }
-
-.wiki-sidebar-footer {
-  padding: 10px;
-  border-top: 1px solid var(--bd);
-}
 
 .wiki-main {
   flex: 1;
@@ -2007,7 +2081,7 @@ nav {
 }
 
 .wiki-world-tab {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-grn);
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -2042,7 +2116,7 @@ nav {
   align-items: center;
   justify-content: center;
   color: var(--t3);
-  font-family: 'Crimson Pro', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-style: italic;
   font-size: var(--fs-red);
 }
@@ -2086,7 +2160,7 @@ nav {
 .wiki-article-title {
   margin: 0;
   font-family: 'Cinzel', serif;
-  font-size: var(--fs-h1);
+  font-size: calc(var(--fs-h1) * 0.75);
   font-weight: 700;
   color: var(--t1);
   letter-spacing: 0.06em;
@@ -2138,7 +2212,39 @@ nav {
 
 .wiki-images-float { float: right; margin-left: 20px; max-width: 300px; }
 .wiki-img-figure { margin: 0 0 10px 0; }
-.wiki-img { width: 100%; border-radius: var(--radius-sm); display: block; }
+.wiki-img { width: 100%; border-radius: var(--radius-sm); display: block; cursor: pointer; }
+.wiki-img:hover { opacity: 0.88; }
+
+#img-lightbox {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.88);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  cursor: zoom-out;
+}
+#lightbox-img {
+  max-width: 90vw; max-height: 80vh;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 40px rgba(0,0,0,.7);
+  object-fit: contain;
+  cursor: default;
+}
+#lightbox-caption {
+  margin-top: 12px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,.7);
+  text-align: center;
+  max-width: 80vw;
+}
+.lightbox-close {
+  position: fixed; top: 16px; right: 20px;
+  background: none; border: none;
+  color: rgba(255,255,255,.8); font-size: 2rem; line-height: 1;
+  cursor: pointer; padding: 4px 8px;
+}
+.lightbox-close:hover { color: #fff; }
 .wiki-img-figure figcaption {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: calc(var(--fs-grn) * 0.9);
@@ -2148,13 +2254,15 @@ nav {
 }
 
 .wiki-body-text {
-  font-family: 'Crimson Pro', serif;
-  font-size: 1rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
   line-height: 1.7;
   color: var(--t1);
 }
 .wiki-body-text h1, .wiki-body-text h2, .wiki-body-text h3,
 .wiki-body-text h4, .wiki-body-text h5, .wiki-body-text h6 {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
   margin-top: 1.6em;
   margin-bottom: 0.3em;
 }
@@ -2183,9 +2291,9 @@ nav {
   text-transform: uppercase;
   letter-spacing: .05em;
 }
-.wiki-spoiler-content { font-size: var(--fs-red); }
+.wiki-spoiler-content { font-size: inherit; }
 
-.wiki-linked-section { margin: 14px 0; }
+.wiki-linked-section { margin: 14px 0; font-size: 0.75rem; }
 .wiki-linked-section h4 {
   font-family: 'Cinzel', serif;
   font-size: var(--fs-grn);
@@ -2393,7 +2501,7 @@ nav {
   flex: 1;
   width: 100%;
   box-sizing: border-box;
-  font-family: 'Crimson Pro', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--fs-red);
   line-height: 1.6;
   resize: none;
@@ -2467,7 +2575,7 @@ nav {
 .wiki-empty {
   padding: 12px;
   color: var(--t3);
-  font-family: 'Crimson Pro', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-style: italic;
   font-size: var(--fs-red);
 }

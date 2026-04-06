@@ -40,12 +40,17 @@ public class WikiService {
     public List<WikiEntryListItemDto> list(Integer worldId, String q, Integer currentUserId, boolean isAdmin) {
         List<WikiEntry> entries;
         if (q != null && !q.isBlank()) {
+            String qLower = q.trim().toLowerCase();
             entries = entryRepository.searchByTitleOrBody(q.trim());
             if (worldId != null) {
                 entries = entries.stream()
                         .filter(e -> e.getWorld().getId().equals(worldId))
                         .toList();
             }
+            // Title matches first, body-only matches second
+            entries = entries.stream()
+                    .sorted(Comparator.comparing(e -> !e.getTitle().toLowerCase().contains(qLower)))
+                    .toList();
         } else if (worldId != null) {
             entries = entryRepository.findAllByWorldIdOrderByTitleAsc(worldId);
         } else {
@@ -94,14 +99,29 @@ public class WikiService {
     @Transactional
     public WikiEntryDto update(Integer id, UpdateWikiEntryRequest req, Integer currentUserId, boolean isAdmin) {
         WikiEntry entry = requireEntry(id);
-        checkOwnership(entry, currentUserId, isAdmin);
         checkDuplicate(entry.getWorld().getId(), req.getTitle(), id);
+
+        boolean canReadSpoilers = isAdmin
+                || entry.getCreatedBy().getId().equals(currentUserId)
+                || spoilerReaderRepository.existsByIdEntryIdAndIdUserId(id, currentUserId);
+        boolean canManageSpoilers = isAdmin
+                || entry.getCreatedBy().getId().equals(currentUserId);
 
         entry.setTitle(req.getTitle());
         entry.setType(req.getType());
-        entry.setBody(req.getBody());
+
+        if (canReadSpoilers) {
+            entry.setBody(req.getBody());
+        } else {
+            // User cannot see spoiler blocks — strip any they may have submitted,
+            // then reattach the original spoiler blocks from the stored body.
+            String preserved = extractSpoilers(entry.getBody());
+            String newBody   = stripSpoilers(req.getBody());
+            entry.setBody(preserved.isEmpty() ? newBody : newBody + "\n\n" + preserved);
+        }
+
         WikiEntry saved = entryRepository.save(entry);
-        return toDto(saved, true, true);
+        return toDto(saved, canReadSpoilers, canManageSpoilers);
     }
 
     @Transactional
@@ -240,6 +260,18 @@ public class WikiService {
         return body.replaceAll("(?s):::spoiler[^\\n]*\\n.*?:::", "").trim();
     }
 
+    static String extractSpoilers(String body) {
+        if (body == null) return "";
+        StringBuilder sb = new StringBuilder();
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?s):::spoiler[^\\n]*\\n.*?:::").matcher(body);
+        while (m.find()) {
+            if (sb.length() > 0) sb.append("\n\n");
+            sb.append(m.group());
+        }
+        return sb.toString();
+    }
+
     private WikiEntryDto toDto(WikiEntry e, boolean canReadSpoilers, boolean canManageSpoilers) {
         WikiEntryDto dto = new WikiEntryDto();
         dto.setId(e.getId());
@@ -248,6 +280,7 @@ public class WikiService {
         dto.setWorldId(e.getWorld().getId());
         dto.setWorldName(e.getWorld().getName());
         dto.setBody(canReadSpoilers ? e.getBody() : stripSpoilers(e.getBody()));
+        dto.setCanReadSpoilers(canReadSpoilers);
         dto.setCreatedByUserId(e.getCreatedBy().getId());
         dto.setCreatedByUsername(e.getCreatedBy().getUsername());
         dto.setImages(e.getImages().stream()

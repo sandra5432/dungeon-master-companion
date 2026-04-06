@@ -270,7 +270,7 @@ server:
 > 2. Log in as `admin` / `4711` — confirm the password-change overlay appears
 > 3. Change the password, confirm the app loads normally after
 > 4. Create a timeline event, verify it appears attributed to your user
-> 5. Log out, log in as `user1` / `user1`, create an event, confirm edit/delete only appears on your own events
+> 5. Log out, log in as `user` / `user`, create an event, confirm edit/delete only appears on your own events
 > 6. Log back in as admin — confirm the ⚙ gear icon is visible and user management works
 >
 > All good to push?"

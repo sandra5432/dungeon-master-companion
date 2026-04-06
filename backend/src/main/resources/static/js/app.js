@@ -33,6 +33,8 @@ const state = {
     wikiExistingImages: [],
     wikiTypeFilter: new Set(),
     wikiFilterPanelOpen: false,
+    wikiView: 'recent',
+    wikiCollapsedTypes: new Set(),
   },
   wikiTitles: [],
   wikiAllEntries: [],
@@ -1559,17 +1561,72 @@ function renderWikiRecentList(entries) {
     el.innerHTML = '<div class="wiki-empty">Keine Einträge.</div>';
     return;
   }
-  const sorted = [...entries].sort((a, b) => {
-    const ta = a.updatedAt || a.createdAt || '';
-    const tb = b.updatedAt || b.createdAt || '';
-    return tb.localeCompare(ta);
-  });
-  el.innerHTML = sorted.map(e => `
+  const view = state.ui.wikiView;
+
+  if (view === 'recent') {
+    const sorted = [...entries].sort((a, b) => {
+      const ta = a.updatedAt || a.createdAt || '';
+      const tb = b.updatedAt || b.createdAt || '';
+      return tb.localeCompare(ta);
+    });
+    el.innerHTML = sorted.map(e => wikiListItemHtml(e, true)).join('');
+
+  } else if (view === 'alpha') {
+    const sorted = [...entries].sort((a, b) => a.title.localeCompare(b.title, 'de'));
+    el.innerHTML = sorted.map(e => wikiListItemHtml(e, true)).join('');
+
+  } else if (view === 'type') {
+    const typeOrder = Object.keys(WIKI_TYPE_LABELS);
+    const byType = {};
+    entries.forEach(e => {
+      if (!byType[e.type]) byType[e.type] = [];
+      byType[e.type].push(e);
+    });
+    // also catch any types not in the standard order
+    Object.keys(byType).forEach(t => { if (!typeOrder.includes(t)) typeOrder.push(t); });
+
+    el.innerHTML = typeOrder
+      .filter(type => byType[type]?.length)
+      .map(type => {
+        const group = [...byType[type]].sort((a, b) => a.title.localeCompare(b.title, 'de'));
+        const collapsed = state.ui.wikiCollapsedTypes.has(type);
+        return `
+          <div class="wiki-type-group-header" onclick="toggleWikiTypeGroup('${type}')">
+            <span class="wiki-type-group-arrow">${collapsed ? '▶' : '▼'}</span>
+            <span class="wiki-type-badge wiki-type-${type.toLowerCase()} wiki-type-badge--sm">${escHtml(type)}</span>
+            <span class="wiki-type-group-count">${group.length}</span>
+          </div>
+          ${collapsed ? '' : `<div class="wiki-type-group-entries">${group.map(e => wikiListItemHtml(e, false)).join('')}</div>`}
+        `;
+      }).join('');
+  }
+}
+
+function wikiListItemHtml(e, showBadge) {
+  return `
     <div class="wiki-list-item" onclick="loadWikiArticle(${e.id})">
       <span class="wiki-list-title">${escHtml(e.title)}</span>
-      <span class="wiki-type-badge wiki-type-${e.type.toLowerCase()} wiki-type-badge--sm">${escHtml(e.type)}</span>
+      ${showBadge ? `<span class="wiki-type-badge wiki-type-${e.type.toLowerCase()} wiki-type-badge--sm">${escHtml(e.type)}</span>` : ''}
     </div>
-  `).join('');
+  `;
+}
+
+function setWikiView(view) {
+  state.ui.wikiView = view;
+  ['recent', 'alpha', 'type'].forEach(v => {
+    const btn = document.getElementById(`wiki-view-${v}`);
+    if (btn) btn.classList.toggle('active', v === view);
+  });
+  applyWikiFilter();
+}
+
+function toggleWikiTypeGroup(type) {
+  if (state.ui.wikiCollapsedTypes.has(type)) {
+    state.ui.wikiCollapsedTypes.delete(type);
+  } else {
+    state.ui.wikiCollapsedTypes.add(type);
+  }
+  applyWikiFilter();
 }
 
 function onWikiSearch(value) {

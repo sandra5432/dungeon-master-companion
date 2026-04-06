@@ -92,6 +92,7 @@ public class WikiService {
         entry.setType(req.getType());
         entry.setBody(req.getBody());
         entry.setCreatedBy(creator);
+        entry.setParent(resolveParent(req.getParentId(), req.getWorldId(), null));
         WikiEntry saved = entryRepository.save(entry);
         return toDto(saved, true, true);
     }
@@ -109,6 +110,7 @@ public class WikiService {
 
         entry.setTitle(req.getTitle());
         entry.setType(req.getType());
+        entry.setParent(resolveParent(req.getParentId(), entry.getWorld().getId(), id));
 
         if (canReadSpoilers) {
             entry.setBody(req.getBody());
@@ -272,6 +274,48 @@ public class WikiService {
         return sb.toString();
     }
 
+    private int ancestorDepth(WikiEntry entry) {
+        int depth = 0;
+        WikiEntry current = entry.getParent();
+        while (current != null && depth < 4) {
+            depth++;
+            current = current.getParent();
+        }
+        return depth;
+    }
+
+    private boolean wouldCreateCycle(WikiEntry potentialParent, Integer entryId) {
+        WikiEntry current = potentialParent;
+        while (current != null) {
+            if (current.getId().equals(entryId)) return true;
+            current = current.getParent();
+        }
+        return false;
+    }
+
+    private WikiEntry resolveParent(Integer parentId, Integer worldId, Integer selfId) {
+        if (parentId == null) return null;
+        WikiEntry parent = entryRepository.findById(parentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Parent entry not found: " + parentId));
+        if (!parent.getWorld().getId().equals(worldId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Übergeordneter Eintrag muss zur gleichen Welt gehören");
+        }
+        if (selfId != null && selfId.equals(parentId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ein Eintrag kann nicht sein eigener Elterneintrag sein");
+        }
+        if (selfId != null && wouldCreateCycle(parent, selfId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Zirkuläre Eltern-Kind-Beziehung nicht erlaubt");
+        }
+        if (ancestorDepth(parent) >= 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Maximale Verschachtelungstiefe (3) überschritten");
+        }
+        return parent;
+    }
+
     private WikiEntryDto toDto(WikiEntry e, boolean canReadSpoilers, boolean canManageSpoilers) {
         WikiEntryDto dto = new WikiEntryDto();
         dto.setId(e.getId());
@@ -292,6 +336,14 @@ public class WikiService {
         }
         dto.setCreatedAt(e.getCreatedAt());
         dto.setUpdatedAt(e.getUpdatedAt());
+        if (e.getParent() != null) {
+            dto.setParentId(e.getParent().getId());
+            dto.setParentTitle(e.getParent().getTitle());
+        }
+        dto.setChildren(entryRepository.findByParentId(e.getId()).stream()
+                .map(c -> new WikiChildDto(c.getId(), c.getTitle(), c.getType().name()))
+                .sorted(Comparator.comparing(WikiChildDto::getTitle))
+                .toList());
         return dto;
     }
 
@@ -303,6 +355,9 @@ public class WikiService {
         dto.setWorldId(e.getWorld().getId());
         dto.setWorldName(e.getWorld().getName());
         dto.setUpdatedAt(e.getUpdatedAt());
+        if (e.getParent() != null) {
+            dto.setParentId(e.getParent().getId());
+        }
         return dto;
     }
 

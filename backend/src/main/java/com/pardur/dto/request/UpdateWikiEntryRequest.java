@@ -22,4 +22,8 @@ public class UpdateWikiEntryRequest {
     public void setType(WikiEntryType type) { this.type = type; }
     public String getBody() { return body; }
     public void setBody(String body) { this.body = body; }
+
+    private Integer parentId;
+    public Integer getParentId() { return parentId; }
+    public void setParentId(Integer parentId) { this.parentId = parentId; }
 }

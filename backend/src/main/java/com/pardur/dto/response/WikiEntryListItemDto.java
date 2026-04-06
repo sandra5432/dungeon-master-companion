@@ -22,4 +22,8 @@ public class WikiEntryListItemDto {
     public void setWorldName(String worldName) { this.worldName = worldName; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    private Integer parentId;
+    public Integer getParentId() { return parentId; }
+    public void setParentId(Integer parentId) { this.parentId = parentId; }
 }

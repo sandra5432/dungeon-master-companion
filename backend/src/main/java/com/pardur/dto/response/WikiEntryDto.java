@@ -1,6 +1,7 @@
 package com.pardur.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 public class WikiEntryDto {
@@ -44,4 +45,15 @@ public class WikiEntryDto {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    private Integer parentId;
+    private String parentTitle;
+    private List<WikiChildDto> children = new ArrayList<>();
+
+    public Integer getParentId() { return parentId; }
+    public void setParentId(Integer parentId) { this.parentId = parentId; }
+    public String getParentTitle() { return parentTitle; }
+    public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
+    public List<WikiChildDto> getChildren() { return children; }
+    public void setChildren(List<WikiChildDto> children) { this.children = children; }
 }

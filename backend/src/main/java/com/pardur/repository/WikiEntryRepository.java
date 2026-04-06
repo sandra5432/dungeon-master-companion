@@ -22,4 +22,6 @@ public interface WikiEntryRepository extends JpaRepository<WikiEntry, Integer> {
 
     @Query("SELECT e FROM WikiEntry e WHERE e.world.id = :worldId AND LOWER(e.title) = LOWER(:title) AND e.id <> :excludeId")
     Optional<WikiEntry> findDuplicateTitle(@Param("worldId") Integer worldId, @Param("title") String title, @Param("excludeId") Integer excludeId);
+
+    List<WikiEntry> findByParentId(Integer parentId);
 }

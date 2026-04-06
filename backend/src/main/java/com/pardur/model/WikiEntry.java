@@ -34,6 +34,10 @@ public class WikiEntry {
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private WikiEntry parent;
+
     @OneToMany(mappedBy = "entry", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     private List<WikiImage> images = new ArrayList<>();
@@ -64,4 +68,6 @@ public class WikiEntry {
     public List<WikiSpoilerReader> getSpoilerReaders() { return spoilerReaders; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public WikiEntry getParent() { return parent; }
+    public void setParent(WikiEntry parent) { this.parent = parent; }
 }

@@ -306,7 +306,7 @@
         </div>
       </div>
       <div class="wiki-view-toggle">
-        <button class="wiki-view-btn active" id="wiki-view-recent" onclick="setWikiView('recent')" title="Zuletzt geändert">Zuletzt</button>
+        <button class="wiki-view-btn active" id="wiki-view-hierarchy" onclick="setWikiView('hierarchy')" title="Eltern-Kind-Hierarchie">Hierarchie</button>
         <button class="wiki-view-btn" id="wiki-view-alpha" onclick="setWikiView('alpha')" title="Alphabetisch">A–Z</button>
         <button class="wiki-view-btn" id="wiki-view-type" onclick="setWikiView('type')" title="Nach Typ gruppiert">Typ</button>
       </div>
@@ -342,6 +342,19 @@
             <div class="form-row">
               <label>Titel</label>
               <input type="text" id="wiki-ed-title" placeholder="Titel des Eintrags">
+            </div>
+            <div class="form-row wiki-parent-row">
+              <label>Übergeordneter Eintrag</label>
+              <div class="wiki-parent-search-wrap">
+                <input type="text" id="wiki-ed-parent-input" placeholder="Elterneintrag suchen…" autocomplete="off"
+                       oninput="onWikiParentSearch(this.value)">
+                <div id="wiki-parent-dropdown" class="wiki-parent-dropdown" style="display:none"></div>
+                <div id="wiki-parent-selected" class="wiki-parent-selected" style="display:none">
+                  <span id="wiki-parent-selected-label"></span>
+                  <button type="button" class="wiki-parent-clear" onclick="clearWikiParent()">✕</button>
+                </div>
+                <input type="hidden" id="wiki-ed-parent-id">
+              </div>
             </div>
             <div class="form-row two-col">
               <div>

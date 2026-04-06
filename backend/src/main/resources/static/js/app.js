@@ -33,8 +33,10 @@ const state = {
     wikiExistingImages: [],
     wikiTypeFilter: new Set(),
     wikiFilterPanelOpen: false,
-    wikiView: 'recent',
+    wikiView: 'hierarchy',
     wikiCollapsedTypes: new Set(),
+    wikiCollapsedNodes: new Set(),
+    wikiEditParentId: null,
   },
   wikiTitles: [],
   wikiAllEntries: [],
@@ -1563,13 +1565,41 @@ function renderWikiRecentList(entries) {
   }
   const view = state.ui.wikiView;
 
-  if (view === 'recent') {
-    const sorted = [...entries].sort((a, b) => {
-      const ta = a.updatedAt || a.createdAt || '';
-      const tb = b.updatedAt || b.createdAt || '';
-      return tb.localeCompare(ta);
+  if (view === 'hierarchy') {
+    const idSet = new Set(entries.map(e => e.id));
+    const childrenMap = {};
+    entries.forEach(e => {
+      const pid = e.parentId;
+      if (pid && idSet.has(pid)) {
+        if (!childrenMap[pid]) childrenMap[pid] = [];
+        childrenMap[pid].push(e);
+      }
     });
-    el.innerHTML = sorted.map(e => wikiListItemHtml(e, true)).join('');
+    Object.values(childrenMap).forEach(arr => arr.sort((a, b) => a.title.localeCompare(b.title, 'de')));
+    const roots = entries
+      .filter(e => !e.parentId || !idSet.has(e.parentId))
+      .sort((a, b) => a.title.localeCompare(b.title, 'de'));
+
+    function renderNode(e, depth) {
+      const collapsed = state.ui.wikiCollapsedNodes.has(e.id);
+      const children = childrenMap[e.id] || [];
+      const hasChildren = children.length > 0;
+      const indent = depth * 16;
+      let html = `
+        <div class="wiki-list-item wiki-hierarchy-item" style="padding-left:${12 + indent}px" onclick="loadWikiArticle(${e.id})">
+          ${hasChildren
+            ? `<span class="wiki-hierarchy-toggle" onclick="event.stopPropagation();toggleWikiNode(${e.id})">${collapsed ? '▶' : '▼'}</span>`
+            : `<span class="wiki-hierarchy-spacer"></span>`}
+          <span class="wiki-list-title">${escHtml(e.title)}</span>
+          <span class="wiki-type-badge wiki-type-${e.type.toLowerCase()} wiki-type-badge--sm">${escHtml(e.type)}</span>
+        </div>
+      `;
+      if (hasChildren && !collapsed) {
+        children.forEach(child => { html += renderNode(child, depth + 1); });
+      }
+      return html;
+    }
+    el.innerHTML = roots.map(e => renderNode(e, 0)).join('');
 
   } else if (view === 'alpha') {
     const sorted = [...entries].sort((a, b) => a.title.localeCompare(b.title, 'de'));
@@ -1613,7 +1643,7 @@ function wikiListItemHtml(e, showBadge) {
 
 function setWikiView(view) {
   state.ui.wikiView = view;
-  ['recent', 'alpha', 'type'].forEach(v => {
+  ['hierarchy', 'alpha', 'type'].forEach(v => {
     const btn = document.getElementById(`wiki-view-${v}`);
     if (btn) btn.classList.toggle('active', v === view);
   });
@@ -1625,6 +1655,15 @@ function toggleWikiTypeGroup(type) {
     state.ui.wikiCollapsedTypes.delete(type);
   } else {
     state.ui.wikiCollapsedTypes.add(type);
+  }
+  applyWikiFilter();
+}
+
+function toggleWikiNode(id) {
+  if (state.ui.wikiCollapsedNodes.has(id)) {
+    state.ui.wikiCollapsedNodes.delete(id);
+  } else {
+    state.ui.wikiCollapsedNodes.add(id);
   }
   applyWikiFilter();
 }
@@ -1796,10 +1835,28 @@ function renderWikiArticle(entry) {
   const content = document.getElementById('wiki-article-content');
   if (!panel || !content) return;
 
-  const isOwner          = state.auth.loggedIn && entry.createdByUserId === state.auth.userId;
-  const isAdmin          = state.auth.isAdmin;
-  const canEdit          = state.auth.loggedIn;
+  const isOwner           = state.auth.loggedIn && entry.createdByUserId === state.auth.userId;
+  const isAdmin           = state.auth.isAdmin;
+  const canEdit           = state.auth.loggedIn;
   const canManageSpoilers = isOwner || isAdmin;
+
+  const breadcrumbHtml = entry.parentId
+    ? `<div class="wiki-breadcrumb"><a class="wiki-breadcrumb-link" onclick="loadWikiArticle(${entry.parentId})">← ${escHtml(entry.parentTitle)}</a></div>`
+    : '';
+
+  const childrenHtml = (entry.children && entry.children.length > 0)
+    ? `<div class="wiki-linked-section">
+        <h4>Unterseiten</h4>
+        <div class="wiki-children-list">
+          ${entry.children.map(c => `
+            <a class="wiki-linked-item" href="#" onclick="loadWikiArticle(${c.id});return false">
+              <span class="wiki-type-badge wiki-type-${c.type.toLowerCase()} wiki-type-badge--sm">${escHtml(c.type)}</span>
+              ${escHtml(c.title)}
+            </a>
+          `).join('')}
+        </div>
+      </div>`
+    : '';
 
   const imagesHtml = (entry.images || []).map(img => `
     <figure class="wiki-img-figure">
@@ -1825,6 +1882,7 @@ function renderWikiArticle(entry) {
     : '';
 
   content.innerHTML = `
+    ${breadcrumbHtml}
     <div class="wiki-article-header">
       <span class="wiki-type-badge wiki-type-${entry.type.toLowerCase()}">${escHtml(entry.type)}</span>
       <h2 class="wiki-article-title">${escHtml(entry.title)}</h2>
@@ -1850,6 +1908,7 @@ function renderWikiArticle(entry) {
       <h4>Verknüpfte Artikel</h4>
       <div id="wiki-linked-entries-${entry.id}">Lade…</div>
     </div>
+    ${childrenHtml}
     <div class="wiki-article-meta">Erstellt von <strong>${escHtml(entry.createdByUsername)}</strong></div>
   `;
 
@@ -1996,6 +2055,7 @@ function openWikiEditor(entryId) {
   state.ui.wikiEditId = entryId;
   state.ui.wikiPendingImages = [];
   state.ui.wikiExistingImages = [];
+  clearWikiParent();
 
   const panel       = document.getElementById('wiki-editor-panel');
   const titleEl     = document.getElementById('wiki-editor-title');
@@ -2023,6 +2083,9 @@ function openWikiEditor(entryId) {
         id: img.id, caption: img.caption || '', sortOrder: img.sortOrder
       }));
       if (spoilerBtn) spoilerBtn.style.display = entry.canReadSpoilers ? '' : 'none';
+      if (entry.parentId) {
+        selectWikiParent(entry.parentId, entry.parentTitle);
+      }
       renderWikiImagePreviews();
     }).catch(e => alert('Fehler: ' + e.message));
   } else {
@@ -2049,6 +2112,63 @@ function closeWikiEditor() {
   state.ui.wikiExistingImages = [];
 }
 
+function clearWikiParent() {
+  state.ui.wikiEditParentId = null;
+  const idInput = document.getElementById('wiki-ed-parent-id');
+  const textInput = document.getElementById('wiki-ed-parent-input');
+  const dropdown = document.getElementById('wiki-parent-dropdown');
+  const selected = document.getElementById('wiki-parent-selected');
+  if (idInput) idInput.value = '';
+  if (textInput) textInput.value = '';
+  if (dropdown) dropdown.style.display = 'none';
+  if (selected) selected.style.display = 'none';
+}
+
+function selectWikiParent(id, title) {
+  state.ui.wikiEditParentId = id;
+  const idInput = document.getElementById('wiki-ed-parent-id');
+  const textInput = document.getElementById('wiki-ed-parent-input');
+  const dropdown = document.getElementById('wiki-parent-dropdown');
+  const selected = document.getElementById('wiki-parent-selected');
+  const label    = document.getElementById('wiki-parent-selected-label');
+  if (idInput) idInput.value = id;
+  if (textInput) textInput.value = '';
+  if (dropdown) dropdown.style.display = 'none';
+  if (label) label.textContent = title;
+  if (selected) selected.style.display = '';
+}
+
+function onWikiParentSearch(value) {
+  const dropdown = document.getElementById('wiki-parent-dropdown');
+  if (!dropdown) return;
+  const worldIdEl = document.getElementById('wiki-ed-world');
+  const worldId   = worldIdEl ? parseInt(worldIdEl.value) : null;
+  const selfId    = state.ui.wikiEditId;
+  const q = value.trim().toLowerCase();
+  if (!q) { dropdown.style.display = 'none'; return; }
+
+  const matches = state.wikiAllEntries
+    .filter(e => e.worldId === worldId && e.id !== selfId && e.title.toLowerCase().includes(q))
+    .slice(0, 10);
+
+  if (!matches.length) { dropdown.style.display = 'none'; return; }
+
+  dropdown.innerHTML = matches.map(e => {
+    const safeTitle = escHtml(e.title);
+    return `
+      <div class="wiki-parent-option" data-id="${e.id}" data-title="${safeTitle}" onclick="selectWikiParentFromEl(this)">
+        <span class="wiki-type-badge wiki-type-${e.type.toLowerCase()} wiki-type-badge--sm">${escHtml(e.type)}</span>
+        ${safeTitle}
+      </div>
+    `;
+  }).join('');
+  dropdown.style.display = '';
+}
+
+function selectWikiParentFromEl(el) {
+  selectWikiParent(parseInt(el.dataset.id), el.dataset.title);
+}
+
 async function saveWikiEntry() {
   const titleInput  = document.getElementById('wiki-ed-title');
   const typeSelect  = document.getElementById('wiki-ed-type');
@@ -2058,11 +2178,13 @@ async function saveWikiEntry() {
   const title = titleInput.value.trim();
   if (!title) { showWikiEditorError('Titel ist erforderlich.'); return; }
 
+  const parentIdVal = document.getElementById('wiki-ed-parent-id').value;
   const payload = {
     title,
     type:    typeSelect.value,
     worldId: parseInt(worldSelect.value),
-    body:    bodyArea.value
+    body:    bodyArea.value,
+    parentId: parentIdVal ? parseInt(parentIdVal) : null
   };
 
   try {

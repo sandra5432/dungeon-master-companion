@@ -1998,6 +1998,71 @@ nav {
 .wiki-filter-opt:hover { color: var(--t1); }
 .wiki-filter-opt input[type="checkbox"] { cursor: pointer; accent-color: var(--gold); }
 
+/* ── Parent search (editor) ── */
+.wiki-parent-search-wrap { position: relative; }
+.wiki-parent-search-wrap input[type="text"] {
+  width: 100%;
+  background: var(--inp);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--t1);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition);
+}
+.wiki-parent-search-wrap input[type="text"]:focus { border-color: var(--gold); }
+.wiki-parent-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  background: var(--bg-c);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-sm);
+  z-index: 100;
+  box-shadow: var(--sh);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.wiki-parent-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  color: var(--t1);
+  cursor: pointer;
+  transition: background .12s;
+}
+.wiki-parent-option:hover { background: var(--bg-ch); }
+.wiki-parent-selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--tag-bg);
+  border: 1px solid var(--tag-bd);
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  color: var(--t1);
+  margin-top: 4px;
+}
+.wiki-parent-clear {
+  background: none;
+  border: none;
+  color: var(--t3);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 2px;
+  line-height: 1;
+  margin-left: auto;
+}
+.wiki-parent-clear:hover { color: var(--t1); }
+
 .wiki-view-toggle {
   display: flex;
   border-bottom: 1px solid var(--bd);
@@ -2045,6 +2110,19 @@ nav {
 .wiki-type-group-entries .wiki-list-item {
   padding-left: 24px;
 }
+
+/* ── Hierarchy view ── */
+.wiki-hierarchy-item { align-items: center; }
+.wiki-hierarchy-toggle,
+.wiki-hierarchy-spacer {
+  font-size: 0.55rem;
+  color: var(--t3);
+  width: 12px;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+}
+.wiki-hierarchy-spacer { cursor: default; }
 
 .wiki-new-entry-wrap {
   padding: 8px 10px;
@@ -2180,6 +2258,16 @@ nav {
   padding: 24px 24px 20px;
   z-index: 20;
 }
+
+.wiki-breadcrumb { margin-bottom: 10px; }
+.wiki-breadcrumb-link {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--fs-grn);
+  color: var(--t3);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+.wiki-breadcrumb-link:hover { color: var(--gold); }
 
 .wiki-panel-close {
   position: absolute;

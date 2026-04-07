@@ -343,7 +343,12 @@ nav {
 #page-timeline.active {
   display: grid;
   grid-template-columns: 220px 1fr 220px;
+  grid-template-rows: auto 1fr;
   min-height: calc(100vh - 64px);
+}
+
+#tl-world-tabs {
+  grid-column: 1 / -1;
 }
 
 /* ══════════════════════════════════════════════

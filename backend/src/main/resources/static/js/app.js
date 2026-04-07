@@ -101,6 +101,7 @@ function toggleTheme() {
 }
 
 function showPage(p) {
+  if (p === 'config' && !state.auth.isAdmin) return;
   state.ui.currentPage = p;
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
@@ -112,6 +113,7 @@ function showPage(p) {
   if (p === 'items') renderItems();
   if (p === 'users') renderUsers();
   if (p === 'wiki') initWikiPage();
+  if (p === 'config') renderConfigWorlds();
 }
 
 /* ══════════════════════════════════════
@@ -163,6 +165,34 @@ function renderWorldSelector() {
   }).join('');
 }
 
+function renderConfigWorlds() {
+  const el = document.getElementById('config-worlds-body');
+  if (!el) return;
+  if (!state.worlds.length) {
+    el.innerHTML = '<tr><td colspan="3" style="text-align:center;font-style:italic;color:var(--t3);padding:16px">Keine Welten vorhanden</td></tr>';
+    return;
+  }
+  el.innerHTML = state.worlds.map(w => `
+    <tr>
+      <td>${escHtml(w.name)}</td>
+      <td>${escHtml(w.description || '—')}</td>
+      <td style="white-space:nowrap">
+        <button class="act-btn" onclick="openEditWorldModal(${w.id},event)" title="Bearbeiten">✎</button>
+        <button class="act-btn del" onclick="openDeleteWorldConfirm(${w.id},event)" title="Löschen">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderTimelineWorldTabs() {
+  const el = document.getElementById('tl-world-tabs');
+  if (!el) return;
+  el.innerHTML = state.worlds.map(w => {
+    const active = w.id === state.ui.activeWorldId ? ' active' : '';
+    return `<button class="wiki-world-tab${active}" onclick="selectWorld(${w.id})">${escHtml(w.name)}</button>`;
+  }).join('');
+}
+
 async function selectWorld(worldId) {
   state.ui.activeWorldId = worldId;
   localStorage.setItem('activeWorldId', worldId);
@@ -183,7 +213,7 @@ async function selectWorld(worldId) {
     console.error('Failed to load world events', e);
   }
   renderTimeline();
-  renderWorldSelector();
+  renderTimelineWorldTabs();
 }
 
 /* ══════════════════════════════════════
@@ -965,7 +995,8 @@ async function _saveEntry() {
         if (!state.ui.activeWorldId) await selectWorld(created.id);
       }
       closeModal();
-      renderWorldSelector();
+      renderTimelineWorldTabs();
+      renderConfigWorlds();
     } catch (e) { alert('Fehler: ' + e.message); }
     return;
   }
@@ -982,7 +1013,8 @@ async function _saveEntry() {
         if (state.ui.activeWorldId) await selectWorld(state.ui.activeWorldId);
       }
       closeModal();
-      renderWorldSelector();
+      renderTimelineWorldTabs();
+      renderConfigWorlds();
       renderTimeline();
     } catch (e) { alert('Fehler: ' + e.message); }
     return;
@@ -1297,7 +1329,7 @@ async function init() {
       itemTagCounts = tagCounts || [];
     }
 
-    renderWorldSelector();
+    renderTimelineWorldTabs();
     renderTimeline();
     renderItems();
     renderItemTagFilter();
@@ -1307,7 +1339,7 @@ async function init() {
     if (state.auth.mustChangePassword) showPasswordChangeOverlay();
   } catch (e) {
     console.error('Init failed', e);
-    renderWorldSelector();
+    renderTimelineWorldTabs();
     renderTimeline();
     renderItems();
     renderItemTagFilter();
@@ -1881,8 +1913,17 @@ function renderWikiArticle(entry) {
       </details>`
     : '';
 
+  const parentCellHtml = entry.parentId
+    ? `<a class="wiki-info-link wiki-type-${(entry.parentType || 'other').toLowerCase()}" href="#" onclick="loadWikiArticle(${entry.parentId});return false">${escHtml(entry.parentTitle)}</a>`
+    : `<span class="wiki-info-empty">—</span>`;
+
+  const childrenCellHtml = (entry.children && entry.children.length > 0)
+    ? entry.children.map(c =>
+        `<a class="wiki-info-link wiki-type-${c.type.toLowerCase()}" href="#" onclick="loadWikiArticle(${c.id});return false">${escHtml(c.title)}</a>`
+      ).join('')
+    : `<span class="wiki-info-empty">—</span>`;
+
   content.innerHTML = `
-    ${breadcrumbHtml}
     <div class="wiki-article-header">
       <span class="wiki-type-badge wiki-type-${entry.type.toLowerCase()}">${escHtml(entry.type)}</span>
       <h2 class="wiki-article-title">${escHtml(entry.title)}</h2>
@@ -1900,15 +1941,24 @@ function renderWikiArticle(entry) {
       <div style="clear:both"></div>
     </div>
     ${spoilerSection}
-    <div class="wiki-linked-section">
-      <h4>Verknüpfte Events</h4>
-      <div id="wiki-linked-events-${entry.id}">Lade…</div>
-    </div>
-    <div class="wiki-linked-section">
-      <h4>Verknüpfte Artikel</h4>
-      <div id="wiki-linked-entries-${entry.id}">Lade…</div>
-    </div>
-    ${childrenHtml}
+    <table class="wiki-info-table">
+      <tr>
+        <th>Elterneintrag</th>
+        <td>${parentCellHtml}</td>
+      </tr>
+      <tr>
+        <th>Unterseiten</th>
+        <td>${childrenCellHtml}</td>
+      </tr>
+      <tr>
+        <th>Verknüpfte Seiten</th>
+        <td><div id="wiki-linked-entries-${entry.id}">Lade…</div></td>
+      </tr>
+      <tr>
+        <th>Verknüpfte Events</th>
+        <td><div id="wiki-linked-events-${entry.id}">Lade…</div></td>
+      </tr>
+    </table>
     <div class="wiki-article-meta">Erstellt von <strong>${escHtml(entry.createdByUsername)}</strong></div>
   `;
 
@@ -1917,18 +1967,18 @@ function renderWikiArticle(entry) {
   api('GET', `/wiki/${entry.id}/linked-events`).then(events => {
     const el = document.getElementById(`wiki-linked-events-${entry.id}`);
     if (!el) return;
-    if (!events.length) { el.innerHTML = '<em>Keine.</em>'; return; }
+    if (!events.length) { el.innerHTML = '<span class="wiki-info-empty">—</span>'; return; }
     el.innerHTML = events.map(e =>
-      `<a class="wiki-linked-item" href="#" onclick="openEventFromWiki(${e.id},${e.worldId});return false">${escHtml(e.title)}</a>`
+      `<a class="wiki-info-link" href="#" onclick="openEventFromWiki(${e.id},${e.worldId});return false">${escHtml(e.title)}</a>`
     ).join('');
   }).catch(() => {});
 
   api('GET', `/wiki/${entry.id}/linked-entries`).then(entries => {
     const el = document.getElementById(`wiki-linked-entries-${entry.id}`);
     if (!el) return;
-    if (!entries.length) { el.innerHTML = '<em>Keine.</em>'; return; }
+    if (!entries.length) { el.innerHTML = '<span class="wiki-info-empty">—</span>'; return; }
     el.innerHTML = entries.map(e =>
-      `<a class="wiki-linked-item" href="#" onclick="loadWikiArticle(${e.id});return false">${escHtml(e.title)}</a>`
+      `<a class="wiki-info-link wiki-type-${(e.type || 'other').toLowerCase()}" href="#" onclick="loadWikiArticle(${e.id});return false">${escHtml(e.title)}</a>`
     ).join('');
   }).catch(() => {});
 
@@ -2114,28 +2164,28 @@ function closeWikiEditor() {
 
 function clearWikiParent() {
   state.ui.wikiEditParentId = null;
-  const idInput = document.getElementById('wiki-ed-parent-id');
+  const idInput   = document.getElementById('wiki-ed-parent-id');
   const textInput = document.getElementById('wiki-ed-parent-input');
-  const dropdown = document.getElementById('wiki-parent-dropdown');
-  const selected = document.getElementById('wiki-parent-selected');
-  if (idInput) idInput.value = '';
-  if (textInput) textInput.value = '';
-  if (dropdown) dropdown.style.display = 'none';
-  if (selected) selected.style.display = 'none';
+  const dropdown  = document.getElementById('wiki-parent-dropdown');
+  const selected  = document.getElementById('wiki-parent-selected');
+  if (idInput)   idInput.value = '';
+  if (textInput) { textInput.value = ''; textInput.style.display = ''; textInput.focus(); }
+  if (dropdown)  dropdown.style.display = 'none';
+  if (selected)  selected.style.display = 'none';
 }
 
 function selectWikiParent(id, title) {
   state.ui.wikiEditParentId = id;
-  const idInput = document.getElementById('wiki-ed-parent-id');
+  const idInput   = document.getElementById('wiki-ed-parent-id');
   const textInput = document.getElementById('wiki-ed-parent-input');
-  const dropdown = document.getElementById('wiki-parent-dropdown');
-  const selected = document.getElementById('wiki-parent-selected');
-  const label    = document.getElementById('wiki-parent-selected-label');
-  if (idInput) idInput.value = id;
-  if (textInput) textInput.value = '';
-  if (dropdown) dropdown.style.display = 'none';
-  if (label) label.textContent = title;
-  if (selected) selected.style.display = '';
+  const dropdown  = document.getElementById('wiki-parent-dropdown');
+  const selected  = document.getElementById('wiki-parent-selected');
+  const label     = document.getElementById('wiki-parent-selected-label');
+  if (idInput)   idInput.value = id;
+  if (textInput) { textInput.value = ''; textInput.style.display = 'none'; }
+  if (dropdown)  dropdown.style.display = 'none';
+  if (label)     label.textContent = title;
+  if (selected)  selected.style.display = '';
 }
 
 function onWikiParentSearch(value) {

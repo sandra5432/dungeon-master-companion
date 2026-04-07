@@ -37,6 +37,7 @@
     <span class="user-action-only" id="nav-user" style="display:none;font-family:'Inter',system-ui,sans-serif;font-size:.9rem;letter-spacing:.06em;color:var(--gold);text-transform:uppercase"></span>
     <button class="btn btn-sm user-action-only" id="btn-logout" onclick="doLogout()" style="display:none">Abmelden</button>
     <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
+    <button class="btn btn-sm admin-only" id="btn-config" onclick="showPage('config')" style="display:none" title="Weltkonfiguration">🌐</button>
     <button class="btn btn-sm admin-only" id="btn-gear" onclick="showPage('users')" style="display:none" title="Nutzerverwaltung">⚙</button>
   </div>
 </nav>
@@ -44,8 +45,6 @@
 <!-- ══ TIMELINE PAGE ══ -->
 <div class="page" id="page-timeline">
   <aside class="sidebar sidebar-left">
-    <div class="sb-title">Welten <button class="admin-only" onclick="openAddWorldModal()" style="display:none">+</button></div>
-    <div id="world-selector" style="margin-bottom:16px"></div>
     <div class="sb-title">Typ <button onclick="clearTypes()">Alle</button></div>
     <div class="tag-filter-list" id="type-filter-list"></div>
     <div style="margin-top:16px">
@@ -65,12 +64,9 @@
     </div>
   </aside>
 
+  <div class="wiki-world-tabs" id="tl-world-tabs"></div>
+
   <div class="tl-center">
-    <div class="page-hdr">
-      <h1 id="page-title">Aufzeichnung</h1>
-      <p>Ereignisse der bekannten Welt</p>
-      <div class="divider"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
-    </div>
     <p class="tl-hint user-action-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
     <div class="timeline" id="timeline"></div>
   </div>
@@ -213,6 +209,28 @@
         <th>Aktionen</th>
       </tr></thead>
       <tbody id="users-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ CONFIG PAGE ══ -->
+<div class="page" id="page-config">
+  <div class="pg-hdr">
+    <h1>Weltkonfiguration</h1>
+    <p>Welten anlegen, bearbeiten und löschen</p>
+    <div class="divider" style="margin:10px auto 0"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+  </div>
+  <div style="max-width:800px;margin:0 auto;padding:0 16px">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openAddWorldModal()">+ Welt hinzufügen</button>
+    </div>
+    <table class="it" id="config-worlds-table">
+      <thead><tr>
+        <th>Name</th>
+        <th>Beschreibung</th>
+        <th>Aktionen</th>
+      </tr></thead>
+      <tbody id="config-worlds-body"></tbody>
     </table>
   </div>
 </div>

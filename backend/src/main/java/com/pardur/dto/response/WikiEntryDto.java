@@ -48,12 +48,15 @@ public class WikiEntryDto {
 
     private Integer parentId;
     private String parentTitle;
+    private String parentType;
     private List<WikiChildDto> children = new ArrayList<>();
 
     public Integer getParentId() { return parentId; }
     public void setParentId(Integer parentId) { this.parentId = parentId; }
     public String getParentTitle() { return parentTitle; }
     public void setParentTitle(String parentTitle) { this.parentTitle = parentTitle; }
+    public String getParentType() { return parentType; }
+    public void setParentType(String parentType) { this.parentType = parentType; }
     public List<WikiChildDto> getChildren() { return children; }
     public void setChildren(List<WikiChildDto> children) { this.children = children; }
 }

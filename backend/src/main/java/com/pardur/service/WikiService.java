@@ -339,6 +339,7 @@ public class WikiService {
         if (e.getParent() != null) {
             dto.setParentId(e.getParent().getId());
             dto.setParentTitle(e.getParent().getTitle());
+            dto.setParentType(e.getParent().getType().name());
         }
         dto.setChildren(entryRepository.findByParentId(e.getId()).stream()
                 .map(c -> new WikiChildDto(c.getId(), c.getTitle(), c.getType().name()))

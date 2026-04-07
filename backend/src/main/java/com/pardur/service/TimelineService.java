@@ -135,7 +135,7 @@ public class TimelineService {
         BigDecimal newOrder;
 
         if (req.getAfterEventId() == null) {
-            Optional<TimelineEvent> first = eventRepository.findFirstByWorldIdOrderBySequenceOrderAsc(worldId);
+            Optional<TimelineEvent> first = eventRepository.findFirstByWorldIdAndSequenceOrderIsNotNullOrderBySequenceOrderAsc(worldId);
             if (first.isEmpty()) {
                 newOrder = new BigDecimal("1000");
             } else {

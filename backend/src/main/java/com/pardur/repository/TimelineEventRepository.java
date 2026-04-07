@@ -18,7 +18,7 @@ public interface TimelineEventRepository extends JpaRepository<TimelineEvent, In
 
     Optional<TimelineEvent> findTopByWorldIdAndSequenceOrderGreaterThanOrderBySequenceOrderAsc(Integer worldId, BigDecimal seq);
 
-    Optional<TimelineEvent> findFirstByWorldIdOrderBySequenceOrderAsc(Integer worldId);
+    Optional<TimelineEvent> findFirstByWorldIdAndSequenceOrderIsNotNullOrderBySequenceOrderAsc(Integer worldId);
 
     @Query("SELECT e FROM TimelineEvent e WHERE LOWER(e.title) LIKE LOWER(CONCAT('%', :title, '%')) OR LOWER(e.description) LIKE LOWER(CONCAT('%', :title, '%'))")
     List<TimelineEvent> findByTitleOrDescriptionContainingIgnoreCase(@Param("title") String title);

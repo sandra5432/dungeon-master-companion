@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astral Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=22">
+<link rel="stylesheet" href="/css/app.css?v=23">
 <script src="/js/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -49,12 +49,12 @@
     <div class="sb-title">Typ <button onclick="clearTypes()">Alle</button></div>
     <div class="tag-filter-list" id="type-filter-list"></div>
     <div style="margin-top:16px">
-      <div class="sb-title">Tags <button onclick="clearTags()">Alle</button></div>
-      <div class="tag-filter-list" id="tag-list"></div>
+      <div class="sb-title"><span>Tags <button class="sb-collapse-btn" id="tags-toggle" onclick="toggleTagsCollapsed()">▲</button></span><button onclick="clearTags()">Alle</button></div>
+      <div class="tag-filter-list" id="tag-list" style="display:none"></div>
     </div>
     <div style="margin-top:16px">
-      <div class="sb-title">Ersteller <button onclick="clearCreators()">Alle</button></div>
-      <div id="creator-list"></div>
+      <div class="sb-title"><span>Charaktere <button class="sb-collapse-btn" id="chars-toggle" onclick="toggleCharsCollapsed()">▲</button></span><button onclick="clearChars()">Alle</button></div>
+      <div class="tag-filter-list" id="char-list" style="display:none"></div>
     </div>
     <div class="compact-wrap">
       <span class="compact-lbl">Ansicht</span>

@@ -349,6 +349,11 @@ nav {
 
 #tl-world-tabs {
   grid-column: 1 / -1;
+  border-bottom: 1px solid var(--bd);
+}
+
+#page-timeline.active {
+  border-bottom: 1px solid var(--bd-s);
 }
 
 /* ══════════════════════════════════════════════
@@ -364,8 +369,8 @@ nav {
   transition: background var(--transition);
 }
 
-.sidebar-left  { border-right: 1px solid var(--bd); }
-.sidebar-right { border-left:  1px solid var(--bd);  background: var(--bg-un); transition: border-color var(--transition), background var(--transition); }
+.sidebar-left  { border-right: 1px solid var(--bd-s); }
+.sidebar-right { border-left:  1px solid var(--bd-s); background: var(--bg-un); transition: border-color var(--transition), background var(--transition); }
 
 .sidebar-right.unplace-target {
   border-left-color: var(--gold);
@@ -410,6 +415,12 @@ nav {
 
 .sb-title button:hover { color: var(--gold); }
 
+.sb-collapse-btn {
+  font-size: .6rem !important;
+  opacity: .55;
+  padding: 0 3px !important;
+  vertical-align: middle;
+}
 
 /* ── Tag filter buttons ── */
 .tag-filter-list {
@@ -1421,7 +1432,9 @@ nav {
 /* ══════════════════════════════════════════════
    MARKETPLACE / ITEMS PAGE
 ══════════════════════════════════════════════ */
-#page-items {
+#page-items,
+#page-users,
+#page-config {
   max-width: 1180px;
   margin: 0 auto;
   padding: 32px 28px 80px;
@@ -1859,7 +1872,7 @@ nav {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 2px solid var(--bd-s);
+  border-right: 1px solid var(--bd-s);
   background: var(--bg-s);
 }
 

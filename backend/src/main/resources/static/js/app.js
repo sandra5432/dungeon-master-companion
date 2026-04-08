@@ -10,8 +10,10 @@ const state = {
   ui: {
     activeWorldId: null,
     activeTags: new Set(),
-    activeCreators: new Set(),
+    activeChars: new Set(),
     activeTypes: new Set(),
+    tagsCollapsed: true,
+    charsCollapsed: true,
     compact: false,
     currentPage: 'timeline',
     detailId: null,
@@ -199,7 +201,7 @@ async function selectWorld(worldId) {
   state.events  = [];
   state.undated = [];
   state.ui.activeTags    = new Set();
-  state.ui.activeCreators = new Set();
+  state.ui.activeChars   = new Set();
   state.ui.activeTypes   = new Set();
 
   try {
@@ -221,7 +223,7 @@ async function selectWorld(worldId) {
 ══════════════════════════════════════ */
 function isVisible(ev) {
   if (state.ui.activeTags.size > 0 && !ev.tags.some(t => state.ui.activeTags.has(t))) return false;
-  if (state.ui.activeCreators.size > 0 && !state.ui.activeCreators.has(ev.createdByUserId)) return false;
+  if (state.ui.activeChars.size > 0 && !(ev.characters || []).some(c => state.ui.activeChars.has(c))) return false;
   if (state.ui.activeTypes.size > 0 && !state.ui.activeTypes.has(ev.type)) return false;
   return true;
 }
@@ -327,7 +329,7 @@ function renderTimeline() {
   if (!state.ui.activeWorldId) {
     tl.innerHTML = '<div style="text-align:center;padding:40px;font-style:italic;color:var(--t3)">Keine Welt ausgewählt.</div>';
     renderTagList();
-    renderCreatorList();
+    renderCharList();
     renderUndated();
     return;
   }
@@ -432,7 +434,7 @@ function renderTimeline() {
 
   renderTagList();
   renderTypeFilter();
-  renderCreatorList();
+  renderCharList();
   updatePageTitle();
   renderUndated();
 
@@ -510,34 +512,40 @@ function wireUndatedDropZone() {
    FILTERS
 ══════════════════════════════════════ */
 function renderTagList() {
-  const counts = allTagCounts();
-  document.getElementById('tag-list').innerHTML =
-    Object.entries(counts).sort((a, b) => b[1] - a[1])
-    .map(([t, c]) => `<button class="tag-fb${state.ui.activeTags.has(t) ? ' on' : ''}" onclick="toggleTag('${escHtml(t)}')">${escHtml(t)}<span class="tag-count">${c}</span></button>`)
-    .join('');
+  const togBtn = document.getElementById('tags-toggle');
+  const listEl = document.getElementById('tag-list');
+  if (togBtn) togBtn.textContent = state.ui.tagsCollapsed ? '▲' : '▾';
+  if (!listEl) return;
+  listEl.style.display = state.ui.tagsCollapsed ? 'none' : '';
+  if (!state.ui.tagsCollapsed) {
+    const counts = allTagCounts();
+    listEl.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1])
+      .map(([t, c]) => `<button class="tag-fb${state.ui.activeTags.has(t) ? ' on' : ''}" onclick="toggleTag('${escHtml(t)}')">${escHtml(t)}<span class="tag-count">${c}</span></button>`)
+      .join('');
+  }
 }
 
-function renderCreatorList() {
-  const seen = new Map(); // userId → {username, colorHex}
-  state.events.forEach(e => {
-    if (e.createdByUserId != null && !seen.has(e.createdByUserId)) {
-      seen.set(e.createdByUserId, { username: e.creatorUsername || '?', colorHex: e.creatorColorHex || '#888888' });
-    }
-  });
-  const el = document.getElementById('creator-list');
-  if (!el) return;
-  el.innerHTML = [...seen.entries()].map(([uid, cr]) =>
-    `<button class="creator-fb${state.ui.activeCreators.has(uid) ? ' on' : ''}" onclick="toggleCreator(${uid})">
-      <span class="creator-dot" style="background:${escHtml(cr.colorHex)}"></span>
-      <span class="creator-nm">${escHtml(cr.username)}</span>
-    </button>`
-  ).join('');
+function renderCharList() {
+  const togBtn = document.getElementById('chars-toggle');
+  const listEl = document.getElementById('char-list');
+  if (togBtn) togBtn.textContent = state.ui.charsCollapsed ? '▲' : '▾';
+  if (!listEl) return;
+  listEl.style.display = state.ui.charsCollapsed ? 'none' : '';
+  if (!state.ui.charsCollapsed) {
+    const counts = new Map();
+    state.events.forEach(ev => (ev.characters || []).forEach(c => counts.set(c, (counts.get(c) || 0) + 1)));
+    listEl.innerHTML = [...counts.entries()].sort((a, b) => b[1] - a[1])
+      .map(([c, n]) => `<button class="tag-fb${state.ui.activeChars.has(c) ? ' on' : ''}" onclick="toggleChar('${escHtml(c)}')">${escHtml(c)}<span class="tag-count">${n}</span></button>`)
+      .join('');
+  }
 }
 
-function toggleTag(t)     { state.ui.activeTags.has(t) ? state.ui.activeTags.delete(t) : state.ui.activeTags.add(t); renderTimeline(); }
-function clearTags()      { state.ui.activeTags.clear(); renderTimeline(); }
-function toggleCreator(uid) { state.ui.activeCreators.has(uid) ? state.ui.activeCreators.delete(uid) : state.ui.activeCreators.add(uid); renderTimeline(); }
-function clearCreators()   { state.ui.activeCreators.clear(); renderTimeline(); }
+function toggleTag(t)           { state.ui.activeTags.has(t) ? state.ui.activeTags.delete(t) : state.ui.activeTags.add(t); renderTimeline(); }
+function clearTags()            { state.ui.activeTags.clear(); renderTimeline(); }
+function toggleTagsCollapsed()  { state.ui.tagsCollapsed = !state.ui.tagsCollapsed; renderTagList(); }
+function toggleChar(c)          { state.ui.activeChars.has(c) ? state.ui.activeChars.delete(c) : state.ui.activeChars.add(c); renderTimeline(); }
+function clearChars()           { state.ui.activeChars.clear(); renderTimeline(); }
+function toggleCharsCollapsed() { state.ui.charsCollapsed = !state.ui.charsCollapsed; renderCharList(); }
 
 function toggleCompact() {
   state.ui.compact = !state.ui.compact;
@@ -678,8 +686,10 @@ function populateDetail(id, source) {
   const charsEl = document.getElementById('dp-chars');
   if (charsEl) {
     if (ev.characters && ev.characters.length > 0) {
-      charsEl.innerHTML = '<div style="font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Charaktere</div>' +
-        ev.characters.map(c => '<span class="detail-tag" style="color:var(--gold2);border-color:rgba(200,168,75,.38);background:rgba(200,168,75,.10)">' + escHtml(c) + '</span>').join(' ');
+      charsEl.innerHTML = '<div style="font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:5px">Charaktere</div>' +
+        '<div class="detail-tags" style="margin-bottom:0">' +
+        ev.characters.map(c => '<span class="detail-tag" style="color:var(--gold2);border-color:rgba(200,168,75,.38);background:rgba(200,168,75,.10)">' + escHtml(c) + '</span>').join('') +
+        '</div>';
       charsEl.style.display = '';
     } else {
       charsEl.style.display = 'none';

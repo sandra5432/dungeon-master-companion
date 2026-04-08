@@ -29,3 +29,6 @@ logs/
 # Node (legacy prototype)
 item-management-list/node_modules/
 item-management-list/.env
+
+# Brainstorm / visual companion artefacts
+.superpowers/

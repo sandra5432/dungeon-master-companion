@@ -1,4 +1,4 @@
-# Wiki Parent Hierarchy — Design Spec
+w# Wiki Parent Hierarchy — Design Spec
 **Date:** 2026-04-06  
 **Status:** Approved
 

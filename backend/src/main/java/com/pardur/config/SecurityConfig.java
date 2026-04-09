@@ -74,6 +74,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,    "/api/worlds/*/map/pois/**").hasRole("USER")
                 .requestMatchers(HttpMethod.DELETE, "/api/worlds/*/map/pois/**").hasRole("USER")
                 .requestMatchers(HttpMethod.POST,   "/api/worlds/*/map/background").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH,  "/api/worlds/*/map/background/scale").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/worlds/*/map/background").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

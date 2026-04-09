@@ -435,20 +435,33 @@
 <div class="page" id="page-map">
   <aside class="map-sidebar" id="map-sidebar">
     <div class="map-sb-section">Werkzeuge</div>
-    <button class="map-tool active" id="map-tool-select" onclick="setMapTool('select')">
-      <span class="map-tool-sym">↖</span> Auswählen
+    <button class="map-tool active" id="map-tool-view" onclick="setMapTool('view')">
+      <span class="map-tool-sym">🔍</span> Ansicht
+    </button>
+    <button class="map-tool user-action-only" id="map-tool-move" onclick="setMapTool('move')" style="display:none">
+      <span class="map-tool-sym">✋</span> Verschieben
+    </button>
+    <button class="map-tool user-action-only" id="map-tool-edit" onclick="setMapTool('edit')" style="display:none">
+      <span class="map-tool-sym">✏</span> Bearbeiten
     </button>
     <button class="map-tool" id="map-tool-ruler" onclick="setMapTool('ruler')">
       <span class="map-tool-sym">📏</span> Messen
     </button>
-    <hr class="map-sb-divider">
-    <div class="map-sb-section">POI platzieren</div>
-    <div id="map-poi-type-list"></div>
     <div class="map-admin-area admin-only" style="display:none">
-      <div class="map-admin-lbl">⚙ Admin</div>
+      <hr class="map-sb-divider">
+      <div class="map-sb-section">Karte</div>
       <button class="map-admin-btn" onclick="openMapBgUpload()">🖼 Hintergrund</button>
+      <div class="map-scale-ctrl">
+        <div class="map-scale-lbl">Bildgröße: <span id="map-bg-scale-val">100%</span></div>
+        <input type="range" id="map-bg-scale" class="map-scale-slider"
+               min="0.3" max="3" step="0.05" value="1"
+               oninput="setMapBgScale(parseFloat(this.value))">
+      </div>
       <button class="map-admin-btn" onclick="openPoiTypeManager(null)">＋ POI-Typ</button>
     </div>
+    <hr class="map-sb-divider">
+    <div class="map-sb-section">Marker</div>
+    <div id="map-poi-type-list"></div>
   </aside>
   <div class="map-canvas-wrap" id="map-canvas-wrap">
     <img id="map-bg-img" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">

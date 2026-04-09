@@ -212,6 +212,59 @@ server:
 - Use SLF4J (`private static final Logger log = LoggerFactory.getLogger(Foo.class)`)
 - Log at appropriate levels: DEBUG for internals, INFO for business events, WARN/ERROR for failures
 - Never log passwords, tokens, or PII
+- **Entry/exit logging via AOP** — use a single `@Aspect` component to log method entry (with arguments) and exit (with return value or exception) for all service methods; do not repeat this boilerplate per-method:
+
+```java
+@Aspect
+@Component
+public class ServiceLoggingAspect {
+    private static final Logger log = LoggerFactory.getLogger(ServiceLoggingAspect.class);
+
+    /** Logs entry, exit, and exceptions for every method in the service layer. */
+    @Around("execution(* com.pardur.service.*.*(..))")
+    public Object logServiceCall(ProceedingJoinPoint pjp) throws Throwable {
+        String method = pjp.getSignature().toShortString();
+        log.debug("→ {} args={}", method, Arrays.toString(pjp.getArgs()));
+        try {
+            Object result = pjp.proceed();
+            log.debug("← {} returned={}", method, result);
+            return result;
+        } catch (Exception ex) {
+            log.warn("✗ {} threw {}: {}", method, ex.getClass().getSimpleName(), ex.getMessage());
+            throw ex;
+        }
+    }
+}
+```
+
+- Add `spring-boot-starter-aop` to `pom.xml` to enable AOP support
+- AOP aspect covers all service methods automatically — do not add manual entry/exit log statements inside service methods
+
+### Documentation (Backend)
+- Every public class must have a Javadoc comment describing its responsibility
+- Every public method must have a Javadoc comment: one sentence stating what it does, `@param` for non-obvious parameters, `@return` if non-void and non-obvious, `@throws` for checked exceptions and intentional runtime exceptions
+- Private helpers only need a comment when the logic is non-obvious
+- Keep comments factual and concise — do not restate the signature
+
+```java
+/**
+ * Manages business logic for map POIs: creation, update, deletion, and ownership checks.
+ */
+@Service
+public class MapPoiService {
+
+    /**
+     * Creates a new POI on the given world's map.
+     *
+     * @param worldId  target world; must exist
+     * @param req      validated request containing position and type
+     * @param userId   ID of the authenticated user placing the POI
+     * @return the persisted POI as a DTO
+     * @throws ResourceNotFoundException if the world or POI type does not exist
+     */
+    public MapPoiDto createPoi(Integer worldId, CreateMapPoiRequest req, Integer userId) { ... }
+}
+```
 
 ## Frontend Best Practices
 
@@ -251,6 +304,64 @@ server:
 - Theme variables (`--gold`, `--blue2`, `--bg-s`, `--t3`, etc.) — never hardcode colours in JS
 - CSS class toggles for state: `.active`, `.open`, `.on`, `.compact`, `.dragging`
 - Dark/light theme stored in `localStorage` under key `theme`
+
+### Logging (Frontend)
+- Every public-facing JS function (page initialisation, API calls, event handlers, render functions) must log entry and exit at `console.debug` level
+- Entry log: function name + relevant arguments; exit log: function name + result summary or `'done'`
+- Use a consistent format so logs are easy to filter: `[functionName] → args` / `[functionName] ← result`
+- Log errors at `console.error` with the full error object
+- Never log passwords, session tokens, or PII
+
+```js
+async function loadMapData(worldId) {
+  console.debug('[loadMapData] →', worldId);
+  try {
+    state.map.pois = await api('GET', `/worlds/${worldId}/map/pois`);
+    console.debug('[loadMapData] ← pois loaded:', state.map.pois.length);
+  } catch (e) {
+    console.error('[loadMapData] failed', e);
+  }
+}
+```
+
+### Documentation (Frontend)
+- Every function in `app.js` must have a JSDoc comment: one sentence describing what it does, `@param` for non-obvious parameters, `@returns` if non-void
+- Group-level section banners (the `══` dividers) already separate logical areas — add a one-line description comment after each banner
+- For complex render functions, briefly note what state they read and what DOM element they write to
+
+```js
+/**
+ * Renders the POI type sidebar buttons for the active world.
+ * Reads: state.map.poiTypes, state.auth.loggedIn, state.auth.isAdmin
+ * Writes: #map-poi-type-list
+ */
+function renderPoiTypeSidebar() { ... }
+```
+
+## File Size Guidelines
+
+Keep files focused but avoid over-fragmentation. A file that is slightly over a soft limit is better than splitting prematurely just to hit a number.
+
+### Backend (Java)
+| File type | Soft target | Hard limit | Notes |
+|-----------|-------------|------------|-------|
+| Controller | ≤ 150 lines | 250 lines | Split only if a controller genuinely owns two unrelated resource domains |
+| Service | ≤ 300 lines | 500 lines | Extract a helper service only when it has a clear independent responsibility |
+| Entity | ≤ 100 lines | 150 lines | If an entity grows beyond this, reconsider the domain model, don't just split the file |
+| DTO | ≤ 50 lines | 80 lines | One DTO per file; group related request/response DTOs in the same package |
+
+- Prefer a single, slightly larger cohesive file over two artificially thin ones
+- Do not create a new class just to reduce line count; create one when there is a meaningful abstraction
+
+### Frontend (JS / CSS / HTML)
+| File | Soft target | Hard limit | Notes |
+|------|-------------|------------|-------|
+| `app.js` | — | 5 000 lines | Split into `map.js`, `wiki.js`, etc. only when a section clearly has no shared state with the rest |
+| `app.css` | — | 3 000 lines | Split by feature section only when the file becomes hard to navigate |
+| `index.html` | — | 600 lines | Inline all page fragments; no external template includes |
+
+- The `app.js` file is intentionally a single file SPA — do not fragment it into micro-modules
+- When a section does warrant extraction, move the entire logical section (state, render, event handlers) together — never split state from its render functions
 
 ## Security Checklist
 - [ ] No credentials in source code — use env vars

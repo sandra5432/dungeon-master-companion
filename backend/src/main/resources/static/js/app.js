@@ -46,11 +46,12 @@ const state = {
   map: {
     pois:              [],
     poiTypes:          [],
-    activeTool:        'select',
+    activeTool:        'view',
     ruler:             null,
     rulerStep:         0,
     rulerStart:        null,
     bgUrl:             null,
+    bgScale:           1.0,
     editPoiId:         null,
     pendingX:          null,
     pendingY:          null,
@@ -2521,9 +2522,11 @@ async function loadMapData(worldId) {
   } catch (e) { console.error('Failed to load map POIs', e); }
 
   if (state.map.bgUrl) { URL.revokeObjectURL(state.map.bgUrl); state.map.bgUrl = null; }
+  state.map.bgScale = 1.0;
   try {
     const res = await fetch(`/api/worlds/${worldId}/map/background`);
     if (res.ok) {
+      state.map.bgScale = parseFloat(res.headers.get('X-Bg-Scale') || '1.0');
       const blob = await res.blob();
       state.map.bgUrl = URL.createObjectURL(blob);
     }
@@ -2533,12 +2536,22 @@ async function loadMapData(worldId) {
 async function initMapPage() {
   const worldId = state.ui.activeWorldId;
   if (!worldId) return;
-  await Promise.all([
-    loadPoiTypes(),
-    loadMapData(worldId),
-  ]);
+
+  // Reset ruler on page load; bgScale is loaded from server inside loadMapData
+  state.map.ruler      = null;
+  state.map.rulerStep  = 0;
+  state.map.rulerStart = null;
+
+  await Promise.all([loadPoiTypes(), loadMapData(worldId)]);
+
+  // Sync slider with the scale loaded from the server
+  const scaleSlider = document.getElementById('map-bg-scale');
+  const scaleVal    = document.getElementById('map-bg-scale-val');
+  if (scaleSlider) scaleSlider.value = state.map.bgScale;
+  if (scaleVal)    scaleVal.textContent = Math.round(state.map.bgScale * 100) + '%';
   renderPoiTypeSidebar();
   renderMap();
+  renderRuler();
   bindMapCanvasEvents();
   applyAuthUI();
 }
@@ -2558,7 +2571,6 @@ function renderPoiTypeSidebar() {
 }
 
 function setMapTool(tool) {
-  console.log('[setMapTool] called with tool:', tool);
   state.map.activeTool = tool;
   if (tool !== 'ruler') {
     state.map.rulerStep  = 0;
@@ -2566,18 +2578,19 @@ function setMapTool(tool) {
     renderRuler();
   }
   document.querySelectorAll('.map-tool').forEach(btn => btn.classList.remove('active'));
-  if (tool === 'select') {
-    document.getElementById('map-tool-select')?.classList.add('active');
-  } else if (tool === 'ruler') {
-    document.getElementById('map-tool-ruler')?.classList.add('active');
+  const btnIds = { view: 'map-tool-view', move: 'map-tool-move', edit: 'map-tool-edit', ruler: 'map-tool-ruler' };
+  if (btnIds[tool]) {
+    document.getElementById(btnIds[tool])?.classList.add('active');
   } else if (tool.startsWith('place-')) {
     const typeId = parseInt(tool.split('-')[1], 10);
     document.querySelector(`.poi-type-btn[data-type-id="${typeId}"]`)?.classList.add('active');
   }
   const wrap = document.getElementById('map-canvas-wrap');
-  console.log('[setMapTool] wrap:', wrap, 'cursor will be:', tool === 'select' ? '' : 'crosshair');
-  if (wrap) wrap.style.cursor = tool === 'select' ? '' : 'crosshair';
-  console.log('[setMapTool] done, activeTool:', state.map.activeTool);
+  if (wrap) {
+    if      (tool === 'move')                               wrap.style.cursor = 'grab';
+    else if (tool === 'ruler' || tool.startsWith('place-')) wrap.style.cursor = 'crosshair';
+    else                                                    wrap.style.cursor = '';
+  }
 }
 
 function openMapBgUpload() {
@@ -2594,11 +2607,38 @@ function openMapBgUpload() {
       if (!res.ok) throw new Error('Upload fehlgeschlagen (' + res.status + ')');
       if (state.map.bgUrl) { URL.revokeObjectURL(state.map.bgUrl); state.map.bgUrl = null; }
       const bgRes = await fetch(`/api/worlds/${state.ui.activeWorldId}/map/background`);
-      if (bgRes.ok) state.map.bgUrl = URL.createObjectURL(await bgRes.blob());
+      if (bgRes.ok) {
+        state.map.bgScale = parseFloat(bgRes.headers.get('X-Bg-Scale') || '1.0');
+        const scaleSlider = document.getElementById('map-bg-scale');
+        const scaleVal    = document.getElementById('map-bg-scale-val');
+        if (scaleSlider) scaleSlider.value = state.map.bgScale;
+        if (scaleVal)    scaleVal.textContent = Math.round(state.map.bgScale * 100) + '%';
+        state.map.bgUrl = URL.createObjectURL(await bgRes.blob());
+      }
       renderMap();
     } catch (e) { alert('Fehler beim Hochladen: ' + e.message); }
   };
   input.click();
+}
+
+let _bgScaleTimer = null;
+
+function setMapBgScale(scale) {
+  state.map.bgScale = scale;
+  const val = document.getElementById('map-bg-scale-val');
+  if (val) val.textContent = Math.round(scale * 100) + '%';
+  const bgImg = document.getElementById('map-bg-img');
+  if (bgImg) bgImg.style.transform = scale !== 1.0 ? `scale(${scale})` : '';
+
+  // Persist after 500 ms of slider inactivity (admin only)
+  clearTimeout(_bgScaleTimer);
+  _bgScaleTimer = setTimeout(async () => {
+    try {
+      await api('PATCH', `/worlds/${state.ui.activeWorldId}/map/background/scale`, { scale });
+    } catch (e) {
+      console.error('[setMapBgScale] save failed', e);
+    }
+  }, 500);
 }
 
 /* ══════════════════════════════════════
@@ -2610,6 +2650,7 @@ function renderMap() {
     if (state.map.bgUrl) {
       bgImg.src = state.map.bgUrl;
       bgImg.style.display = '';
+      bgImg.style.transform = state.map.bgScale !== 1.0 ? `scale(${state.map.bgScale})` : '';
     } else {
       bgImg.style.display = 'none';
     }
@@ -2651,7 +2692,16 @@ function buildPoiElement(poi) {
 
   wrap.addEventListener('click', e => {
     e.stopPropagation();
-    if (state.map.activeTool === 'select') openPoiDialog(poi.id);
+    const tool = state.map.activeTool;
+    if (tool === 'edit') {
+      openPoiDialog(poi.id);
+    } else if (tool === 'view' && poi.label) {
+      const lower = poi.label.trim().toLowerCase();
+      const entry = state.wikiAllEntries.find(w =>
+        w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
+      );
+      if (entry) openWikiFromEvent(entry.id);
+    }
   });
 
   attachPoiDrag(wrap, poi);
@@ -2691,6 +2741,14 @@ function bindMapCanvasEvents() {
       openPoiDialog(null);
     }
   });
+
+  wrap.addEventListener('contextmenu', e => {
+    if (state.map.activeTool !== 'ruler') return;
+    e.preventDefault();
+    state.map.rulerStep  = 0;
+    state.map.rulerStart = null;
+    renderRuler();
+  });
 }
 
 /* ══════════════════════════════════════
@@ -2704,7 +2762,7 @@ function attachPoiDrag(el, poi) {
   let startX, startY, origLeft, origTop;
 
   el.addEventListener('mousedown', e => {
-    if (state.map.activeTool !== 'select') return;
+    if (state.map.activeTool !== 'move') return;
     e.preventDefault();
     dragging = false;
     startX    = e.clientX;
@@ -2845,7 +2903,8 @@ async function savePoiModal() {
       const idx = state.map.pois.findIndex(p => p.id === state.map.editPoiId);
       if (idx >= 0) state.map.pois[idx] = updated;
     } else {
-      if (state.map.pendingX == null || state.map.pendingY == null) {
+      if (state.map.pendingX == null || state.map.pendingY == null ||
+          !isFinite(state.map.pendingX) || !isFinite(state.map.pendingY)) {
         if (errEl) { errEl.textContent = 'Fehler: Position fehlt – bitte erneut auf die Karte klicken.'; errEl.style.display = ''; }
         return;
       }

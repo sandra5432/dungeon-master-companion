@@ -2767,13 +2767,22 @@ nav {
 
 .map-sb-divider { border: none; border-top: 1px solid var(--bd); margin: 5px 0; }
 
-.map-admin-area { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--bd); }
-.map-admin-lbl {
-  font-size: .6rem;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--t3);
-  padding: 2px 6px 6px;
+.map-admin-area { padding-bottom: 4px; }
+
+.map-scale-ctrl {
+  padding: 4px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.map-scale-lbl {
+  font-size: .68rem;
+  color: var(--t2);
+}
+.map-scale-slider {
+  width: 100%;
+  accent-color: var(--gold);
+  cursor: pointer;
 }
 .map-admin-btn {
   display: flex;

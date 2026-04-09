@@ -2,6 +2,7 @@ package com.pardur.controller;
 
 import com.pardur.dto.request.CreateMapPoiRequest;
 import com.pardur.dto.request.CreatePoiTypeRequest;
+import com.pardur.dto.request.UpdateMapBgScaleRequest;
 import com.pardur.dto.request.UpdateMapPoiRequest;
 import com.pardur.dto.request.UpdatePoiTypeRequest;
 import com.pardur.dto.response.MapPoiDto;
@@ -131,6 +132,7 @@ public class MapController {
         bg.setWorldId(worldId);
         bg.setData(file.getBytes());
         bg.setContentType(file.getContentType() != null ? file.getContentType() : "image/jpeg");
+        bg.setBgScale(1.0);   // reset scale on every new upload
         bgRepo.save(bg);
         return ResponseEntity.noContent().build();
     }
@@ -141,7 +143,18 @@ public class MapController {
                 .orElseThrow(() -> new ResourceNotFoundException("No background for world: " + worldId));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(bg.getContentType()))
+                .header("X-Bg-Scale", String.valueOf(bg.getBgScale()))
                 .body(bg.getData());
+    }
+
+    @PatchMapping("/api/worlds/{worldId}/map/background/scale")
+    public ResponseEntity<Void> updateBackgroundScale(@PathVariable Integer worldId,
+                                                       @Valid @RequestBody UpdateMapBgScaleRequest req) {
+        MapBackground bg = bgRepo.findById(worldId)
+                .orElseThrow(() -> new ResourceNotFoundException("No background for world: " + worldId));
+        bg.setBgScale(req.getScale());
+        bgRepo.save(bg);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/api/worlds/{worldId}/map/background")

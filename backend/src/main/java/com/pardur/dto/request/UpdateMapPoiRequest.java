@@ -1,11 +1,12 @@
 package com.pardur.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 
 public class UpdateMapPoiRequest {
 
-    @DecimalMin("0.0") @DecimalMax("1.0") private Double xPct;
-    @DecimalMin("0.0") @DecimalMax("1.0") private Double yPct;
+    @JsonProperty("xPct") @DecimalMin("0.0") @DecimalMax("1.0") private Double xPct;
+    @JsonProperty("yPct") @DecimalMin("0.0") @DecimalMax("1.0") private Double yPct;
     @Size(max = 120) private String label;
     private String gesinnung;
 

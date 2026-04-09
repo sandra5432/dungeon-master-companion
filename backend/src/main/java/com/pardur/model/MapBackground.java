@@ -21,6 +21,9 @@ public class MapBackground {
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
 
+    @Column(name = "bg_scale", nullable = false)
+    private double bgScale = 1.0;
+
     @PrePersist
     @PreUpdate
     void touch() { uploadedAt = LocalDateTime.now(); }
@@ -32,4 +35,6 @@ public class MapBackground {
     public String  getContentType()          { return contentType; }
     public void    setContentType(String ct) { this.contentType = ct; }
     public LocalDateTime getUploadedAt()     { return uploadedAt; }
+    public double  getBgScale()              { return bgScale; }
+    public void    setBgScale(double s)      { this.bgScale = s; }
 }

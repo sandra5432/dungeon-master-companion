@@ -43,6 +43,19 @@ const state = {
   wikiTitles: [],
   wikiAllEntries: [],
   wikiFullGraph: null,
+  map: {
+    pois:              [],
+    poiTypes:          [],
+    activeTool:        'select',
+    ruler:             null,
+    rulerStep:         0,
+    rulerStart:        null,
+    bgUrl:             null,
+    editPoiId:         null,
+    pendingX:          null,
+    pendingY:          null,
+    selectedGesinnung: null,
+  },
 };
 
 // Modal edit state
@@ -104,18 +117,29 @@ function toggleTheme() {
 
 function showPage(p) {
   if (p === 'config' && !state.auth.isAdmin) return;
+  if (p === 'users'  && !state.auth.isAdmin) return;
   state.ui.currentPage = p;
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
   const pageEl = document.getElementById('page-' + p);
   if (pageEl) pageEl.classList.add('active');
-  const navEl = document.getElementById('nav-' + p);
-  if (navEl) navEl.classList.add('active');
+
+  if (p === 'items') {
+    const navEl = document.getElementById('nav-items');
+    if (navEl) navEl.classList.add('active');
+  } else if (state.ui.activeWorldId) {
+    const navEl = document.getElementById('nav-world-' + state.ui.activeWorldId);
+    if (navEl) navEl.classList.add('active');
+  }
+
   if (p !== 'timeline') closeDetail();
-  if (p === 'items') renderItems();
-  if (p === 'users') renderUsers();
-  if (p === 'wiki') initWikiPage();
+  if (p === 'items')  renderItems();
+  if (p === 'users')  renderUsers();
+  if (p === 'wiki')   initWikiPage();
   if (p === 'config') renderConfigWorlds();
+  if (p === 'map')    initMapPage();
+
+  renderSectionTabs();
 }
 
 /* ══════════════════════════════════════
@@ -186,17 +210,45 @@ function renderConfigWorlds() {
   `).join('');
 }
 
-function renderTimelineWorldTabs() {
-  const el = document.getElementById('tl-world-tabs');
-  if (!el) return;
-  el.innerHTML = state.worlds.map(w => {
-    const active = w.id === state.ui.activeWorldId ? ' active' : '';
-    return `<button class="wiki-world-tab${active}" onclick="selectWorld(${w.id})">${escHtml(w.name)}</button>`;
-  }).join('');
+function renderTopNavWorlds() {
+  const linksEl = document.getElementById('nav-links');
+  if (!linksEl) return;
+  const marktplatz = document.getElementById('nav-items');
+  linksEl.innerHTML = '';
+  if (marktplatz) linksEl.appendChild(marktplatz);
+  state.worlds.forEach(w => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-link' + (w.id === state.ui.activeWorldId ? ' active' : '');
+    btn.id = 'nav-world-' + w.id;
+    btn.textContent = w.name;
+    btn.onclick = () => selectWorld(w.id);
+    linksEl.appendChild(btn);
+  });
 }
 
+function renderSectionTabs() {
+  const tabs = document.getElementById('section-tabs');
+  if (!tabs) return;
+  const isWorldPage = ['timeline', 'wiki', 'map'].includes(state.ui.currentPage);
+  tabs.style.display = (state.ui.activeWorldId && isWorldPage) ? '' : 'none';
+  const tabTimeline = document.getElementById('tab-timeline');
+  const tabWiki     = document.getElementById('tab-wiki');
+  const tabMap      = document.getElementById('tab-map');
+  if (tabTimeline) tabTimeline.classList.toggle('active', state.ui.currentPage === 'timeline');
+  if (tabWiki)     tabWiki.classList.toggle('active',     state.ui.currentPage === 'wiki');
+  if (tabMap)      tabMap.classList.toggle('active',      state.ui.currentPage === 'map');
+}
+
+function selectSection(section) {
+  showPage(section);
+}
+
+// keep old name as alias (used in world create/delete handlers below)
+function renderTimelineWorldTabs() { renderTopNavWorlds(); }
+
 async function selectWorld(worldId) {
-  state.ui.activeWorldId = worldId;
+  state.ui.activeWorldId     = worldId;
+  state.ui.wikiActiveWorldId = worldId;
   localStorage.setItem('activeWorldId', worldId);
   state.events  = [];
   state.undated = [];
@@ -204,18 +256,27 @@ async function selectWorld(worldId) {
   state.ui.activeChars   = new Set();
   state.ui.activeTypes   = new Set();
 
-  try {
-    const [events, undated] = await Promise.all([
-      api('GET', `/worlds/${worldId}/events`),
-      api('GET', `/worlds/${worldId}/events/unpositioned`),
-    ]);
-    state.events  = events;
-    state.undated = undated;
-  } catch (e) {
-    console.error('Failed to load world events', e);
+  const section = ['timeline', 'wiki', 'map'].includes(state.ui.currentPage)
+    ? state.ui.currentPage : 'timeline';
+
+  if (section === 'timeline') {
+    try {
+      const [events, undated] = await Promise.all([
+        api('GET', `/worlds/${worldId}/events`),
+        api('GET', `/worlds/${worldId}/events/unpositioned`),
+      ]);
+      state.events  = events;
+      state.undated = undated;
+    } catch (e) { console.error('Failed to load world events', e); }
+    renderTimeline();
+  } else if (section === 'wiki') {
+    await initWikiPage();
+  } else if (section === 'map') {
+    await initMapPage();
   }
-  renderTimeline();
-  renderTimelineWorldTabs();
+
+  renderTopNavWorlds();
+  renderSectionTabs();
 }
 
 /* ══════════════════════════════════════
@@ -1339,17 +1400,18 @@ async function init() {
       itemTagCounts = tagCounts || [];
     }
 
-    renderTimelineWorldTabs();
+    renderTopNavWorlds();
     renderTimeline();
     renderItems();
     renderItemTagFilter();
     applyAuthUI();
+    loadPoiTypes();
     showPage('timeline');
     loadWikiTitles();
     if (state.auth.mustChangePassword) showPasswordChangeOverlay();
   } catch (e) {
     console.error('Init failed', e);
-    renderTimelineWorldTabs();
+    renderTopNavWorlds();
     renderTimeline();
     renderItems();
     renderItemTagFilter();
@@ -1555,10 +1617,13 @@ async function searchWiki(q) {
    WIKI — PAGE INIT
 ══════════════════════════════════════ */
 async function initWikiPage() {
-  if (state.worlds.length > 0 && !state.ui.wikiActiveWorldId) {
+  if (state.ui.activeWorldId) {
+    state.ui.wikiActiveWorldId = state.ui.activeWorldId;
+  } else if (state.worlds.length > 0 && !state.ui.wikiActiveWorldId) {
     state.ui.wikiActiveWorldId = state.worlds[0].id;
+    state.ui.activeWorldId     = state.ui.wikiActiveWorldId;
   }
-  renderWikiWorldTabs();
+  // wiki-world-tabs div no longer exists; section tabs are global
 
   // Restore search input
   const searchEl = document.getElementById('wiki-search');
@@ -2439,4 +2504,566 @@ function linkifyWikiTitles(html, excludeId) {
 function openWikiFromEvent(entryId) {
   showPage('wiki');
   loadWikiArticle(entryId);
+}
+
+/* ══════════════════════════════════════
+   MAP — INITIALISATION
+══════════════════════════════════════ */
+async function loadPoiTypes() {
+  try {
+    state.map.poiTypes = await api('GET', '/poi-types');
+  } catch (e) { console.error('Failed to load POI types', e); }
+}
+
+async function loadMapData(worldId) {
+  try {
+    state.map.pois = await api('GET', `/worlds/${worldId}/map/pois`);
+  } catch (e) { console.error('Failed to load map POIs', e); }
+
+  if (state.map.bgUrl) { URL.revokeObjectURL(state.map.bgUrl); state.map.bgUrl = null; }
+  try {
+    const res = await fetch(`/api/worlds/${worldId}/map/background`);
+    if (res.ok) {
+      const blob = await res.blob();
+      state.map.bgUrl = URL.createObjectURL(blob);
+    }
+  } catch (e) { /* no background set */ }
+}
+
+async function initMapPage() {
+  const worldId = state.ui.activeWorldId;
+  if (!worldId) return;
+  await Promise.all([
+    loadPoiTypes(),
+    loadMapData(worldId),
+  ]);
+  renderPoiTypeSidebar();
+  renderMap();
+  bindMapCanvasEvents();
+  applyAuthUI();
+}
+
+function renderPoiTypeSidebar() {
+  const el = document.getElementById('map-poi-type-list');
+  if (!el) return;
+  const loggedIn = state.auth.loggedIn;
+  el.innerHTML = state.map.poiTypes.map(t => `
+    <button class="map-tool poi-type-btn" data-type-id="${t.id}"
+            onclick="setMapTool('place-${t.id}')"
+            ${!loggedIn ? 'disabled title="Bitte einloggen"' : ''}>
+      <span class="map-tool-sym">${escHtml(t.icon)}</span> ${escHtml(t.name)}
+      ${state.auth.isAdmin ? `<span class="poi-type-edit-link" onclick="event.stopPropagation();openPoiTypeManager(${t.id})" title="Bearbeiten">✎</span>` : ''}
+    </button>
+  `).join('');
+}
+
+function setMapTool(tool) {
+  console.log('[setMapTool] called with tool:', tool);
+  state.map.activeTool = tool;
+  if (tool !== 'ruler') {
+    state.map.rulerStep  = 0;
+    state.map.rulerStart = null;
+    renderRuler();
+  }
+  document.querySelectorAll('.map-tool').forEach(btn => btn.classList.remove('active'));
+  if (tool === 'select') {
+    document.getElementById('map-tool-select')?.classList.add('active');
+  } else if (tool === 'ruler') {
+    document.getElementById('map-tool-ruler')?.classList.add('active');
+  } else if (tool.startsWith('place-')) {
+    const typeId = parseInt(tool.split('-')[1], 10);
+    document.querySelector(`.poi-type-btn[data-type-id="${typeId}"]`)?.classList.add('active');
+  }
+  const wrap = document.getElementById('map-canvas-wrap');
+  console.log('[setMapTool] wrap:', wrap, 'cursor will be:', tool === 'select' ? '' : 'crosshair');
+  if (wrap) wrap.style.cursor = tool === 'select' ? '' : 'crosshair';
+  console.log('[setMapTool] done, activeTool:', state.map.activeTool);
+}
+
+function openMapBgUpload() {
+  const input = document.createElement('input');
+  input.type   = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch(`/api/worlds/${state.ui.activeWorldId}/map/background`, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Upload fehlgeschlagen (' + res.status + ')');
+      if (state.map.bgUrl) { URL.revokeObjectURL(state.map.bgUrl); state.map.bgUrl = null; }
+      const bgRes = await fetch(`/api/worlds/${state.ui.activeWorldId}/map/background`);
+      if (bgRes.ok) state.map.bgUrl = URL.createObjectURL(await bgRes.blob());
+      renderMap();
+    } catch (e) { alert('Fehler beim Hochladen: ' + e.message); }
+  };
+  input.click();
+}
+
+/* ══════════════════════════════════════
+   MAP — RENDERING
+══════════════════════════════════════ */
+function renderMap() {
+  const bgImg = document.getElementById('map-bg-img');
+  if (bgImg) {
+    if (state.map.bgUrl) {
+      bgImg.src = state.map.bgUrl;
+      bgImg.style.display = '';
+    } else {
+      bgImg.style.display = 'none';
+    }
+  }
+
+  const layer = document.getElementById('map-pois-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  layer.style.pointerEvents = 'none';
+
+  for (const poi of state.map.pois) {
+    const el = buildPoiElement(poi);
+    layer.appendChild(el);
+  }
+}
+
+function buildPoiElement(poi) {
+  const wrap = document.createElement('div');
+  const gc = gesinnungClass(poi.gesinnung);
+  wrap.className = 'map-poi' + (gc ? ' ' + gc : '');
+  wrap.dataset.poiId = poi.id;
+  wrap.style.left = (poi.xPct * 100) + '%';
+  wrap.style.top  = (poi.yPct * 100) + '%';
+  wrap.style.pointerEvents = 'auto';
+
+  const icon = document.createElement('span');
+  icon.className   = 'map-poi-icon';
+  icon.textContent = poi.poiTypeIcon || '●';
+  wrap.appendChild(icon);
+
+  if (poi.label) {
+    const linked = wikiLinkCheck(poi.label, state.ui.activeWorldId);
+    const lbl = document.createElement('span');
+    lbl.className   = 'map-poi-label' + (linked ? ' wiki-linked' : '');
+    lbl.textContent = poi.label;
+    if (linked) lbl.title = 'Wiki-Artikel gefunden';
+    wrap.appendChild(lbl);
+  }
+
+  wrap.addEventListener('click', e => {
+    e.stopPropagation();
+    if (state.map.activeTool === 'select') openPoiDialog(poi.id);
+  });
+
+  attachPoiDrag(wrap, poi);
+  return wrap;
+}
+
+function gesinnungClass(g) {
+  if (g === 'FRIENDLY') return 'poi-friendly';
+  if (g === 'HOSTILE')  return 'poi-hostile';
+  if (g === 'NEUTRAL')  return 'poi-neutral';
+  return '';
+}
+
+function wikiLinkCheck(label, worldId) {
+  if (!label || !state.wikiAllEntries || !state.wikiAllEntries.length) return false;
+  const lower = label.toLowerCase();
+  return state.wikiAllEntries.some(e => e.worldId === worldId && e.title.toLowerCase() === lower);
+}
+
+function bindMapCanvasEvents() {
+  const wrap = document.getElementById('map-canvas-wrap');
+  if (!wrap || wrap._mapBound) return;
+  wrap._mapBound = true;
+
+  wrap.addEventListener('click', e => {
+    if (e.target.closest('.map-poi')) return;
+    const rect = wrap.getBoundingClientRect();
+    const xPct = (e.clientX - rect.left) / rect.width;
+    const yPct = (e.clientY - rect.top)  / rect.height;
+
+    if (state.map.activeTool === 'ruler') {
+      handleRulerClick(xPct, yPct);
+    } else if (state.map.activeTool.startsWith('place-')) {
+      if (!isFinite(xPct) || !isFinite(yPct) || rect.width === 0 || rect.height === 0) return;
+      state.map.pendingX = xPct;
+      state.map.pendingY = yPct;
+      openPoiDialog(null);
+    }
+  });
+}
+
+/* ══════════════════════════════════════
+   MAP — POI DRAG
+══════════════════════════════════════ */
+function attachPoiDrag(el, poi) {
+  const canEdit = state.auth.isAdmin || poi.createdByUserId === state.auth.userId;
+  if (!canEdit) return;
+
+  let dragging = false;
+  let startX, startY, origLeft, origTop;
+
+  el.addEventListener('mousedown', e => {
+    if (state.map.activeTool !== 'select') return;
+    e.preventDefault();
+    dragging = false;
+    startX    = e.clientX;
+    startY    = e.clientY;
+    origLeft  = el.style.left;
+    origTop   = el.style.top;
+
+    function onMove(e) {
+      const wrap = document.getElementById('map-canvas-wrap');
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!dragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) dragging = true;
+      if (!dragging) return;
+      const newX = (parseFloat(origLeft) / 100) + dx / rect.width;
+      const newY = (parseFloat(origTop)  / 100) + dy / rect.height;
+      el.style.left = Math.max(0, Math.min(1, newX)) * 100 + '%';
+      el.style.top  = Math.max(0, Math.min(1, newY)) * 100 + '%';
+    }
+
+    async function onUp(e) {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      if (!dragging) return;
+      const wrap = document.getElementById('map-canvas-wrap');
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const newX = Math.max(0, Math.min(1, (parseFloat(origLeft) / 100) + dx / rect.width));
+      const newY = Math.max(0, Math.min(1, (parseFloat(origTop)  / 100) + dy / rect.height));
+      try {
+        const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${poi.id}`, { xPct: newX, yPct: newY });
+        const idx = state.map.pois.findIndex(p => p.id === poi.id);
+        if (idx >= 0) state.map.pois[idx] = updated;
+        renderMap();
+      } catch (ex) {
+        el.style.left = origLeft;
+        el.style.top  = origTop;
+        alert('Fehler beim Verschieben: ' + ex.message);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+}
+
+/* ══════════════════════════════════════
+   MAP — POI DIALOG
+══════════════════════════════════════ */
+function openPoiDialog(poiId) {
+  state.map.editPoiId = poiId;
+
+  const modal     = document.getElementById('poi-modal');
+  const title     = document.getElementById('poi-modal-title');
+  const labelGrp  = document.getElementById('poi-label-grp');
+  const gesGrp    = document.getElementById('poi-gesinnung-grp');
+  const delBtn    = document.getElementById('poi-delete-btn');
+  const errEl     = document.getElementById('poi-modal-err');
+  const wikiHint  = document.getElementById('poi-wiki-hint');
+  const labelInp  = document.getElementById('poi-label-inp');
+
+  if (!modal) return;
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+  if (wikiHint) wikiHint.style.display = 'none';
+
+  if (poiId) {
+    const poi  = state.map.pois.find(p => p.id === poiId);
+    if (!poi) return;
+    const type = state.map.poiTypes.find(t => t.id === poi.poiTypeId);
+    title.textContent = (type ? type.icon + ' ' + type.name : 'POI') + ' bearbeiten';
+    if (labelInp) labelInp.value = poi.label || '';
+    state.map.selectedGesinnung = poi.gesinnung || null;
+    if (labelGrp) labelGrp.style.display = type?.hasLabel      ? '' : 'none';
+    if (gesGrp)   gesGrp.style.display   = type?.hasGesinnung  ? '' : 'none';
+    const canDelete = state.auth.isAdmin || poi.createdByUserId === state.auth.userId;
+    if (delBtn) delBtn.style.display = canDelete ? '' : 'none';
+  } else {
+    const typeId = parseInt(state.map.activeTool.split('-')[1], 10);
+    const type   = state.map.poiTypes.find(t => t.id === typeId);
+    title.textContent = (type ? type.icon + ' ' + type.name : 'POI') + ' platzieren';
+    if (labelInp) labelInp.value = '';
+    state.map.selectedGesinnung = null;
+    if (labelGrp) labelGrp.style.display = type?.hasLabel      ? '' : 'none';
+    if (gesGrp)   gesGrp.style.display   = type?.hasGesinnung  ? '' : 'none';
+    if (delBtn)   delBtn.style.display   = 'none';
+  }
+
+  updateGesinnungButtons();
+
+  if (labelInp) {
+    labelInp.oninput = () => {
+      const linked = wikiLinkCheck(labelInp.value.trim(), state.ui.activeWorldId);
+      if (wikiHint) wikiHint.style.display = linked ? '' : 'none';
+    };
+  }
+
+  modal.classList.add('open');
+  if (labelInp) labelInp.focus();
+}
+
+function updateGesinnungButtons() {
+  document.querySelectorAll('.poi-gesinnung-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === state.map.selectedGesinnung);
+  });
+}
+
+function selectGesinnung(value) {
+  state.map.selectedGesinnung = state.map.selectedGesinnung === value ? null : value;
+  updateGesinnungButtons();
+}
+
+function closePoiModal() {
+  const modal = document.getElementById('poi-modal');
+  if (modal) modal.classList.remove('open');
+  state.map.editPoiId  = null;
+  state.map.pendingX   = null;
+  state.map.pendingY   = null;
+}
+
+async function savePoiModal() {
+  const errEl   = document.getElementById('poi-modal-err');
+  const labelInp = document.getElementById('poi-label-inp');
+  const label   = labelInp ? labelInp.value.trim() : '';
+
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+
+  try {
+    if (state.map.editPoiId) {
+      const poi  = state.map.pois.find(p => p.id === state.map.editPoiId);
+      const type = poi ? state.map.poiTypes.find(t => t.id === poi.poiTypeId) : null;
+      const body = {};
+      if (type?.hasLabel)      body.label     = label || null;
+      if (type?.hasGesinnung)  body.gesinnung  = state.map.selectedGesinnung || null;
+      const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${state.map.editPoiId}`, body);
+      const idx = state.map.pois.findIndex(p => p.id === state.map.editPoiId);
+      if (idx >= 0) state.map.pois[idx] = updated;
+    } else {
+      if (state.map.pendingX == null || state.map.pendingY == null) {
+        if (errEl) { errEl.textContent = 'Fehler: Position fehlt – bitte erneut auf die Karte klicken.'; errEl.style.display = ''; }
+        return;
+      }
+      const typeId = parseInt(state.map.activeTool.split('-')[1], 10);
+      const type   = state.map.poiTypes.find(t => t.id === typeId);
+      const body = {
+        poiTypeId: typeId,
+        xPct:      state.map.pendingX,
+        yPct:      state.map.pendingY,
+        label:     (type?.hasLabel     && label)                           ? label                           : null,
+        gesinnung: (type?.hasGesinnung && state.map.selectedGesinnung)     ? state.map.selectedGesinnung     : null,
+      };
+      const created = await api('POST', `/worlds/${state.ui.activeWorldId}/map/pois`, body);
+      state.map.pois.push(created);
+    }
+    closePoiModal();
+    renderMap();
+  } catch (e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
+  }
+}
+
+async function deleteCurrentPoi() {
+  if (!state.map.editPoiId) return;
+  if (!confirm('POI wirklich löschen?')) return;
+  try {
+    await api('DELETE', `/worlds/${state.ui.activeWorldId}/map/pois/${state.map.editPoiId}`);
+    state.map.pois = state.map.pois.filter(p => p.id !== state.map.editPoiId);
+    closePoiModal();
+    renderMap();
+  } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+/* ══════════════════════════════════════
+   MAP — RULER TOOL
+══════════════════════════════════════ */
+const MAP_CELL_PX        = 44;
+const MAP_MILES_PER_CELL = 5;
+
+function handleRulerClick(xPct, yPct) {
+  if (state.map.rulerStep === 0) {
+    state.map.rulerStart = { x: xPct, y: yPct };
+    state.map.rulerStep  = 1;
+    state.map.ruler      = null;
+    renderRuler();
+  } else {
+    const wrap = document.getElementById('map-canvas-wrap');
+    if (!wrap) return;
+    const rect  = wrap.getBoundingClientRect();
+    const dx    = (xPct - state.map.rulerStart.x) * rect.width;
+    const dy    = (yPct - state.map.rulerStart.y) * rect.height;
+    const miles = (Math.sqrt(dx * dx + dy * dy) / MAP_CELL_PX) * MAP_MILES_PER_CELL;
+    state.map.ruler      = { x1: state.map.rulerStart.x, y1: state.map.rulerStart.y, x2: xPct, y2: yPct, miles };
+    state.map.rulerStep  = 0;
+    state.map.rulerStart = null;
+    renderRuler();
+  }
+}
+
+function renderRuler() {
+  const svg = document.getElementById('map-ruler-svg');
+  if (!svg) return;
+  // Remove all children except <defs>
+  Array.from(svg.childNodes).forEach(n => { if (n.tagName !== 'defs') svg.removeChild(n); });
+
+  const wrap = document.getElementById('map-canvas-wrap');
+  if (!wrap) return;
+  const rect = wrap.getBoundingClientRect();
+
+  // Waiting for second click — show start dot
+  if (state.map.rulerStep === 1 && state.map.rulerStart) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', state.map.rulerStart.x * rect.width);
+    c.setAttribute('cy', state.map.rulerStart.y * rect.height);
+    c.setAttribute('r',  5);
+    c.setAttribute('fill', 'var(--gold)');
+    c.setAttribute('opacity', '0.85');
+    svg.appendChild(c);
+    return;
+  }
+
+  if (!state.map.ruler) return;
+  const { x1, y1, x2, y2, miles } = state.map.ruler;
+  const px1 = x1 * rect.width,  py1 = y1 * rect.height;
+  const px2 = x2 * rect.width,  py2 = y2 * rect.height;
+
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', px1); line.setAttribute('y1', py1);
+  line.setAttribute('x2', px2); line.setAttribute('y2', py2);
+  line.setAttribute('stroke', 'var(--gold)');
+  line.setAttribute('stroke-width', '2');
+  line.setAttribute('stroke-dasharray', '6 3');
+  line.setAttribute('marker-start', 'url(#ruler-dot)');
+  line.setAttribute('marker-end',   'url(#ruler-dot)');
+  svg.appendChild(line);
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', (px1 + px2) / 2);
+  text.setAttribute('y', (py1 + py2) / 2 - 8);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('fill', 'var(--gold)');
+  text.setAttribute('font-size', '12');
+  text.setAttribute('font-weight', 'bold');
+  text.textContent = miles < 10
+    ? miles.toFixed(1) + ' Meilen'
+    : Math.round(miles) + ' Meilen';
+  svg.appendChild(text);
+}
+
+/* ══════════════════════════════════════
+   MAP — POI TYPE MANAGER (Admin)
+══════════════════════════════════════ */
+const POI_ICON_PALETTE = ['⭐','●','?','▲','🏰','⛪','🌲','🌊','🏔','🗡','💀','🔥','🏺','💎','🐉','🚢','🌙','☀','🌿'];
+
+function openPoiTypeManager(editTypeId) {
+  const modal      = document.getElementById('poi-type-modal');
+  const title      = document.getElementById('poi-type-modal-title');
+  const nameInp    = document.getElementById('ptm-name');
+  const iconCustom = document.getElementById('ptm-icon-custom');
+  const hasGes     = document.getElementById('ptm-has-gesinnung');
+  const hasLbl     = document.getElementById('ptm-has-label');
+  const delBtn     = document.getElementById('ptm-delete-btn');
+  const palette    = document.getElementById('ptm-icon-palette');
+
+  if (!modal || !title) return;
+
+  if (palette) {
+    palette.innerHTML = POI_ICON_PALETTE.map(ic =>
+      `<button class="ptm-icon-chip" data-icon="${ic}" onclick="selectPtmIcon('${ic}')" title="${ic}">${ic}</button>`
+    ).join('');
+  }
+
+  if (editTypeId) {
+    const t = state.map.poiTypes.find(x => x.id === editTypeId);
+    if (!t) return;
+    modal.dataset.editTypeId = editTypeId;
+    title.textContent        = t.icon + ' ' + t.name + ' bearbeiten';
+    if (nameInp)    nameInp.value    = t.name;
+    if (iconCustom) iconCustom.value = POI_ICON_PALETTE.includes(t.icon) ? '' : t.icon;
+    if (hasGes)     hasGes.checked   = t.hasGesinnung;
+    if (hasLbl)     hasLbl.checked   = t.hasLabel;
+    selectPtmIcon(t.icon);
+    if (delBtn) delBtn.style.display = t.isDefault ? 'none' : '';
+  } else {
+    delete modal.dataset.editTypeId;
+    title.textContent = 'POI-Typ anlegen';
+    if (nameInp)    nameInp.value    = '';
+    if (iconCustom) iconCustom.value = '';
+    if (hasGes)     hasGes.checked   = true;
+    if (hasLbl)     hasLbl.checked   = true;
+    if (palette)    palette.querySelectorAll('.ptm-icon-chip').forEach(b => b.classList.remove('active'));
+    if (delBtn)     delBtn.style.display = 'none';
+  }
+
+  modal.classList.add('open');
+  if (nameInp) nameInp.focus();
+}
+
+function selectPtmIcon(icon) {
+  document.querySelectorAll('.ptm-icon-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.icon === icon);
+  });
+  // If it's a custom icon, clear the chip selection and populate the custom field
+  const iconCustom = document.getElementById('ptm-icon-custom');
+  if (iconCustom && !POI_ICON_PALETTE.includes(icon)) iconCustom.value = icon;
+}
+
+function closePoiTypeModal() {
+  const modal = document.getElementById('poi-type-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function savePoiTypeModal() {
+  const modal      = document.getElementById('poi-type-modal');
+  const nameInp    = document.getElementById('ptm-name');
+  const iconCustom = document.getElementById('ptm-icon-custom');
+  const hasGes     = document.getElementById('ptm-has-gesinnung');
+  const hasLbl     = document.getElementById('ptm-has-label');
+
+  const name = nameInp?.value.trim();
+  if (!name) { alert('Bitte einen Namen eingeben.'); return; }
+
+  const selectedChip = document.querySelector('.ptm-icon-chip.active');
+  const icon = selectedChip ? selectedChip.dataset.icon : (iconCustom?.value.trim() || '●');
+
+  const body = {
+    name,
+    icon,
+    hasGesinnung: hasGes?.checked ?? true,
+    hasLabel:     hasLbl?.checked ?? true,
+  };
+
+  try {
+    const editTypeId = modal?.dataset.editTypeId ? parseInt(modal.dataset.editTypeId, 10) : null;
+    let result;
+    if (editTypeId) {
+      result = await api('PUT', `/poi-types/${editTypeId}`, body);
+      const idx = state.map.poiTypes.findIndex(t => t.id === editTypeId);
+      if (idx >= 0) state.map.poiTypes[idx] = result;
+    } else {
+      result = await api('POST', '/poi-types', body);
+      state.map.poiTypes.push(result);
+    }
+    closePoiTypeModal();
+    renderPoiTypeSidebar();
+    renderMap();
+  } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+async function deletePoiType() {
+  const modal      = document.getElementById('poi-type-modal');
+  const editTypeId = modal?.dataset.editTypeId ? parseInt(modal.dataset.editTypeId, 10) : null;
+  if (!editTypeId) return;
+  if (!confirm('POI-Typ wirklich löschen? Bestehende POIs dieses Typs bleiben erhalten.')) return;
+  try {
+    await api('DELETE', `/poi-types/${editTypeId}`);
+    state.map.poiTypes = state.map.poiTypes.filter(t => t.id !== editTypeId);
+    closePoiTypeModal();
+    renderPoiTypeSidebar();
+  } catch (e) { alert('Fehler: ' + e.message); }
 }

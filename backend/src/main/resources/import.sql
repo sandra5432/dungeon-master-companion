@@ -366,3 +366,11 @@ Da die Glimmquali als nomadisches Händlervolk weite Teile Pardurs bereisen, hab
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 );
+
+
+-- Default POI types (mirrors V15 Flyway seed)
+INSERT INTO poi_type (name, icon, is_default, has_gesinnung, has_label, created_at) VALUES
+  ('Großer POI',  '⭐', TRUE, TRUE,  TRUE,  CURRENT_TIMESTAMP),
+  ('Kleiner POI', '●',  TRUE, TRUE,  TRUE,  CURRENT_TIMESTAMP),
+  ('Unbekannt',   '?',  TRUE, FALSE, FALSE, CURRENT_TIMESTAMP),
+  ('Erhebung',    '▲',  TRUE, FALSE, TRUE,  CURRENT_TIMESTAMP);

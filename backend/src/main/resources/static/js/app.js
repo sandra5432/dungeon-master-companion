@@ -3034,9 +3034,9 @@ const POI_ICON_PALETTE = ['⭐','●','?','▲','🏰','⛪','🌲','🌊','🏔
 function poiShapeHtml(shape, icon) {
   switch (shape) {
     case 'STAR':
-      return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><polygon points="14,3 16.9,10 24.5,10.6 18.8,15.6 20.5,22.9 14,19 7.5,22.9 9.2,15.6 3.5,10.6 11.1,10" fill="currentColor"/></svg>`;
+      return `<svg viewBox="0 0 28 28" width="28" height="28" xmlns="http://www.w3.org/2000/svg"><polygon points="14,3 16.9,10 24.5,10.6 18.8,15.6 20.5,22.9 14,19 7.5,22.9 9.2,15.6 3.5,10.6 11.1,10" fill="currentColor"/></svg>`;
     case 'CIRCLE':
-      return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="11" fill="currentColor"/></svg>`;
+      return `<svg viewBox="0 0 28 28" width="17" height="17" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="11" fill="currentColor"/></svg>`;
     case 'TRIANGLE':
       return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><polygon points="14,3 25,23 3,23" fill="currentColor"/></svg>`;
     case 'QUESTION':

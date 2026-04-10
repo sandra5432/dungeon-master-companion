@@ -217,7 +217,7 @@ nav {
 
 .nav-link {
   font-family: 'Cinzel', serif;
-  font-size: calc(var(--fs-grn) * 1.25);
+  font-size: calc(var(--fs-grn) * 1.125);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--t2);

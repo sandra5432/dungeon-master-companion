@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astral Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=23">
+<link rel="stylesheet" href="/css/app.css?v=25">
 <script src="/js/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -27,10 +27,9 @@
     </div>
     <span class="nav-title">Astral Library</span>
   </div>
-  <div class="nav-links">
+  <div class="nav-links" id="nav-links">
     <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
-    <button class="nav-link active" id="nav-timeline" onclick="showPage('timeline')">Chronik</button>
-    <button class="nav-link" id="nav-wiki" onclick="showPage('wiki')">Wiki</button>
+    <!-- world buttons injected by renderTopNavWorlds() -->
   </div>
   <div class="nav-right">
     <button class="btn btn-sm" id="btn-login" onclick="showLoginModal()" style="display:none">Anmelden</button>
@@ -42,9 +41,15 @@
   </div>
 </nav>
 
+<!-- ══ SECTION TABS (Chronik / Wiki / Karte) ══ -->
+<div class="wiki-world-tabs" id="section-tabs" style="display:none">
+  <button class="wiki-world-tab" id="tab-timeline" onclick="selectSection('timeline')">Chronik</button>
+  <button class="wiki-world-tab" id="tab-wiki"     onclick="selectSection('wiki')">Wiki</button>
+  <button class="wiki-world-tab" id="tab-map"      onclick="selectSection('map')">Karte</button>
+</div>
+
 <!-- ══ TIMELINE PAGE ══ -->
 <div class="page" id="page-timeline">
-  <div class="wiki-world-tabs" id="tl-world-tabs"></div>
   <aside class="sidebar sidebar-left">
     <div class="sb-title">Typ <button onclick="clearTypes()">Alle</button></div>
     <div class="tag-filter-list" id="type-filter-list"></div>
@@ -97,11 +102,6 @@
 
 <!-- ══ ITEMS PAGE ══ -->
 <div class="page" id="page-items">
-  <div class="pg-hdr">
-    <h1>Marktplatz</h1>
-    <p>Gegenstände und Artefakte der bekannten Welt</p>
-    <div class="divider" style="margin:10px auto 0"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
-  </div>
   <div class="toolbar">
     <div class="fg"><label class="fl">Suche</label><input class="fi" id="s-search" type="text" placeholder="Gegenstand…" oninput="state.ui.itemPage=0;renderItems()"></div>
     <div class="fg">
@@ -296,7 +296,6 @@
 
 <!-- ══ WIKI PAGE ══ -->
 <div class="page" id="page-wiki">
-  <div class="wiki-world-tabs" id="wiki-world-tabs"></div>
   <div class="wiki-layout">
 
     <!-- Left panel -->
@@ -427,6 +426,129 @@
   </div>
 </div><!-- #page-wiki -->
 
-<script src="/js/app.js"></script>
+<!-- ══ MAP PAGE ══ -->
+<div class="page" id="page-map">
+  <aside class="map-sidebar" id="map-sidebar">
+    <div class="map-sb-section">Werkzeuge</div>
+    <button class="map-tool active" id="map-tool-interact" onclick="setMapTool('interact')">
+      <span class="map-tool-sym">✋</span> Interagieren
+    </button>
+    <button class="map-tool user-action-only" id="map-tool-edit" onclick="setMapTool('edit')" style="display:none">
+      <span class="map-tool-sym">✏</span> Bearbeiten
+    </button>
+    <button class="map-tool" id="map-tool-ruler" onclick="setMapTool('ruler')">
+      <span class="map-tool-sym">📏</span> Messen
+    </button>
+    <div class="map-admin-area admin-only" style="display:none">
+      <hr class="map-sb-divider">
+      <div class="map-sb-section">Karte</div>
+      <button class="map-admin-btn" onclick="openMapBgUpload()">🖼 Hintergrund</button>
+      <div class="map-scale-ctrl">
+        <div class="map-scale-lbl">Bildgröße: <span id="map-bg-scale-val">100%</span></div>
+        <input type="range" id="map-bg-scale" class="map-scale-slider"
+               min="0.3" max="3" step="0.05" value="1"
+               oninput="setMapBgScale(parseFloat(this.value))">
+      </div>
+      <button class="map-admin-btn" onclick="openPoiTypeManager(null)">＋ POI-Typ</button>
+    </div>
+    <hr class="map-sb-divider">
+    <div class="map-sb-section">Marker</div>
+    <div id="map-poi-type-list"></div>
+  </aside>
+  <div class="map-canvas-wrap" id="map-canvas-wrap">
+    <img id="map-bg-img" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+    <div class="map-grid-layer" id="map-grid"></div>
+    <svg class="map-ruler-svg" id="map-ruler-svg" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ruler-dot" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5">
+          <circle cx="3.5" cy="3.5" r="3" fill="var(--gold)"/>
+        </marker>
+      </defs>
+    </svg>
+    <div id="map-pois-layer" style="position:absolute;inset:0;pointer-events:none"></div>
+    <span class="map-scale-label">1 Feld = 5 Meilen</span>
+  </div>
+</div><!-- #page-map -->
+
+<!-- ══ POI DIALOG ══ -->
+<div class="modal-bg" id="poi-modal" onclick="if(event.target===this)closePoiModal()">
+  <div class="modal">
+    <div class="m-title" id="poi-modal-title">POI bearbeiten</div>
+    <button class="m-close" onclick="closePoiModal()">✕</button>
+    <div class="f-grid">
+      <div class="f-grp" id="poi-label-grp">
+        <label class="f-lbl">Bezeichnung</label>
+        <input class="f-inp" id="poi-label-inp" type="text" placeholder="z.B. Tempel der Exandra" maxlength="120">
+        <div id="poi-wiki-hint" style="display:none;font-size:.63rem;color:var(--gold);margin-top:4px">📖 Wiki-Artikel gefunden — wird verknüpft</div>
+      </div>
+      <div class="f-grp" id="poi-gesinnung-grp">
+        <label class="f-lbl">Gesinnung</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="poi-gesinnung-btn" data-value="FRIENDLY" onclick="selectGesinnung('FRIENDLY')" title="Freundlich" style="background:rgba(56,160,96,.18);color:#5cb85c">✓</button>
+          <button class="poi-gesinnung-btn" data-value="NEUTRAL"  onclick="selectGesinnung('NEUTRAL')"  title="Neutral"   style="background:rgba(138,154,176,.12);color:#8a9ab0">◉</button>
+          <button class="poi-gesinnung-btn" data-value="HOSTILE"  onclick="selectGesinnung('HOSTILE')"  title="Feindlich" style="background:rgba(217,83,79,.18);color:#d9534f">✕</button>
+        </div>
+      </div>
+    </div>
+    <div id="poi-modal-err" style="display:none;color:#e07070;font-size:.8rem;margin-top:6px"></div>
+    <div class="m-actions">
+      <button class="btn btn-danger" id="poi-delete-btn" onclick="deleteCurrentPoi()" style="display:none">🗑 Löschen</button>
+      <button class="btn" onclick="closePoiModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="savePoiModal()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ POI TYPE MANAGER (Admin) ══ -->
+<div class="modal-bg" id="poi-type-modal" onclick="if(event.target===this)closePoiTypeModal()">
+  <div class="modal">
+    <div class="m-title" id="poi-type-modal-title">POI-Typ anlegen</div>
+    <button class="m-close" onclick="closePoiTypeModal()">✕</button>
+    <div class="f-grid">
+      <div class="f-grp">
+        <label class="f-lbl">Name *</label>
+        <input class="f-inp" id="ptm-name" type="text" placeholder="z.B. Hafen" maxlength="80">
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Form</label>
+        <div id="ptm-shape-row" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="ptm-shape-chip" data-shape="STAR"     onclick="selectPtmShape('STAR')"    title="Stern (großer POI)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><polygon points="14,3 16.9,10 24.5,10.6 18.8,15.6 20.5,22.9 14,19 7.5,22.9 9.2,15.6 3.5,10.6 11.1,10" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="CIRCLE"   onclick="selectPtmShape('CIRCLE')"   title="Kreis (kleiner POI)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><circle cx="14" cy="14" r="11" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="TRIANGLE" onclick="selectPtmShape('TRIANGLE')" title="Dreieck (Erhebung)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><polygon points="14,3 25,23 3,23" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="QUESTION" onclick="selectPtmShape('QUESTION')" title="Fragezeichen (unbekannt)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><text x="14" y="21" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor">?</text></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="ICON"     onclick="selectPtmShape('ICON')"     title="Emoji / eigenes Symbol">🎨</button>
+        </div>
+      </div>
+      <div class="f-grp" id="ptm-icon-grp">
+        <label class="f-lbl">Icon</label>
+        <div id="ptm-icon-palette" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px"></div>
+        <input class="f-inp" id="ptm-icon-custom" type="text" placeholder="Eigenes Emoji eingeben" maxlength="10" style="width:100%">
+      </div>
+      <div class="f-grp" style="display:flex;gap:16px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--t2);cursor:pointer">
+          <input type="checkbox" id="ptm-has-gesinnung" checked> Hat Gesinnung
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--t2);cursor:pointer">
+          <input type="checkbox" id="ptm-has-label" checked> Hat Label
+        </label>
+      </div>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-danger" id="ptm-delete-btn" onclick="deletePoiType()" style="display:none">🗑 Löschen</button>
+      <button class="btn" onclick="closePoiTypeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="savePoiTypeModal()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js?v=26"></script>
 </body>
 </html>

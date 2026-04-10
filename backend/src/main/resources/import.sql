@@ -3,7 +3,7 @@
 
 -- ── Users ────────────────────────────────────────────────────────────────────
 -- id=1: admin (pw: 4711), id=2: user (pw: user)
-INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('admin', '$2a$12$IbgLOMbHcChHpfmF/ZnTs.LtH1X4lWjsEvFlnsMFOIEAQpF.l19f.', 'ADMIN', TRUE, '#9a4aaa', CURRENT_TIMESTAMP);
+INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('admin', '$2a$12$IbgLOMbHcChHpfmF/ZnTs.LtH1X4lWjsEvFlnsMFOIEAQpF.l19f.', 'ADMIN', FALSE, '#9a4aaa', CURRENT_TIMESTAMP);
 INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('user', '$2a$12$nWCViL13pxuphLu7ffZp6.MkgEMCGfpNxkB6LXt9DXme7vr27sk7.', 'USER', FALSE, '#2a9a68', CURRENT_TIMESTAMP);
 
 -- ── Worlds ───────────────────────────────────────────────────────────────────
@@ -366,3 +366,11 @@ Da die Glimmquali als nomadisches Händlervolk weite Teile Pardurs bereisen, hab
   CURRENT_TIMESTAMP,
   CURRENT_TIMESTAMP
 );
+
+
+-- Default POI types (mirrors V15 Flyway seed)
+INSERT INTO poi_type (name, icon, is_default, has_gesinnung, has_label, shape, created_at) VALUES
+  ('Großer POI',  '⭐', TRUE, TRUE,  TRUE,  'STAR',     CURRENT_TIMESTAMP),
+  ('Kleiner POI', '●',  TRUE, TRUE,  TRUE,  'CIRCLE',   CURRENT_TIMESTAMP),
+  ('Unbekannt',   '?',  TRUE, FALSE, FALSE, 'QUESTION', CURRENT_TIMESTAMP),
+  ('Erhebung',    '▲',  TRUE, FALSE, TRUE,  'TRIANGLE', CURRENT_TIMESTAMP);

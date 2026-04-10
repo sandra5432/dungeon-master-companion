@@ -217,7 +217,7 @@ nav {
 
 .nav-link {
   font-family: 'Cinzel', serif;
-  font-size: var(--fs-grn);
+  font-size: calc(var(--fs-grn) * 1.25);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--t2);
@@ -384,12 +384,12 @@ nav {
 }
 
 .sb-title {
-  font-family: 'Cinzel', serif;
-  font-size: var(--fs-grn);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: .6rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--t2);
+  color: var(--t3);
   margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--bd);
@@ -400,7 +400,7 @@ nav {
 
 .sb-title button {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: var(--fs-grn);
+  font-size: .6rem;
   font-weight: 600;
   background: none;
   border: none;
@@ -437,16 +437,16 @@ nav {
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--t1);
+  color: var(--t2);
   cursor: pointer;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: var(--fs-grn);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: .75rem;
+  letter-spacing: 0;
+  text-transform: none;
   transition: all 0.15s;
   text-align: left;
   width: 100%;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .tag-fb:hover {
@@ -513,7 +513,7 @@ nav {
 
 .creator-nm {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: var(--fs-grn);
+  font-size: .75rem;
   letter-spacing: 0.04em;
   color: var(--t1);
   text-transform: uppercase;
@@ -529,7 +529,7 @@ nav {
 
 .compact-lbl {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: var(--fs-grn);
+  font-size: .6rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1867,13 +1867,13 @@ nav {
 }
 
 .wiki-sidebar {
-  width: 260px;
+  width: 220px;
   min-width: 200px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--bd-s);
-  background: var(--bg-s);
+  background: var(--bg-sb);
 }
 
 .wiki-search-wrap {
@@ -2157,8 +2157,8 @@ nav {
 
 .wiki-world-tabs {
   display: flex;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--bd);
   background: var(--bg-s);
   flex-wrap: wrap;
@@ -2170,7 +2170,7 @@ nav {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 5px 14px;
+  padding: 7px 20px;
   border: 1px solid var(--bd-s);
   border-radius: var(--radius-sm);
   background: transparent;
@@ -2708,14 +2708,14 @@ nav {
 ══════════════════════════════════════════════ */
 #page-map.active {
   display: grid;
-  grid-template-columns: 168px 1fr;
+  grid-template-columns: 220px 1fr;
   height: calc(100vh - 84px);
   overflow: hidden;
 }
 
 .map-sidebar {
   background: var(--bg-sb);
-  border-right: 1px solid var(--bd);
+  border-right: 1px solid var(--bd-s);
   display: flex;
   flex-direction: column;
   padding: 10px 8px;

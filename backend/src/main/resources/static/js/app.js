@@ -260,6 +260,13 @@ async function selectWorld(worldId) {
   const section = ['timeline', 'wiki', 'map'].includes(state.ui.currentPage)
     ? state.ui.currentPage : 'timeline';
 
+  // Switch the visible page (showPage is not called here to avoid double data loads)
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + section);
+  if (pageEl) pageEl.classList.add('active');
+  state.ui.currentPage = section;
+
   if (section === 'timeline') {
     try {
       const [events, undated] = await Promise.all([

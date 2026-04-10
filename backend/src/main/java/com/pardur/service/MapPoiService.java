@@ -49,7 +49,7 @@ public class MapPoiService {
         poi.setPoiType(type);
         poi.setXPct(req.getXPct());
         poi.setYPct(req.getYPct());
-        poi.setLabel(type.isHasLabel() ? req.getLabel() : null);
+        poi.setLabel(req.getLabel());
         poi.setGesinnung(type.isHasGesinnung() && req.getGesinnung() != null
                 ? MapPoi.Gesinnung.valueOf(req.getGesinnung()) : null);
         poi.setCreatedBy(user);
@@ -65,7 +65,7 @@ public class MapPoiService {
 
         if (req.getXPct()      != null) poi.setXPct(req.getXPct());
         if (req.getYPct()      != null) poi.setYPct(req.getYPct());
-        if (req.getLabel()     != null) poi.setLabel(poi.getPoiType().isHasLabel() ? req.getLabel() : null);
+        if (req.getLabel()     != null) poi.setLabel(req.getLabel());
         if (req.getGesinnung() != null) {
             poi.setGesinnung(poi.getPoiType().isHasGesinnung()
                     ? MapPoi.Gesinnung.valueOf(req.getGesinnung()) : null);
@@ -95,6 +95,7 @@ public class MapPoiService {
             p.getPoiType().getId(),
             p.getPoiType().getName(),
             p.getPoiType().getIcon(),
+            p.getPoiType().getShape(),
             p.getXPct(),
             p.getYPct(),
             p.getLabel(),

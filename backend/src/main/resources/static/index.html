@@ -435,11 +435,8 @@
 <div class="page" id="page-map">
   <aside class="map-sidebar" id="map-sidebar">
     <div class="map-sb-section">Werkzeuge</div>
-    <button class="map-tool active" id="map-tool-view" onclick="setMapTool('view')">
-      <span class="map-tool-sym">🔍</span> Ansicht
-    </button>
-    <button class="map-tool user-action-only" id="map-tool-move" onclick="setMapTool('move')" style="display:none">
-      <span class="map-tool-sym">✋</span> Verschieben
+    <button class="map-tool active" id="map-tool-interact" onclick="setMapTool('interact')">
+      <span class="map-tool-sym">✋</span> Interagieren
     </button>
     <button class="map-tool user-action-only" id="map-tool-edit" onclick="setMapTool('edit')" style="display:none">
       <span class="map-tool-sym">✏</span> Bearbeiten
@@ -518,6 +515,24 @@
         <input class="f-inp" id="ptm-name" type="text" placeholder="z.B. Hafen" maxlength="80">
       </div>
       <div class="f-grp">
+        <label class="f-lbl">Form</label>
+        <div id="ptm-shape-row" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="ptm-shape-chip" data-shape="STAR"     onclick="selectPtmShape('STAR')"    title="Stern (großer POI)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><polygon points="14,3 16.9,10 24.5,10.6 18.8,15.6 20.5,22.9 14,19 7.5,22.9 9.2,15.6 3.5,10.6 11.1,10" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="CIRCLE"   onclick="selectPtmShape('CIRCLE')"   title="Kreis (kleiner POI)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><circle cx="14" cy="14" r="11" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="TRIANGLE" onclick="selectPtmShape('TRIANGLE')" title="Dreieck (Erhebung)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><polygon points="14,3 25,23 3,23" fill="currentColor"/></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="QUESTION" onclick="selectPtmShape('QUESTION')" title="Fragezeichen (unbekannt)">
+            <svg viewBox="0 0 28 28" width="18" height="18"><text x="14" y="21" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor">?</text></svg>
+          </button>
+          <button type="button" class="ptm-shape-chip" data-shape="ICON"     onclick="selectPtmShape('ICON')"     title="Emoji / eigenes Symbol">🎨</button>
+        </div>
+      </div>
+      <div class="f-grp" id="ptm-icon-grp">
         <label class="f-lbl">Icon</label>
         <div id="ptm-icon-palette" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px"></div>
         <input class="f-inp" id="ptm-icon-custom" type="text" placeholder="Eigenes Emoji eingeben" maxlength="10" style="width:100%">

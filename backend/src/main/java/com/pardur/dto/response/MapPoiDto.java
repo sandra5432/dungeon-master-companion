@@ -6,6 +6,7 @@ public record MapPoiDto(
     Integer poiTypeId,
     String  poiTypeName,
     String  poiTypeIcon,
+    String  poiTypeShape,
     Double  xPct,
     Double  yPct,
     String  label,

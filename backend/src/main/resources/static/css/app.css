@@ -2763,7 +2763,9 @@ nav {
   justify-content: center;
   font-size: .9rem;
   flex-shrink: 0;
+  color: var(--gold);
 }
+.map-tool-sym svg { display: block; }
 
 .map-sb-divider { border: none; border-top: 1px solid var(--bd); margin: 5px 0; }
 
@@ -2865,39 +2867,27 @@ nav {
   position: relative;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.7));
   transition: transform .1s;
+  color: var(--gold);
 }
-.map-poi-pin::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  opacity: .25;
-  transition: opacity .15s;
-}
-.map-poi:hover .map-poi-pin::after { opacity: .55; }
+.map-poi-pin svg { display: block; }
 
-.map-poi.friendly .map-poi-pin { color: #5cb85c; }
-.map-poi.neutral  .map-poi-pin { color: #8a9ab0; }
-.map-poi.hostile  .map-poi-pin { color: #d9534f; }
-.map-poi.unknown  .map-poi-pin { color: var(--t3); font-weight: 700; font-size: 1.1rem; }
-.map-poi.terrain  .map-poi-pin { color: var(--t2); }
+.map-poi.poi-friendly .map-poi-pin { color: #7ddb7d; }
+.map-poi.poi-neutral  .map-poi-pin { color: #8a9ab0; }
+.map-poi.poi-hostile  .map-poi-pin { color: #e07070; }
 
 .map-poi-label {
-  margin-top: 4px;
+  margin-top: 1px;
   font-size: .6rem;
-  color: var(--t1);
+  color: var(--t2);
   background: rgba(13,17,23,.8);
   padding: 1px 6px;
   border-radius: 3px;
   white-space: nowrap;
   border: 1px solid var(--bd);
-  transform: translateY(4px);
   cursor: pointer;
 }
-.map-poi-label.wiki-linked {
-  color: var(--gold);
-}
+:root[data-theme="light"] .map-poi-label { background: rgba(245,240,232,.88); }
+.map-poi-label.wiki-linked { color: var(--gold); }
 .map-poi-label.wiki-linked::after {
   content: ' ↗';
   font-size: .55rem;
@@ -2914,6 +2904,24 @@ nav {
   transition: border-color .15s, transform .1s;
 }
 .poi-gesinnung-btn.active { border-color: var(--gold); transform: scale(1.15); }
+
+/* ── Shape chips in POI type manager ── */
+.ptm-shape-chip {
+  width: 36px; height: 36px;
+  background: var(--bg-c);
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; cursor: pointer;
+  color: var(--t2);
+  transition: border-color .15s, color .15s;
+}
+.ptm-shape-chip:hover { color: var(--gold); }
+.ptm-shape-chip.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
 
 /* ── Icon palette chips in POI type manager ── */
 .ptm-icon-chip {

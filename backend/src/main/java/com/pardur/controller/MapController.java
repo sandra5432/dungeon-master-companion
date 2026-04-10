@@ -58,6 +58,7 @@ public class MapController {
         t.setIcon(req.getIcon());
         t.setHasGesinnung(req.isHasGesinnung());
         t.setHasLabel(req.isHasLabel());
+        t.setShape(req.getShape() != null ? req.getShape() : "ICON");
         return ResponseEntity.status(201).body(toTypeDto(typeRepo.save(t)));
     }
 
@@ -70,6 +71,7 @@ public class MapController {
         if (req.getIcon()         != null) t.setIcon(req.getIcon());
         if (req.getHasGesinnung() != null) t.setHasGesinnung(req.getHasGesinnung());
         if (req.getHasLabel()     != null) t.setHasLabel(req.getHasLabel());
+        if (req.getShape()        != null) t.setShape(req.getShape());
         return ResponseEntity.ok(toTypeDto(typeRepo.save(t)));
     }
 
@@ -166,7 +168,7 @@ public class MapController {
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private PoiTypeDto toTypeDto(PoiType t) {
-        return new PoiTypeDto(t.getId(), t.getName(), t.getIcon(),
+        return new PoiTypeDto(t.getId(), t.getName(), t.getIcon(), t.getShape(),
                               t.isDefault(), t.isHasGesinnung(), t.isHasLabel());
     }
 

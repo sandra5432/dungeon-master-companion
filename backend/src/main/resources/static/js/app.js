@@ -46,7 +46,7 @@ const state = {
   map: {
     pois:              [],
     poiTypes:          [],
-    activeTool:        'view',
+    activeTool:        'interact',
     ruler:             null,
     rulerStep:         0,
     rulerStart:        null,
@@ -986,14 +986,13 @@ async function doLogin(username, password) {
       colorHex: result.colorHex || null,
       mustChangePassword: result.mustChangePassword || false,
     };
-    hideLoginModal();
-    applyAuthUI();
-    renderTimeline();
-    renderItems();
-    if (state.auth.mustChangePassword) {
+    if (result.mustChangePassword) {
+      hideLoginModal();
+      applyAuthUI();
       showPasswordChangeOverlay();
       return;
     }
+    location.reload();
   } catch (e) {
     const errEl = document.getElementById('fl-err');
     if (errEl) { errEl.textContent = 'Anmeldung fehlgeschlagen: ' + e.message; errEl.style.display = 'block'; }
@@ -2537,7 +2536,8 @@ async function initMapPage() {
   const worldId = state.ui.activeWorldId;
   if (!worldId) return;
 
-  // Reset ruler on page load; bgScale is loaded from server inside loadMapData
+  // Reset ruler and tool on page load; bgScale is loaded from server inside loadMapData
+  state.map.activeTool = 'interact';
   state.map.ruler      = null;
   state.map.rulerStep  = 0;
   state.map.rulerStart = null;
@@ -2564,7 +2564,7 @@ function renderPoiTypeSidebar() {
     <button class="map-tool poi-type-btn" data-type-id="${t.id}"
             onclick="setMapTool('place-${t.id}')"
             ${!loggedIn ? 'disabled title="Bitte einloggen"' : ''}>
-      <span class="map-tool-sym">${escHtml(t.icon)}</span> ${escHtml(t.name)}
+      <span class="map-tool-sym">${poiShapeHtml(t.shape, t.icon)}</span> ${escHtml(t.name)}
       ${state.auth.isAdmin ? `<span class="poi-type-edit-link" onclick="event.stopPropagation();openPoiTypeManager(${t.id})" title="Bearbeiten">✎</span>` : ''}
     </button>
   `).join('');
@@ -2578,7 +2578,7 @@ function setMapTool(tool) {
     renderRuler();
   }
   document.querySelectorAll('.map-tool').forEach(btn => btn.classList.remove('active'));
-  const btnIds = { view: 'map-tool-view', move: 'map-tool-move', edit: 'map-tool-edit', ruler: 'map-tool-ruler' };
+  const btnIds = { interact: 'map-tool-interact', edit: 'map-tool-edit', ruler: 'map-tool-ruler' };
   if (btnIds[tool]) {
     document.getElementById(btnIds[tool])?.classList.add('active');
   } else if (tool.startsWith('place-')) {
@@ -2587,7 +2587,7 @@ function setMapTool(tool) {
   }
   const wrap = document.getElementById('map-canvas-wrap');
   if (wrap) {
-    if      (tool === 'move')                               wrap.style.cursor = 'grab';
+    if      (tool === 'interact')                            wrap.style.cursor = 'grab';
     else if (tool === 'ruler' || tool.startsWith('place-')) wrap.style.cursor = 'crosshair';
     else                                                    wrap.style.cursor = '';
   }
@@ -2677,8 +2677,8 @@ function buildPoiElement(poi) {
   wrap.style.pointerEvents = 'auto';
 
   const icon = document.createElement('span');
-  icon.className   = 'map-poi-icon';
-  icon.textContent = poi.poiTypeIcon || '●';
+  icon.className = 'map-poi-pin';
+  icon.innerHTML = poiShapeHtml(poi.poiTypeShape, poi.poiTypeIcon);
   wrap.appendChild(icon);
 
   if (poi.label) {
@@ -2686,21 +2686,24 @@ function buildPoiElement(poi) {
     const lbl = document.createElement('span');
     lbl.className   = 'map-poi-label' + (linked ? ' wiki-linked' : '');
     lbl.textContent = poi.label;
-    if (linked) lbl.title = 'Wiki-Artikel gefunden';
+    if (linked) {
+      lbl.title = 'Wiki-Artikel öffnen';
+      lbl.addEventListener('click', e => {
+        e.stopPropagation();
+        const lower = poi.label.trim().toLowerCase();
+        const entry = state.wikiAllEntries.find(w =>
+          w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
+        );
+        if (entry) openWikiFromEvent(entry.id);
+      });
+    }
     wrap.appendChild(lbl);
   }
 
   wrap.addEventListener('click', e => {
     e.stopPropagation();
-    const tool = state.map.activeTool;
-    if (tool === 'edit') {
+    if (state.map.activeTool === 'edit') {
       openPoiDialog(poi.id);
-    } else if (tool === 'view' && poi.label) {
-      const lower = poi.label.trim().toLowerCase();
-      const entry = state.wikiAllEntries.find(w =>
-        w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
-      );
-      if (entry) openWikiFromEvent(entry.id);
     }
   });
 
@@ -2762,7 +2765,7 @@ function attachPoiDrag(el, poi) {
   let startX, startY, origLeft, origTop;
 
   el.addEventListener('mousedown', e => {
-    if (state.map.activeTool !== 'move') return;
+    if (state.map.activeTool !== 'interact') return;
     e.preventDefault();
     dragging = false;
     startX    = e.clientX;
@@ -2820,7 +2823,6 @@ function openPoiDialog(poiId) {
 
   const modal     = document.getElementById('poi-modal');
   const title     = document.getElementById('poi-modal-title');
-  const labelGrp  = document.getElementById('poi-label-grp');
   const gesGrp    = document.getElementById('poi-gesinnung-grp');
   const delBtn    = document.getElementById('poi-delete-btn');
   const errEl     = document.getElementById('poi-modal-err');
@@ -2838,8 +2840,7 @@ function openPoiDialog(poiId) {
     title.textContent = (type ? type.icon + ' ' + type.name : 'POI') + ' bearbeiten';
     if (labelInp) labelInp.value = poi.label || '';
     state.map.selectedGesinnung = poi.gesinnung || null;
-    if (labelGrp) labelGrp.style.display = type?.hasLabel      ? '' : 'none';
-    if (gesGrp)   gesGrp.style.display   = type?.hasGesinnung  ? '' : 'none';
+    if (gesGrp) gesGrp.style.display = type?.hasGesinnung ? '' : 'none';
     const canDelete = state.auth.isAdmin || poi.createdByUserId === state.auth.userId;
     if (delBtn) delBtn.style.display = canDelete ? '' : 'none';
   } else {
@@ -2848,9 +2849,8 @@ function openPoiDialog(poiId) {
     title.textContent = (type ? type.icon + ' ' + type.name : 'POI') + ' platzieren';
     if (labelInp) labelInp.value = '';
     state.map.selectedGesinnung = null;
-    if (labelGrp) labelGrp.style.display = type?.hasLabel      ? '' : 'none';
-    if (gesGrp)   gesGrp.style.display   = type?.hasGesinnung  ? '' : 'none';
-    if (delBtn)   delBtn.style.display   = 'none';
+    if (gesGrp) gesGrp.style.display = type?.hasGesinnung ? '' : 'none';
+    if (delBtn) delBtn.style.display = 'none';
   }
 
   updateGesinnungButtons();
@@ -2896,9 +2896,8 @@ async function savePoiModal() {
     if (state.map.editPoiId) {
       const poi  = state.map.pois.find(p => p.id === state.map.editPoiId);
       const type = poi ? state.map.poiTypes.find(t => t.id === poi.poiTypeId) : null;
-      const body = {};
-      if (type?.hasLabel)      body.label     = label || null;
-      if (type?.hasGesinnung)  body.gesinnung  = state.map.selectedGesinnung || null;
+      const body = { label: label || null };
+      if (type?.hasGesinnung) body.gesinnung = state.map.selectedGesinnung || null;
       const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${state.map.editPoiId}`, body);
       const idx = state.map.pois.findIndex(p => p.id === state.map.editPoiId);
       if (idx >= 0) state.map.pois[idx] = updated;
@@ -2914,11 +2913,12 @@ async function savePoiModal() {
         poiTypeId: typeId,
         xPct:      state.map.pendingX,
         yPct:      state.map.pendingY,
-        label:     (type?.hasLabel     && label)                           ? label                           : null,
-        gesinnung: (type?.hasGesinnung && state.map.selectedGesinnung)     ? state.map.selectedGesinnung     : null,
+        label:     label || null,
+        gesinnung: (type?.hasGesinnung && state.map.selectedGesinnung) ? state.map.selectedGesinnung : null,
       };
       const created = await api('POST', `/worlds/${state.ui.activeWorldId}/map/pois`, body);
       state.map.pois.push(created);
+      setMapTool('interact');
     }
     closePoiModal();
     renderMap();
@@ -3019,6 +3019,26 @@ function renderRuler() {
 ══════════════════════════════════════ */
 const POI_ICON_PALETTE = ['⭐','●','?','▲','🏰','⛪','🌲','🌊','🏔','🗡','💀','🔥','🏺','💎','🐉','🚢','🌙','☀','🌿'];
 
+/**
+ * Returns the inner HTML for a POI symbol — inline SVG for shaped types, escaped emoji for ICON.
+ * @param {string} shape  - 'STAR', 'CIRCLE', 'TRIANGLE', 'QUESTION', or 'ICON'
+ * @param {string} icon   - emoji fallback used when shape is 'ICON'
+ */
+function poiShapeHtml(shape, icon) {
+  switch (shape) {
+    case 'STAR':
+      return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><polygon points="14,3 16.9,10 24.5,10.6 18.8,15.6 20.5,22.9 14,19 7.5,22.9 9.2,15.6 3.5,10.6 11.1,10" fill="currentColor"/></svg>`;
+    case 'CIRCLE':
+      return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="11" fill="currentColor"/></svg>`;
+    case 'TRIANGLE':
+      return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><polygon points="14,3 25,23 3,23" fill="currentColor"/></svg>`;
+    case 'QUESTION':
+      return `<svg viewBox="0 0 28 28" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><text x="14" y="21" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor">?</text></svg>`;
+    default:
+      return escHtml(icon || '●');
+  }
+}
+
 function openPoiTypeManager(editTypeId) {
   const modal      = document.getElementById('poi-type-modal');
   const title      = document.getElementById('poi-type-modal-title');
@@ -3041,11 +3061,12 @@ function openPoiTypeManager(editTypeId) {
     const t = state.map.poiTypes.find(x => x.id === editTypeId);
     if (!t) return;
     modal.dataset.editTypeId = editTypeId;
-    title.textContent        = t.icon + ' ' + t.name + ' bearbeiten';
+    title.textContent        = t.name + ' bearbeiten';
     if (nameInp)    nameInp.value    = t.name;
     if (iconCustom) iconCustom.value = POI_ICON_PALETTE.includes(t.icon) ? '' : t.icon;
     if (hasGes)     hasGes.checked   = t.hasGesinnung;
     if (hasLbl)     hasLbl.checked   = t.hasLabel;
+    selectPtmShape(t.shape || 'ICON');
     selectPtmIcon(t.icon);
     if (delBtn) delBtn.style.display = t.isDefault ? 'none' : '';
   } else {
@@ -3056,11 +3077,20 @@ function openPoiTypeManager(editTypeId) {
     if (hasGes)     hasGes.checked   = true;
     if (hasLbl)     hasLbl.checked   = true;
     if (palette)    palette.querySelectorAll('.ptm-icon-chip').forEach(b => b.classList.remove('active'));
+    selectPtmShape('ICON');
     if (delBtn)     delBtn.style.display = 'none';
   }
 
   modal.classList.add('open');
   if (nameInp) nameInp.focus();
+}
+
+function selectPtmShape(shape) {
+  document.querySelectorAll('.ptm-shape-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.shape === shape);
+  });
+  const iconGrp = document.getElementById('ptm-icon-grp');
+  if (iconGrp) iconGrp.style.display = shape === 'ICON' ? '' : 'none';
 }
 
 function selectPtmIcon(icon) {
@@ -3087,12 +3117,14 @@ async function savePoiTypeModal() {
   const name = nameInp?.value.trim();
   if (!name) { alert('Bitte einen Namen eingeben.'); return; }
 
-  const selectedChip = document.querySelector('.ptm-icon-chip.active');
-  const icon = selectedChip ? selectedChip.dataset.icon : (iconCustom?.value.trim() || '●');
+  const selectedChip  = document.querySelector('.ptm-icon-chip.active');
+  const icon          = selectedChip ? selectedChip.dataset.icon : (iconCustom?.value.trim() || '●');
+  const selectedShape = document.querySelector('.ptm-shape-chip.active')?.dataset.shape || 'ICON';
 
   const body = {
     name,
     icon,
+    shape:        selectedShape,
     hasGesinnung: hasGes?.checked ?? true,
     hasLabel:     hasLbl?.checked ?? true,
   };

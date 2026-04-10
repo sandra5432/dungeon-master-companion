@@ -27,6 +27,9 @@ public class PoiType {
     @Column(name = "has_label", nullable = false)
     private boolean hasLabel = true;
 
+    @Column(length = 20, nullable = false)
+    private String shape = "ICON";
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -42,5 +45,7 @@ public class PoiType {
     public void    setHasGesinnung(boolean v){ this.hasGesinnung = v; }
     public boolean isHasLabel()              { return hasLabel; }
     public void    setHasLabel(boolean v)    { this.hasLabel = v; }
+    public String  getShape()               { return shape; }
+    public void    setShape(String s)       { this.shape = s; }
     public LocalDateTime getCreatedAt()      { return createdAt; }
 }

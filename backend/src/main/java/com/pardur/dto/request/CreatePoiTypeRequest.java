@@ -13,6 +13,7 @@ public class CreatePoiTypeRequest {
 
     private boolean hasGesinnung = true;
     private boolean hasLabel     = true;
+    private String  shape        = "ICON";
 
     public String  getName()                  { return name; }
     public void    setName(String n)          { this.name = n; }
@@ -22,4 +23,6 @@ public class CreatePoiTypeRequest {
     public void    setHasGesinnung(boolean v) { this.hasGesinnung = v; }
     public boolean isHasLabel()               { return hasLabel; }
     public void    setHasLabel(boolean v)     { this.hasLabel = v; }
+    public String  getShape()                 { return shape; }
+    public void    setShape(String s)         { this.shape = s; }
 }

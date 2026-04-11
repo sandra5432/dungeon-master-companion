@@ -229,6 +229,41 @@ public class WikiService {
         return new WikiGraphDto(nodes, edges);
     }
 
+    /**
+     * Returns a raw-markdown excerpt of the entry body: the first paragraph, or
+     * the first 1–2 sentences if the opening paragraph is long, capped at ~300 chars.
+     * The caller is expected to render this as markdown (e.g. via marked.js).
+     *
+     * @param id entry ID
+     * @return markdown excerpt, empty if the entry has no body
+     */
+    @Transactional(readOnly = true)
+    public String getPreview(Integer id) {
+        WikiEntry entry = requireEntry(id);
+        String body = entry.getBody() != null ? entry.getBody().trim() : "";
+        if (body.isEmpty()) return "";
+
+        // Strip spoiler blocks — they should not appear in a preview
+        body = body.replaceAll(":::spoiler[^\n]*\n[\\s\\S]*?:::", "").trim();
+
+        // Use the first paragraph (blank-line boundary) if it is reasonably sized
+        int paraEnd = body.indexOf("\n\n");
+        String para = (paraEnd > 0 && paraEnd <= 400) ? body.substring(0, paraEnd).trim() : body;
+
+        if (para.length() <= 300) return para;
+
+        // Paragraph is long — find end of first or second sentence
+        int end = -1;
+        for (int i = 60; i < Math.min(para.length(), 350); i++) {
+            char c = para.charAt(i);
+            if ((c == '.' || c == '!' || c == '?') && (i + 1 >= para.length() || para.charAt(i + 1) == ' ')) {
+                end = i;
+                if (end >= 120) break;
+            }
+        }
+        return end > 0 ? para.substring(0, end + 1).trim() : para.substring(0, 300).trim() + "…";
+    }
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllTitles() {
         return entryRepository.findAll().stream()

@@ -1961,7 +1961,7 @@ function renderWikiArticle(entry) {
   const canManageSpoilers = isOwner || isAdmin;
 
   const breadcrumbHtml = entry.parentId
-    ? `<div class="wiki-breadcrumb"><a class="wiki-breadcrumb-link" onclick="loadWikiArticle(${entry.parentId})">← ${escHtml(entry.parentTitle)}</a></div>`
+    ? `<div class="wiki-breadcrumb"><a class="wiki-breadcrumb-link" data-wiki-id="${entry.parentId}" data-wiki-title="${escHtml(entry.parentTitle)}" onclick="loadWikiArticle(${entry.parentId})">← ${escHtml(entry.parentTitle)}</a></div>`
     : '';
 
   const childrenHtml = (entry.children && entry.children.length > 0)
@@ -1969,7 +1969,7 @@ function renderWikiArticle(entry) {
         <h4>Unterseiten</h4>
         <div class="wiki-children-list">
           ${entry.children.map(c => `
-            <a class="wiki-linked-item" href="#" onclick="loadWikiArticle(${c.id});return false">
+            <a class="wiki-linked-item" href="#" data-wiki-id="${c.id}" data-wiki-title="${escHtml(c.title)}" onclick="loadWikiArticle(${c.id});return false">
               <span class="wiki-type-badge wiki-type-${c.type.toLowerCase()} wiki-type-badge--sm">${escHtml(c.type)}</span>
               ${escHtml(c.title)}
             </a>
@@ -2002,12 +2002,12 @@ function renderWikiArticle(entry) {
     : '';
 
   const parentCellHtml = entry.parentId
-    ? `<a class="wiki-info-link wiki-type-${(entry.parentType || 'other').toLowerCase()}" href="#" onclick="loadWikiArticle(${entry.parentId});return false">${escHtml(entry.parentTitle)}</a>`
+    ? `<a class="wiki-info-link wiki-type-${(entry.parentType || 'other').toLowerCase()}" href="#" data-wiki-id="${entry.parentId}" data-wiki-title="${escHtml(entry.parentTitle)}" onclick="loadWikiArticle(${entry.parentId});return false">${escHtml(entry.parentTitle)}</a>`
     : `<span class="wiki-info-empty">—</span>`;
 
   const childrenCellHtml = (entry.children && entry.children.length > 0)
     ? entry.children.map(c =>
-        `<a class="wiki-info-link wiki-type-${c.type.toLowerCase()}" href="#" onclick="loadWikiArticle(${c.id});return false">${escHtml(c.title)}</a>`
+        `<a class="wiki-info-link wiki-type-${c.type.toLowerCase()}" href="#" data-wiki-id="${c.id}" data-wiki-title="${escHtml(c.title)}" onclick="loadWikiArticle(${c.id});return false">${escHtml(c.title)}</a>`
       ).join('')
     : `<span class="wiki-info-empty">—</span>`;
 
@@ -2066,7 +2066,7 @@ function renderWikiArticle(entry) {
     if (!el) return;
     if (!entries.length) { el.innerHTML = '<span class="wiki-info-empty">—</span>'; return; }
     el.innerHTML = entries.map(e =>
-      `<a class="wiki-info-link wiki-type-${(e.type || 'other').toLowerCase()}" href="#" onclick="loadWikiArticle(${e.id});return false">${escHtml(e.title)}</a>`
+      `<a class="wiki-info-link wiki-type-${(e.type || 'other').toLowerCase()}" href="#" data-wiki-id="${e.id}" data-wiki-title="${escHtml(e.title)}" onclick="loadWikiArticle(${e.id});return false">${escHtml(e.title)}</a>`
     ).join('');
   }).catch(() => {});
 
@@ -2500,7 +2500,7 @@ function linkifyWikiTitles(html, excludeId) {
       const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const re = new RegExp(`(?<!\\w)${escaped}(?!\\w)`, 'gi');
       const next = result.replace(re, match =>
-        `<a class="wiki-inline-link" href="#" onclick="openWikiFromEvent(${id});return false">${match}</a>`
+        `<a class="wiki-inline-link" href="#" data-wiki-id="${id}" onclick="openWikiFromEvent(${id});return false">${match}</a>`
       );
       if (next !== result) { result = next; modified = true; }
     }
@@ -2518,6 +2518,79 @@ function openWikiFromEvent(entryId) {
   showPage('wiki');
   loadWikiArticle(entryId);
 }
+
+/* ══════════════════════════════════════
+   WIKI — PREVIEW TOOLTIP
+══════════════════════════════════════ */
+let _wikiTipTimer = null;
+let _wikiTipEl    = null;
+const _wikiTipCache = {};
+
+/**
+ * Starts (or continues) the 1-second hover timer for a wiki preview tooltip.
+ * Does nothing if the same element is already being tracked.
+ * @param {Element} el   - element with data-wiki-id attribute
+ * @param {number}  x    - clientX of the triggering mouse event
+ * @param {number}  y    - clientY of the triggering mouse event
+ */
+function _startWikiTip(el, x, y) {
+  if (el === _wikiTipEl) return;
+  _hideWikiTip();
+  _wikiTipEl = el;
+  _wikiTipTimer = setTimeout(async () => {
+    const id = el.dataset.wikiId;
+    try {
+      if (!_wikiTipCache[id]) {
+        const res = await api('GET', `/wiki/${id}/preview`);
+        _wikiTipCache[id] = res.preview || '';
+      }
+      if (_wikiTipEl !== el) return; // navigated away while fetching
+      const title = el.dataset.wikiTitle || el.textContent.replace(/\s+/g, ' ').trim();
+      const tip   = document.getElementById('wiki-preview-tip');
+      if (!tip) return;
+      tip.querySelector('.wpt-title').textContent = title;
+      tip.querySelector('.wpt-text').innerHTML    = _wikiTipCache[id]
+        ? marked.parse(_wikiTipCache[id])
+        : '<em>…</em>';
+      tip.hidden = false;
+      _posWikiTip(x, y);
+    } catch (e) { /* ignore fetch errors */ }
+  }, 1000);
+}
+
+/** Hides the tooltip and cancels any pending timer. */
+function _hideWikiTip() {
+  clearTimeout(_wikiTipTimer);
+  _wikiTipTimer = null;
+  _wikiTipEl    = null;
+  const tip = document.getElementById('wiki-preview-tip');
+  if (tip) tip.hidden = true;
+}
+
+/**
+ * Repositions the tooltip near the cursor, keeping it within the viewport.
+ * @param {number} x - clientX
+ * @param {number} y - clientY
+ */
+function _posWikiTip(x, y) {
+  const tip = document.getElementById('wiki-preview-tip');
+  if (!tip || tip.hidden) return;
+  const m = 14;
+  let left = x + m;
+  let top  = y + m;
+  if (left + tip.offsetWidth  > window.innerWidth  - m) left = x - tip.offsetWidth  - m;
+  if (top  + tip.offsetHeight > window.innerHeight - m) top  = y - tip.offsetHeight - m;
+  tip.style.left = left + 'px';
+  tip.style.top  = top  + 'px';
+}
+
+// Delegated listeners — work for any [data-wiki-id] element regardless of when it was created
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('[data-wiki-id]');
+  if (el) _startWikiTip(el, e.clientX, e.clientY);
+  else    _hideWikiTip();
+});
+document.addEventListener('mousemove', e => { _posWikiTip(e.clientX, e.clientY); });
 
 /* ══════════════════════════════════════
    MAP — INITIALISATION
@@ -2764,13 +2837,16 @@ function buildPoiElement(poi) {
       if (poi.textItalic) txt.style.fontStyle  = 'italic';
       if (poi.textSize)   txt.style.fontSize   = poi.textSize + 'px';
       if (linked) {
+        const entry = state.wikiTitles.find(w =>
+          w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === poi.label.trim().toLowerCase()
+        );
+        if (entry) {
+          txt.dataset.wikiId    = entry.id;
+          txt.dataset.wikiTitle = entry.title;
+        }
         txt.title = 'Wiki-Artikel öffnen';
         txt.addEventListener('click', e => {
           e.stopPropagation();
-          const lower = poi.label.trim().toLowerCase();
-          const entry = state.wikiTitles.find(w =>
-            w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
-          );
           if (entry) openWikiFromEvent(entry.id);
         });
       }
@@ -2789,13 +2865,16 @@ function buildPoiElement(poi) {
       lbl.className   = 'map-poi-label' + (linked ? ' wiki-linked' : '');
       lbl.textContent = poi.label;
       if (linked) {
+        const entry = state.wikiTitles.find(w =>
+          w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === poi.label.trim().toLowerCase()
+        );
+        if (entry) {
+          lbl.dataset.wikiId    = entry.id;
+          lbl.dataset.wikiTitle = entry.title;
+        }
         lbl.title = 'Wiki-Artikel öffnen';
         lbl.addEventListener('click', e => {
           e.stopPropagation();
-          const lower = poi.label.trim().toLowerCase();
-          const entry = state.wikiTitles.find(w =>
-            w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
-          );
           if (entry) openWikiFromEvent(entry.id);
         });
       }

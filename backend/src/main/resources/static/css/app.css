@@ -2466,6 +2466,38 @@ nav {
 .wiki-inline-link { color: var(--gold); text-decoration: underline dotted; cursor: pointer; }
 .wiki-inline-link:hover { color: var(--t1); }
 
+/* ── Wiki preview tooltip ── */
+#wiki-preview-tip {
+  position: fixed;
+  max-width: 280px;
+  background: var(--bg-sb);
+  border: 1px solid var(--bd-s);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: .73rem;
+  line-height: 1.55;
+  color: var(--t2);
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  z-index: 9999;
+  pointer-events: none;
+}
+#wiki-preview-tip .wpt-title {
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 5px;
+  font-size: .78rem;
+}
+/* Compact markdown rendering inside the tooltip */
+#wiki-preview-tip .wpt-text p         { margin: 0 0 4px; }
+#wiki-preview-tip .wpt-text p:last-child { margin-bottom: 0; }
+#wiki-preview-tip .wpt-text strong    { font-weight: 700; color: var(--t1); }
+#wiki-preview-tip .wpt-text em        { font-style: italic; }
+#wiki-preview-tip .wpt-text code      { font-family: monospace; font-size: .9em; background: rgba(255,255,255,.08); padding: 0 3px; border-radius: 3px; }
+#wiki-preview-tip .wpt-text ul,
+#wiki-preview-tip .wpt-text ol        { margin: 2px 0 4px 14px; padding: 0; }
+#wiki-preview-tip .wpt-text li        { margin-bottom: 2px; }
+#wiki-preview-tip[hidden] { display: none; }
+
 .wiki-article-meta {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: calc(var(--fs-grn) * 0.9);

@@ -53,6 +53,18 @@ public class WikiController {
         return ResponseEntity.ok(wikiService.getAllTitles());
     }
 
+    /**
+     * Returns a short plain-text preview of the entry body (first 1–2 sentences).
+     * Public endpoint — no auth required.
+     *
+     * @param id entry ID
+     * @return map with a single {@code preview} key
+     */
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<Map<String, String>> preview(@PathVariable Integer id) {
+        return ResponseEntity.ok(Map.of("preview", wikiService.getPreview(id)));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<WikiEntryDto> get(@PathVariable Integer id, Authentication auth) {
         PardurUserDetails user = resolve(auth);

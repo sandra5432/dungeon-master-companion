@@ -9,7 +9,10 @@ public class CreateMapPoiRequest {
     @JsonProperty("xPct") @NotNull @DecimalMin("0.0") @DecimalMax("1.0") private Double xPct;
     @JsonProperty("yPct") @NotNull @DecimalMin("0.0") @DecimalMax("1.0") private Double yPct;
     @Size(max = 120) private String label;
-    private String gesinnung;
+    private String  gesinnung;
+    private Boolean textBold;
+    private Boolean textItalic;
+    @Min(8) @Max(72) private Integer textSize;
 
     public Integer getPoiTypeId()             { return poiTypeId; }
     public void    setPoiTypeId(Integer v)    { this.poiTypeId = v; }
@@ -21,4 +24,10 @@ public class CreateMapPoiRequest {
     public void    setLabel(String v)         { this.label = v; }
     public String  getGesinnung()             { return gesinnung; }
     public void    setGesinnung(String v)     { this.gesinnung = v; }
+    public Boolean getTextBold()              { return textBold; }
+    public void    setTextBold(Boolean v)     { this.textBold = v; }
+    public Boolean getTextItalic()            { return textItalic; }
+    public void    setTextItalic(Boolean v)   { this.textItalic = v; }
+    public Integer getTextSize()              { return textSize; }
+    public void    setTextSize(Integer v)     { this.textSize = v; }
 }

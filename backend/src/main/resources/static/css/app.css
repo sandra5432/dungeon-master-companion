@@ -581,6 +581,28 @@ nav {
   font-weight: 600;
 }
 
+/* ── Undated add button ── */
+.undated-add-btn {
+  width: 100%;
+  padding: 6px 14px;
+  margin-bottom: 10px;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--gold);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: calc(var(--fs-grn) * 0.92);
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.undated-add-btn:hover {
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  border-color: var(--gold);
+}
+
 /* ── Undated cards (right sidebar) ── */
 .undated-list {
   display: flex;
@@ -2713,6 +2735,12 @@ nav {
   overflow: hidden;
 }
 
+.map-canvas-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .map-sidebar {
   background: var(--bg-sb);
   border-right: 1px solid var(--bd-s);
@@ -2808,12 +2836,44 @@ nav {
 /* ── Canvas ── */
 .map-canvas-wrap {
   position: relative;
+  flex: 1;
   background: var(--bg);
   overflow: hidden;
   cursor: default;
 }
 .map-canvas-wrap.placing   { cursor: crosshair; }
 .map-canvas-wrap.measuring { cursor: crosshair; }
+
+.map-viewport {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+}
+
+.map-zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: var(--bg-sb);
+  border-top: 1px solid var(--bd-s);
+  flex-shrink: 0;
+}
+.map-zoom-bar input[type=range] { flex: 1; }
+.map-zoom-icon {
+  font-size: 1rem;
+  color: var(--t3);
+  user-select: none;
+  cursor: default;
+  width: 14px;
+  text-align: center;
+}
+#map-zoom-val {
+  font-size: .75rem;
+  color: var(--t3);
+  min-width: 38px;
+  text-align: right;
+}
 
 .map-grid-layer {
   position: absolute;
@@ -2877,6 +2937,7 @@ nav {
 
 .map-poi-label {
   margin-top: 1px;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: .6rem;
   color: var(--t2);
   background: rgba(13,17,23,.8);
@@ -2891,6 +2952,43 @@ nav {
 .map-poi-label.wiki-linked::after {
   content: ' ↗';
   font-size: .55rem;
+}
+
+/* ── TEXT POI ── */
+.map-poi--text {
+  transform: translate(-50%, -50%);
+}
+
+.map-poi-text {
+  display: block;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--t1);
+  white-space: nowrap;
+  user-select: none;
+  cursor: grab;
+  text-shadow: 0 1px 3px rgba(0,0,0,.65), 0 0 8px rgba(0,0,0,.4);
+  pointer-events: all;
+}
+.map-poi-text.wiki-linked {
+  color: var(--gold);
+  cursor: pointer;
+}
+.map-poi-text.wiki-linked::after {
+  content: ' ↗';
+  font-size: .7em;
+}
+
+/* ── Text-format controls in POI dialog ── */
+.poi-text-fmt-lbl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .8rem;
+  cursor: pointer;
+}
+.poi-text-size-inp {
+  width: 58px;
+  padding: 2px 6px;
 }
 
 /* ── POI gesinnung buttons in dialog ── */

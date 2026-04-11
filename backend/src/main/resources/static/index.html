@@ -76,7 +76,8 @@
   </div>
 
   <aside class="sidebar sidebar-right">
-    <div class="sb-title">Datum Unbekannt <button class="user-action-only" onclick="openUndatedAdd()" style="display:none">+</button></div>
+    <div class="sb-title">Datum Unbekannt</div>
+    <button class="undated-add-btn user-action-only" onclick="openUndatedAdd()" style="display:none">+ Neuer Eintrag</button>
     <div class="undated-list" id="undated-list"></div>
     <div class="undated-hint user-action-only" style="display:none">⠿ Ziehen zum Einordnen</div>
   </aside>
@@ -455,18 +456,29 @@
     <div class="map-sb-section">Marker</div>
     <div id="map-poi-type-list"></div>
   </aside>
-  <div class="map-canvas-wrap" id="map-canvas-wrap">
-    <img id="map-bg-img" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
-    <div class="map-grid-layer" id="map-grid"></div>
-    <svg class="map-ruler-svg" id="map-ruler-svg" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <marker id="ruler-dot" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5">
-          <circle cx="3.5" cy="3.5" r="3" fill="var(--gold)"/>
-        </marker>
-      </defs>
-    </svg>
-    <div id="map-pois-layer" style="position:absolute;inset:0;pointer-events:none"></div>
-    <span class="map-scale-label">1 Feld = 5 Meilen</span>
+  <div class="map-canvas-area">
+    <div class="map-canvas-wrap" id="map-canvas-wrap">
+      <div class="map-viewport" id="map-viewport">
+        <img id="map-bg-img" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+        <div class="map-grid-layer" id="map-grid"></div>
+        <svg class="map-ruler-svg" id="map-ruler-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="ruler-dot" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5">
+              <circle cx="3.5" cy="3.5" r="3" fill="var(--gold)"/>
+            </marker>
+          </defs>
+        </svg>
+        <div id="map-pois-layer" style="position:absolute;inset:0;pointer-events:none"></div>
+        <span class="map-scale-label">1 Feld = 5 Meilen</span>
+      </div>
+    </div>
+    <div class="map-zoom-bar">
+      <span class="map-zoom-icon">−</span>
+      <input type="range" id="map-zoom-slider" min="25" max="400" step="5" value="100"
+             oninput="setMapZoom(this.value / 100)">
+      <span class="map-zoom-icon">+</span>
+      <span id="map-zoom-val">100%</span>
+    </div>
   </div>
 </div><!-- #page-map -->
 
@@ -480,6 +492,20 @@
         <label class="f-lbl">Bezeichnung</label>
         <input class="f-inp" id="poi-label-inp" type="text" placeholder="z.B. Tempel der Exandra" maxlength="120">
         <div id="poi-wiki-hint" style="display:none;font-size:.63rem;color:var(--gold);margin-top:4px">📖 Wiki-Artikel gefunden — wird verknüpft</div>
+      </div>
+      <div class="f-grp" id="poi-text-grp" style="display:none">
+        <label class="f-lbl">Text-Format</label>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <label class="poi-text-fmt-lbl">
+            <input type="checkbox" id="poi-text-bold"> <strong>Fett</strong>
+          </label>
+          <label class="poi-text-fmt-lbl">
+            <input type="checkbox" id="poi-text-italic"> <em>Kursiv</em>
+          </label>
+          <label class="poi-text-fmt-lbl">
+            Größe: <input type="number" id="poi-text-size" class="f-inp poi-text-size-inp" min="8" max="72" value="14">
+          </label>
+        </div>
       </div>
       <div class="f-grp" id="poi-gesinnung-grp">
         <label class="f-lbl">Gesinnung</label>

@@ -52,6 +52,9 @@ const state = {
     rulerStart:        null,
     bgUrl:             null,
     bgScale:           1.0,
+    zoom:              1.0,
+    panX:              0,
+    panY:              0,
     editPoiId:         null,
     pendingX:          null,
     pendingY:          null,
@@ -2543,11 +2546,14 @@ async function initMapPage() {
   const worldId = state.ui.activeWorldId;
   if (!worldId) return;
 
-  // Reset ruler and tool on page load; bgScale is loaded from server inside loadMapData
+  // Reset ruler, tool, and viewport on page load; bgScale is loaded from server inside loadMapData
   state.map.activeTool = 'interact';
   state.map.ruler      = null;
   state.map.rulerStep  = 0;
   state.map.rulerStart = null;
+  state.map.zoom       = 1.0;
+  state.map.panX       = 0;
+  state.map.panY       = 0;
 
   await Promise.all([loadPoiTypes(), loadMapData(worldId)]);
 
@@ -2556,6 +2562,10 @@ async function initMapPage() {
   const scaleVal    = document.getElementById('map-bg-scale-val');
   if (scaleSlider) scaleSlider.value = state.map.bgScale;
   if (scaleVal)    scaleVal.textContent = Math.round(state.map.bgScale * 100) + '%';
+  const zoomSlider = document.getElementById('map-zoom-slider');
+  const zoomVal    = document.getElementById('map-zoom-val');
+  if (zoomSlider) zoomSlider.value = 100;
+  if (zoomVal)    zoomVal.textContent = '100%';
   renderPoiTypeSidebar();
   renderMap();
   renderRuler();
@@ -2672,6 +2682,45 @@ function renderMap() {
     const el = buildPoiElement(poi);
     layer.appendChild(el);
   }
+
+  applyMapViewport();
+}
+
+/**
+ * Applies the current zoom and pan transform to the map viewport element.
+ */
+function applyMapViewport() {
+  const vp = document.getElementById('map-viewport');
+  if (vp) vp.style.transform = `translate(${state.map.panX}px, ${state.map.panY}px) scale(${state.map.zoom})`;
+}
+
+/**
+ * Sets the map zoom level, clamped to [0.25, 4.0], and syncs the zoom slider.
+ * @param {number} zoom - desired zoom level as a multiplier (1.0 = 100%)
+ */
+function setMapZoom(zoom) {
+  state.map.zoom = Math.max(0.25, Math.min(4.0, zoom));
+  const slider = document.getElementById('map-zoom-slider');
+  const val    = document.getElementById('map-zoom-val');
+  if (slider) slider.value = Math.round(state.map.zoom * 100);
+  if (val)    val.textContent = Math.round(state.map.zoom * 100) + '%';
+  applyMapViewport();
+}
+
+/**
+ * Converts screen coordinates to map percentage position, accounting for
+ * the current zoom and pan transform of the viewport.
+ * @param {number} clientX
+ * @param {number} clientY
+ * @returns {{ xPct: number, yPct: number }}
+ */
+function screenToMapPct(clientX, clientY) {
+  const wrap = document.getElementById('map-canvas-wrap');
+  if (!wrap) return { xPct: 0, yPct: 0 };
+  const rect = wrap.getBoundingClientRect();
+  const xPct = 0.5 + (clientX - rect.left - rect.width  / 2 - state.map.panX) / (rect.width  * state.map.zoom);
+  const yPct = 0.5 + (clientY - rect.top  - rect.height / 2 - state.map.panY) / (rect.height * state.map.zoom);
+  return { xPct, yPct };
 }
 
 function buildPoiElement(poi) {
@@ -2683,35 +2732,60 @@ function buildPoiElement(poi) {
   wrap.style.top  = (poi.yPct * 100) + '%';
   wrap.style.pointerEvents = 'auto';
 
-  const icon = document.createElement('span');
-  icon.className = 'map-poi-pin';
-  icon.innerHTML = poiShapeHtml(poi.poiTypeShape, poi.poiTypeIcon);
-  wrap.appendChild(icon);
-
-  if (poi.label) {
-    const linked = wikiLinkCheck(poi.label, state.ui.activeWorldId);
-    const lbl = document.createElement('span');
-    lbl.className   = 'map-poi-label' + (linked ? ' wiki-linked' : '');
-    lbl.textContent = poi.label;
-    if (linked) {
-      lbl.title = 'Wiki-Artikel öffnen';
-      lbl.addEventListener('click', e => {
-        e.stopPropagation();
-        const lower = poi.label.trim().toLowerCase();
-        const entry = state.wikiAllEntries.find(w =>
-          w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
-        );
-        if (entry) openWikiFromEvent(entry.id);
-      });
+  if (poi.poiTypeShape === 'TEXT') {
+    // TEXT POI: no icon pin, just styled text centered on the placed point
+    wrap.classList.add('map-poi--text');
+    if (poi.label) {
+      const linked = wikiLinkCheck(poi.label, state.ui.activeWorldId);
+      const txt = document.createElement('span');
+      txt.className   = 'map-poi-text' + (linked ? ' wiki-linked' : '');
+      txt.textContent = poi.label;
+      if (poi.textBold)   txt.style.fontWeight = 'bold';
+      if (poi.textItalic) txt.style.fontStyle  = 'italic';
+      if (poi.textSize)   txt.style.fontSize   = poi.textSize + 'px';
+      if (linked) {
+        txt.title = 'Wiki-Artikel öffnen';
+        txt.addEventListener('click', e => {
+          e.stopPropagation();
+          const lower = poi.label.trim().toLowerCase();
+          const entry = state.wikiTitles.find(w =>
+            w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
+          );
+          if (entry) openWikiFromEvent(entry.id);
+        });
+      }
+      wrap.appendChild(txt);
     }
-    wrap.appendChild(lbl);
+  } else {
+    // Standard POI: icon pin + optional label below
+    const icon = document.createElement('span');
+    icon.className = 'map-poi-pin';
+    icon.innerHTML = poiShapeHtml(poi.poiTypeShape, poi.poiTypeIcon);
+    wrap.appendChild(icon);
+
+    if (poi.label) {
+      const linked = wikiLinkCheck(poi.label, state.ui.activeWorldId);
+      const lbl = document.createElement('span');
+      lbl.className   = 'map-poi-label' + (linked ? ' wiki-linked' : '');
+      lbl.textContent = poi.label;
+      if (linked) {
+        lbl.title = 'Wiki-Artikel öffnen';
+        lbl.addEventListener('click', e => {
+          e.stopPropagation();
+          const lower = poi.label.trim().toLowerCase();
+          const entry = state.wikiTitles.find(w =>
+            w.worldId === state.ui.activeWorldId && w.title.toLowerCase() === lower
+          );
+          if (entry) openWikiFromEvent(entry.id);
+        });
+      }
+      wrap.appendChild(lbl);
+    }
   }
 
   wrap.addEventListener('click', e => {
     e.stopPropagation();
-    if (state.map.activeTool === 'edit') {
-      openPoiDialog(poi.id);
-    }
+    if (state.map.activeTool === 'edit') openPoiDialog(poi.id);
   });
 
   attachPoiDrag(wrap, poi);
@@ -2726,9 +2800,9 @@ function gesinnungClass(g) {
 }
 
 function wikiLinkCheck(label, worldId) {
-  if (!label || !state.wikiAllEntries || !state.wikiAllEntries.length) return false;
+  if (!label || !state.wikiTitles || !state.wikiTitles.length) return false;
   const lower = label.toLowerCase();
-  return state.wikiAllEntries.some(e => e.worldId === worldId && e.title.toLowerCase() === lower);
+  return state.wikiTitles.some(e => e.worldId === worldId && e.title.toLowerCase() === lower);
 }
 
 function bindMapCanvasEvents() {
@@ -2736,29 +2810,65 @@ function bindMapCanvasEvents() {
   if (!wrap || wrap._mapBound) return;
   wrap._mapBound = true;
 
+  // Left-click: ruler or POI placement, using zoom/pan-aware coordinate conversion
   wrap.addEventListener('click', e => {
     if (e.target.closest('.map-poi')) return;
-    const rect = wrap.getBoundingClientRect();
-    const xPct = (e.clientX - rect.left) / rect.width;
-    const yPct = (e.clientY - rect.top)  / rect.height;
+    const { xPct, yPct } = screenToMapPct(e.clientX, e.clientY);
 
     if (state.map.activeTool === 'ruler') {
       handleRulerClick(xPct, yPct);
     } else if (state.map.activeTool.startsWith('place-')) {
-      if (!isFinite(xPct) || !isFinite(yPct) || rect.width === 0 || rect.height === 0) return;
+      if (!isFinite(xPct) || !isFinite(yPct)) return;
       state.map.pendingX = xPct;
       state.map.pendingY = yPct;
       openPoiDialog(null);
     }
   });
 
+  // Right-click: suppress context menu; cancel ruler or start pan drag
   wrap.addEventListener('contextmenu', e => {
-    if (state.map.activeTool !== 'ruler') return;
     e.preventDefault();
-    state.map.rulerStep  = 0;
-    state.map.rulerStart = null;
-    renderRuler();
+    if (state.map.activeTool === 'ruler') {
+      state.map.rulerStep  = 0;
+      state.map.rulerStart = null;
+      renderRuler();
+    }
   });
+
+  // Right-click drag: pan the viewport
+  wrap.addEventListener('mousedown', e => {
+    if (e.button !== 2) return;
+    e.preventDefault();
+    const startX    = e.clientX;
+    const startY    = e.clientY;
+    const startPanX = state.map.panX;
+    const startPanY = state.map.panY;
+    wrap.style.cursor = 'grabbing';
+
+    function onPanMove(e) {
+      state.map.panX = startPanX + (e.clientX - startX);
+      state.map.panY = startPanY + (e.clientY - startY);
+      applyMapViewport();
+    }
+
+    function onPanUp() {
+      document.removeEventListener('mousemove', onPanMove);
+      document.removeEventListener('mouseup',   onPanUp);
+      // Restore cursor based on active tool
+      const tool = state.map.activeTool;
+      wrap.style.cursor = (tool === 'ruler' || tool.startsWith('place-')) ? 'crosshair' : 'grab';
+    }
+
+    document.addEventListener('mousemove', onPanMove);
+    document.addEventListener('mouseup',   onPanUp);
+  });
+
+  // Mouse wheel: zoom in/out
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setMapZoom(state.map.zoom + delta);
+  }, { passive: false });
 }
 
 /* ══════════════════════════════════════
@@ -2788,8 +2898,8 @@ function attachPoiDrag(el, poi) {
       const dy = e.clientY - startY;
       if (!dragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) dragging = true;
       if (!dragging) return;
-      const newX = (parseFloat(origLeft) / 100) + dx / rect.width;
-      const newY = (parseFloat(origTop)  / 100) + dy / rect.height;
+      const newX = (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom);
+      const newY = (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom);
       el.style.left = Math.max(0, Math.min(1, newX)) * 100 + '%';
       el.style.top  = Math.max(0, Math.min(1, newY)) * 100 + '%';
     }
@@ -2803,8 +2913,8 @@ function attachPoiDrag(el, poi) {
       const rect = wrap.getBoundingClientRect();
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      const newX = Math.max(0, Math.min(1, (parseFloat(origLeft) / 100) + dx / rect.width));
-      const newY = Math.max(0, Math.min(1, (parseFloat(origTop)  / 100) + dy / rect.height));
+      const newX = Math.max(0, Math.min(1, (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom)));
+      const newY = Math.max(0, Math.min(1, (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom)));
       try {
         const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${poi.id}`, { xPct: newX, yPct: newY });
         const idx = state.map.pois.findIndex(p => p.id === poi.id);
@@ -2840,23 +2950,42 @@ function openPoiDialog(poiId) {
   if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
   if (wikiHint) wikiHint.style.display = 'none';
 
+  const textGrp   = document.getElementById('poi-text-grp');
+  const boldInp   = document.getElementById('poi-text-bold');
+  const italicInp = document.getElementById('poi-text-italic');
+  const sizeInp   = document.getElementById('poi-text-size');
+
   if (poiId) {
     const poi  = state.map.pois.find(p => p.id === poiId);
     if (!poi) return;
-    const type = state.map.poiTypes.find(t => t.id === poi.poiTypeId);
+    const type   = state.map.poiTypes.find(t => t.id === poi.poiTypeId);
+    const isText = type?.shape === 'TEXT';
     title.textContent = (type ? type.icon + ' ' + type.name : 'POI') + ' bearbeiten';
     if (labelInp) labelInp.value = poi.label || '';
     state.map.selectedGesinnung = poi.gesinnung || null;
-    if (gesGrp) gesGrp.style.display = type?.hasGesinnung ? '' : 'none';
+    if (gesGrp)  gesGrp.style.display  = type?.hasGesinnung ? '' : 'none';
+    if (textGrp) textGrp.style.display = isText ? '' : 'none';
+    if (isText) {
+      if (boldInp)   boldInp.checked = poi.textBold   ?? false;
+      if (italicInp) italicInp.checked = poi.textItalic ?? false;
+      if (sizeInp)   sizeInp.value   = poi.textSize   ?? 14;
+    }
     const canDelete = state.auth.isAdmin || poi.createdByUserId === state.auth.userId;
     if (delBtn) delBtn.style.display = canDelete ? '' : 'none';
   } else {
     const typeId = parseInt(state.map.activeTool.split('-')[1], 10);
     const type   = state.map.poiTypes.find(t => t.id === typeId);
+    const isText = type?.shape === 'TEXT';
     title.textContent = (type ? type.icon + ' ' + type.name : 'POI') + ' platzieren';
     if (labelInp) labelInp.value = '';
     state.map.selectedGesinnung = null;
-    if (gesGrp) gesGrp.style.display = type?.hasGesinnung ? '' : 'none';
+    if (gesGrp)  gesGrp.style.display  = type?.hasGesinnung ? '' : 'none';
+    if (textGrp) textGrp.style.display = isText ? '' : 'none';
+    if (isText) {
+      if (boldInp)   boldInp.checked   = false;
+      if (italicInp) italicInp.checked = false;
+      if (sizeInp)   sizeInp.value     = 14;
+    }
     if (delBtn) delBtn.style.display = 'none';
   }
 
@@ -2901,10 +3030,16 @@ async function savePoiModal() {
 
   try {
     if (state.map.editPoiId) {
-      const poi  = state.map.pois.find(p => p.id === state.map.editPoiId);
-      const type = poi ? state.map.poiTypes.find(t => t.id === poi.poiTypeId) : null;
-      const body = { label: label || null };
+      const poi    = state.map.pois.find(p => p.id === state.map.editPoiId);
+      const type   = poi ? state.map.poiTypes.find(t => t.id === poi.poiTypeId) : null;
+      const isText = type?.shape === 'TEXT';
+      const body   = { label: label || null };
       if (type?.hasGesinnung) body.gesinnung = state.map.selectedGesinnung || null;
+      if (isText) {
+        body.textBold   = document.getElementById('poi-text-bold')?.checked   ?? false;
+        body.textItalic = document.getElementById('poi-text-italic')?.checked ?? false;
+        body.textSize   = parseInt(document.getElementById('poi-text-size')?.value || '14', 10);
+      }
       const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${state.map.editPoiId}`, body);
       const idx = state.map.pois.findIndex(p => p.id === state.map.editPoiId);
       if (idx >= 0) state.map.pois[idx] = updated;
@@ -2916,6 +3051,7 @@ async function savePoiModal() {
       }
       const typeId = parseInt(state.map.activeTool.split('-')[1], 10);
       const type   = state.map.poiTypes.find(t => t.id === typeId);
+      const isText = type?.shape === 'TEXT';
       const body = {
         poiTypeId: typeId,
         xPct:      state.map.pendingX,
@@ -2923,6 +3059,11 @@ async function savePoiModal() {
         label:     label || null,
         gesinnung: (type?.hasGesinnung && state.map.selectedGesinnung) ? state.map.selectedGesinnung : null,
       };
+      if (isText) {
+        body.textBold   = document.getElementById('poi-text-bold')?.checked   ?? false;
+        body.textItalic = document.getElementById('poi-text-italic')?.checked ?? false;
+        body.textSize   = parseInt(document.getElementById('poi-text-size')?.value || '14', 10);
+      }
       const created = await api('POST', `/worlds/${state.ui.activeWorldId}/map/pois`, body);
       state.map.pois.push(created);
       setMapTool('interact');

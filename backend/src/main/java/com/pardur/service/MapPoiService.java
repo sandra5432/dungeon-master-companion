@@ -52,6 +52,11 @@ public class MapPoiService {
         poi.setLabel(req.getLabel());
         poi.setGesinnung(type.isHasGesinnung() && req.getGesinnung() != null
                 ? MapPoi.Gesinnung.valueOf(req.getGesinnung()) : null);
+        if ("TEXT".equals(type.getShape())) {
+            poi.setTextBold(req.getTextBold() != null ? req.getTextBold() : false);
+            poi.setTextItalic(req.getTextItalic() != null ? req.getTextItalic() : false);
+            poi.setTextSize(req.getTextSize() != null ? req.getTextSize() : 14);
+        }
         poi.setCreatedBy(user);
         return toDto(poiRepo.save(poi));
     }
@@ -69,6 +74,11 @@ public class MapPoiService {
         if (req.getGesinnung() != null) {
             poi.setGesinnung(poi.getPoiType().isHasGesinnung()
                     ? MapPoi.Gesinnung.valueOf(req.getGesinnung()) : null);
+        }
+        if ("TEXT".equals(poi.getPoiType().getShape())) {
+            if (req.getTextBold()   != null) poi.setTextBold(req.getTextBold());
+            if (req.getTextItalic() != null) poi.setTextItalic(req.getTextItalic());
+            if (req.getTextSize()   != null) poi.setTextSize(req.getTextSize());
         }
         return toDto(poiRepo.save(poi));
     }
@@ -100,7 +110,10 @@ public class MapPoiService {
             p.getYPct(),
             p.getLabel(),
             p.getGesinnung() != null ? p.getGesinnung().name() : null,
-            p.getCreatedBy().getId()
+            p.getCreatedBy().getId(),
+            p.getTextBold(),
+            p.getTextItalic(),
+            p.getTextSize()
         );
     }
 }

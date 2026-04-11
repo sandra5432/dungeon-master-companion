@@ -36,6 +36,15 @@ public class MapPoi {
     @Column(length = 10)
     private Gesinnung gesinnung;
 
+    @Column(name = "text_bold")
+    private Boolean textBold;
+
+    @Column(name = "text_italic")
+    private Boolean textItalic;
+
+    @Column(name = "text_size")
+    private Integer textSize;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
@@ -61,6 +70,12 @@ public class MapPoi {
     public void      setLabel(String l)        { this.label = l; }
     public Gesinnung getGesinnung()            { return gesinnung; }
     public void      setGesinnung(Gesinnung g) { this.gesinnung = g; }
+    public Boolean   getTextBold()              { return textBold; }
+    public void      setTextBold(Boolean v)    { this.textBold = v; }
+    public Boolean   getTextItalic()           { return textItalic; }
+    public void      setTextItalic(Boolean v)  { this.textItalic = v; }
+    public Integer   getTextSize()             { return textSize; }
+    public void      setTextSize(Integer v)    { this.textSize = v; }
     public User      getCreatedBy()            { return createdBy; }
     public void      setCreatedBy(User u)      { this.createdBy = u; }
     public LocalDateTime getCreatedAt()        { return createdAt; }

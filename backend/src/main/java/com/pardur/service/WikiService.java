@@ -232,7 +232,7 @@ public class WikiService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAllTitles() {
         return entryRepository.findAll().stream()
-                .map(e -> Map.<String, Object>of("id", e.getId(), "title", e.getTitle()))
+                .map(e -> Map.<String, Object>of("id", e.getId(), "title", e.getTitle(), "worldId", e.getWorld().getId()))
                 .toList();
     }
 

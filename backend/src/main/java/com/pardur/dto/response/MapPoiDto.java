@@ -11,5 +11,8 @@ public record MapPoiDto(
     Double  yPct,
     String  label,
     String  gesinnung,
-    Integer createdByUserId
+    Integer createdByUserId,
+    Boolean textBold,
+    Boolean textItalic,
+    Integer textSize
 ) {}

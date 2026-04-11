@@ -160,6 +160,79 @@ function pushUrl(path) {
   history.pushState(null, '', path);
 }
 
+/**
+ * Navigates the app to the state described by a parsed URL.
+ * Sets world/page state directly (does not go through selectWorld) to avoid
+ * double-pushes. When push=true, updates the browser URL.
+ *
+ * @param {{ page: string, worldId: number|null, subId: number|null }} parsed
+ * @param {boolean} push  true when user-initiated; false on startup / popstate
+ */
+async function navigateToUrl({ page, worldId, subId }, push) {
+  console.debug('[navigateToUrl] →', { page, worldId, subId, push });
+
+  if (page === 'items') {
+    if (push) pushUrl('/');
+    showPage('items');
+    console.debug('[navigateToUrl] ← items');
+    return;
+  }
+
+  const world = worldId ? state.worlds.find(w => w.id === worldId) : null;
+  if (!world) {
+    if (push) pushUrl('/');
+    showPage('items');
+    console.debug('[navigateToUrl] ← unknown world, fallback to items');
+    return;
+  }
+
+  // Update world state without triggering selectWorld's own URL push
+  const worldChanged = state.ui.activeWorldId !== worldId;
+  if (worldChanged) {
+    state.ui.activeWorldId     = worldId;
+    state.ui.wikiActiveWorldId = worldId;
+    localStorage.setItem('activeWorldId', worldId);
+    state.events  = [];
+    state.undated = [];
+    state.ui.activeTags  = new Set();
+    state.ui.activeChars = new Set();
+    state.ui.activeTypes = new Set();
+  }
+
+  if (page === 'timeline') {
+    if (worldChanged || !state.events.length) {
+      try {
+        const [ev, und] = await Promise.all([
+          api('GET', `/worlds/${worldId}/events`),
+          api('GET', `/worlds/${worldId}/events/unpositioned`),
+        ]);
+        state.events  = ev  || [];
+        state.undated = und || [];
+      } catch (e) { console.error('[navigateToUrl] load events failed', e); }
+    }
+    if (push) pushUrl(buildUrl(worldId, 'timeline', subId));
+    showPage('timeline');
+    if (subId) {
+      const inTl      = state.events.find(e => e.id === subId);
+      const inUndated = !inTl && state.undated.find(e => e.id === subId);
+      if (inTl)           { populateDetail(subId, 'tl');      openDetailPanel(); }
+      else if (inUndated) { populateDetail(subId, 'undated'); openDetailPanel(); }
+    }
+
+  } else if (page === 'wiki') {
+    if (push) pushUrl(buildUrl(worldId, 'wiki', subId));
+    showPage('wiki');
+    if (subId) await loadWikiArticle(subId, true);
+
+  } else if (page === 'map') {
+    if (push) pushUrl(buildUrl(worldId, 'map'));
+    showPage('map');
+  }
+
+  renderTopNavWorlds();
+  console.debug('[navigateToUrl] ← done', page);
+}
+
 function showPage(p) {
   if (p === 'config' && !state.auth.isAdmin) return;
   if (p === 'users'  && !state.auth.isAdmin) return;

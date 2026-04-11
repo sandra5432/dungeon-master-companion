@@ -1163,6 +1163,7 @@ async function doLogout() {
   const editorPanel = document.getElementById('wiki-editor-panel');
   if (editorPanel) editorPanel.style.display = 'none';
   applyAuthUI();
+  pushUrl('/');
   await loadWikiTitles();
   renderTimeline();
   renderItems();
@@ -1739,10 +1740,11 @@ async function loadWikiGraph(worldId) {
   } catch(e) { console.error(e); }
 }
 
-async function loadWikiArticle(id) {
+async function loadWikiArticle(id, silent = false) {
   try {
     const entry = await api('GET', `/wiki/${id}`);
     renderWikiArticle(entry);
+    if (!silent) pushUrl(buildUrl(state.ui.wikiActiveWorldId, 'wiki', id));
   } catch(e) { alert('Fehler: ' + e.message); }
 }
 
@@ -1769,7 +1771,7 @@ async function initWikiPage() {
 
   // Close any open article before loading — prevents stale content from a previous world
   // flashing on screen. This runs synchronously before the first await so no repaint occurs.
-  closeWikiArticle();
+  closeWikiArticle(true);
   const editorPanel = document.getElementById('wiki-editor-panel');
   if (editorPanel) editorPanel.style.display = 'none';
 
@@ -2251,9 +2253,10 @@ function renderWikiArticle(entry) {
   }
 }
 
-function closeWikiArticle() {
+function closeWikiArticle(silent = false) {
   const panel = document.getElementById('wiki-article-panel');
   if (panel) panel.style.display = 'none';
+  if (!silent) pushUrl(buildUrl(state.ui.wikiActiveWorldId, 'wiki'));
 }
 
 function renderWikiMarkdown(body) {
@@ -2282,14 +2285,14 @@ async function addWikiSpoilerReader(entryId) {
   if (isNaN(userId)) return;
   try {
     await api('POST', `/wiki/${entryId}/spoiler-readers/${userId}`);
-    loadWikiArticle(entryId);
+    loadWikiArticle(entryId, true);
   } catch(e) { alert('Fehler: ' + e.message); }
 }
 
 async function removeWikiSpoilerReader(entryId, userId) {
   try {
     await api('DELETE', `/wiki/${entryId}/spoiler-readers/${userId}`);
-    loadWikiArticle(entryId);
+    loadWikiArticle(entryId, true);
   } catch(e) { alert('Fehler: ' + e.message); }
 }
 
@@ -2491,7 +2494,7 @@ async function saveWikiEntry() {
     await loadWikiEntries();
     if (state.ui.wikiActiveWorldId) await loadWikiGraph(state.ui.wikiActiveWorldId);
     await loadWikiTitles();
-    await loadWikiArticle(saved.id);
+    await loadWikiArticle(saved.id, true);
   } catch(e) { showWikiEditorError(e.message); }
 }
 

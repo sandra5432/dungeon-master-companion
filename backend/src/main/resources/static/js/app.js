@@ -119,6 +119,47 @@ function toggleTheme() {
   if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
 }
 
+/* ══════════════════════════════════════
+   URL ROUTING
+══════════════════════════════════════ */
+
+/**
+ * Builds a pathname string for the given world, section, and optional sub-ID.
+ * @param {number|null} worldId
+ * @param {string} section  'timeline' | 'wiki' | 'map' | 'items'
+ * @param {number|null} [subId]
+ * @returns {string}
+ */
+function buildUrl(worldId, section, subId) {
+  if (!worldId || section === 'items') return '/';
+  const base = `/world/${worldId}/${section}`;
+  return subId ? `${base}/${subId}` : base;
+}
+
+/**
+ * Parses window.location.pathname into a routing descriptor.
+ * @returns {{ page: string, worldId: number|null, subId: number|null }}
+ */
+function parseUrl() {
+  const m = window.location.pathname.match(/^\/world\/(\d+)\/(timeline|wiki|map)(?:\/(\d+))?/);
+  if (m) {
+    return {
+      page:    m[2],
+      worldId: parseInt(m[1], 10),
+      subId:   m[3] ? parseInt(m[3], 10) : null,
+    };
+  }
+  return { page: 'items', worldId: null, subId: null };
+}
+
+/**
+ * Pushes a new entry onto the browser history stack.
+ * @param {string} path
+ */
+function pushUrl(path) {
+  history.pushState(null, '', path);
+}
+
 function showPage(p) {
   if (p === 'config' && !state.auth.isAdmin) return;
   if (p === 'users'  && !state.auth.isAdmin) return;

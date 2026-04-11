@@ -36,6 +36,7 @@ public class WorldService {
         World world = new World();
         world.setName(req.getName());
         world.setDescription(req.getDescription());
+        world.setMilesPerCell(req.getMilesPerCell() != null ? req.getMilesPerCell() : 5);
         return toDto(worldRepository.save(world));
     }
 
@@ -45,6 +46,7 @@ public class WorldService {
                 .orElseThrow(() -> new ResourceNotFoundException("World not found with id: " + id));
         world.setName(req.getName());
         world.setDescription(req.getDescription());
+        if (req.getMilesPerCell() != null) world.setMilesPerCell(req.getMilesPerCell());
         return toDto(worldRepository.save(world));
     }
 
@@ -61,6 +63,6 @@ public class WorldService {
     }
 
     private WorldDto toDto(World w) {
-        return new WorldDto(w.getId(), w.getName(), w.getDescription(), w.getSortOrder());
+        return new WorldDto(w.getId(), w.getName(), w.getDescription(), w.getSortOrder(), w.getMilesPerCell());
     }
 }

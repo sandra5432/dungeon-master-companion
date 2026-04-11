@@ -5,16 +5,19 @@ public class WorldDto {
     private String name;
     private String description;
     private Integer sortOrder;
+    private Integer milesPerCell;
 
-    public WorldDto(Integer id, String name, String description, Integer sortOrder) {
+    public WorldDto(Integer id, String name, String description, Integer sortOrder, Integer milesPerCell) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.sortOrder = sortOrder;
+        this.milesPerCell = milesPerCell;
     }
 
     public Integer getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public Integer getSortOrder() { return sortOrder; }
+    public Integer getMilesPerCell() { return milesPerCell; }
 }

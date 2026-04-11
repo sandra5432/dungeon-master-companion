@@ -8,8 +8,8 @@ INSERT INTO users (username, password, role, must_change_password, color_hex, cr
 
 -- ── Worlds ───────────────────────────────────────────────────────────────────
 -- id=1: Pardur, id=2: Eldorheim
-INSERT INTO worlds (name, description, sort_order, created_at, updated_at) VALUES ('Pardur', 'Die Welt der Erbauer und ihrer Geheimnisse', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO worlds (name, description, sort_order, created_at, updated_at) VALUES ('Eldorheim', '', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO worlds (name, description, sort_order, miles_per_cell, created_at, updated_at) VALUES ('Pardur', 'Die Welt der Erbauer und ihrer Geheimnisse', 0, 5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO worlds (name, description, sort_order, miles_per_cell, created_at, updated_at) VALUES ('Eldorheim', '', 1, 5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 
 -- ── Items ────────────────────────────────────────────────────────────────────

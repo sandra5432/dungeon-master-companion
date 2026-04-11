@@ -2890,9 +2890,36 @@ nav {
   bottom: 8px;
   left: 10px;
   font-size: .6rem;
-  color: rgba(200,168,75,.38);
-  pointer-events: none;
+  color: rgba(200,168,75,.55);
+  pointer-events: all;
+  cursor: default;
   font-family: 'Inter', system-ui, sans-serif;
+}
+:root[data-theme="light"] .map-scale-label {
+  color: rgba(120,90,20,.65);
+}
+
+/* Tooltip on scale label */
+.map-scale-label::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-sb);
+  border: 1px solid var(--bd-s);
+  color: var(--t2);
+  font-size: .65rem;
+  line-height: 1.6;
+  white-space: pre;
+  padding: 6px 10px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 200;
+}
+.map-scale-label:hover::after {
+  opacity: 1;
 }
 
 .map-ruler-svg {
@@ -2925,7 +2952,7 @@ nav {
   justify-content: center;
   font-size: 1rem;
   position: relative;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.7));
+  filter: drop-shadow(0 0 1px rgba(0,0,0,.9)) drop-shadow(0 0 1px rgba(0,0,0,.9)) drop-shadow(0 2px 6px rgba(0,0,0,.6));
   transition: transform .1s;
   color: var(--gold);
 }

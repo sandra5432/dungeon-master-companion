@@ -22,6 +22,9 @@ public class World {
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 0;
 
+    @Column(name = "miles_per_cell", nullable = false)
+    private Integer milesPerCell = 5;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -37,6 +40,8 @@ public class World {
     public void setDescription(String description) { this.description = description; }
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+    public Integer getMilesPerCell() { return milesPerCell; }
+    public void setMilesPerCell(Integer v) { this.milesPerCell = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

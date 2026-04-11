@@ -174,6 +174,7 @@
       <div class="f-grid">
         <div class="f-grp"><label class="f-lbl">Weltname *</label><input class="f-inp" id="fw-n" type="text" placeholder="z.B. Die Bekannte Welt"></div>
         <div class="f-grp"><label class="f-lbl">Beschreibung</label><textarea class="f-inp" id="fw-d" rows="2" placeholder="Kurze Beschreibung der Welt…" style="resize:vertical;min-height:52px"></textarea></div>
+        <div class="f-grp"><label class="f-lbl">Meilen pro Kartenfeld</label><input class="f-inp" id="fw-miles" type="number" min="1" max="9999" value="5" style="width:90px"></div>
       </div>
     </div>
     <div id="f-login" style="display:none">
@@ -459,7 +460,7 @@
   <div class="map-canvas-area">
     <div class="map-canvas-wrap" id="map-canvas-wrap">
       <div class="map-viewport" id="map-viewport">
-        <img id="map-bg-img" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+        <img id="map-bg-img" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none">
         <div class="map-grid-layer" id="map-grid"></div>
         <svg class="map-ruler-svg" id="map-ruler-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -469,8 +470,8 @@
           </defs>
         </svg>
         <div id="map-pois-layer" style="position:absolute;inset:0;pointer-events:none"></div>
-        <span class="map-scale-label">1 Feld = 5 Meilen</span>
       </div>
+      <span class="map-scale-label" id="map-scale-label">1 Feld = 5 Meilen</span>
     </div>
     <div class="map-zoom-bar">
       <span class="map-zoom-icon">−</span>

@@ -6,8 +6,8 @@ import jakarta.validation.constraints.*;
 
 public class UpdateMapPoiRequest {
 
-    @JsonProperty("xPct") @DecimalMin("0.0") @DecimalMax("1.0") private Double xPct;
-    @JsonProperty("yPct") @DecimalMin("0.0") @DecimalMax("1.0") private Double yPct;
+    @JsonProperty("xPct") private Double xPct;
+    @JsonProperty("yPct") private Double yPct;
     @Size(max = 120) private String label;
     private String  gesinnung;
     private Boolean textBold;

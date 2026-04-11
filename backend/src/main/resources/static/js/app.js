@@ -935,8 +935,9 @@ function openAddWorldModal() {
   document.getElementById('m-title').textContent = 'Welt hinzufügen';
   showForms(false, false, false, false, true, false);
   setSaveBtn('Erstellen', false);
-  document.getElementById('fw-n').value = '';
-  document.getElementById('fw-d').value = '';
+  document.getElementById('fw-n').value     = '';
+  document.getElementById('fw-d').value     = '';
+  document.getElementById('fw-miles').value = 5;
   openModal();
 }
 
@@ -948,8 +949,9 @@ function openEditWorldModal(worldId, e) {
   document.getElementById('m-title').textContent = 'Welt bearbeiten';
   showForms(false, false, false, false, true, false);
   setSaveBtn('Speichern', false);
-  document.getElementById('fw-n').value = w.name || '';
-  document.getElementById('fw-d').value = w.description || '';
+  document.getElementById('fw-n').value     = w.name || '';
+  document.getElementById('fw-d').value     = w.description || '';
+  document.getElementById('fw-miles').value = w.milesPerCell ?? 5;
   openModal();
 }
 
@@ -1062,16 +1064,17 @@ async function _saveEntry() {
 
   // WORLD create/edit
   if (editSource === 'world') {
-    const name = document.getElementById('fw-n').value.trim();
-    const desc = document.getElementById('fw-d').value.trim();
+    const name  = document.getElementById('fw-n').value.trim();
+    const desc  = document.getElementById('fw-d').value.trim();
+    const miles = Math.max(1, parseInt(document.getElementById('fw-miles').value || '5', 10));
     if (!name) { alert('Weltname ist Pflicht'); return; }
     try {
       if (editWorldId != null) {
-        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc });
+        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, milesPerCell: miles });
         const idx = state.worlds.findIndex(w => w.id === editWorldId);
         if (idx > -1) state.worlds[idx] = updated;
       } else {
-        const created = await api('POST', '/worlds', { name, description: desc });
+        const created = await api('POST', '/worlds', { name, description: desc, milesPerCell: miles });
         state.worlds.push(created);
         if (!state.ui.activeWorldId) await selectWorld(created.id);
       }
@@ -2571,6 +2574,15 @@ async function initMapPage() {
   renderRuler();
   bindMapCanvasEvents();
   applyAuthUI();
+  const scaleLbl = document.getElementById('map-scale-label');
+  if (scaleLbl) {
+    const mpc = getMapMilesPerCell();
+    scaleLbl.textContent = `1 Feld = ${mpc} Meilen`;
+    scaleLbl.dataset.tooltip =
+      `zu Fuß               ≈ 3 Meilen/Stunde\n` +
+      `zu Pferd             ≈ 5 Meilen/Stunde\n` +
+      `mit Kutsche (Straße) ≈ 6 Meilen/Stunde`;
+  }
 }
 
 function renderPoiTypeSidebar() {
@@ -2644,8 +2656,11 @@ function setMapBgScale(scale) {
   state.map.bgScale = scale;
   const val = document.getElementById('map-bg-scale-val');
   if (val) val.textContent = Math.round(scale * 100) + '%';
+  const scaleVal2 = scale !== 1.0 ? `scale(${scale})` : '';
   const bgImg = document.getElementById('map-bg-img');
-  if (bgImg) bgImg.style.transform = scale !== 1.0 ? `scale(${scale})` : '';
+  if (bgImg) bgImg.style.transform = scaleVal2;
+  const grid = document.getElementById('map-grid');
+  if (grid) grid.style.transform = scaleVal2;
 
   // Persist after 500 ms of slider inactivity (admin only)
   clearTimeout(_bgScaleTimer);
@@ -2672,6 +2687,8 @@ function renderMap() {
       bgImg.style.display = 'none';
     }
   }
+  const grid = document.getElementById('map-grid');
+  if (grid) grid.style.transform = state.map.bgScale !== 1.0 ? `scale(${state.map.bgScale})` : '';
 
   const layer = document.getElementById('map-pois-layer');
   if (!layer) return;
@@ -2900,8 +2917,8 @@ function attachPoiDrag(el, poi) {
       if (!dragging) return;
       const newX = (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom);
       const newY = (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom);
-      el.style.left = Math.max(0, Math.min(1, newX)) * 100 + '%';
-      el.style.top  = Math.max(0, Math.min(1, newY)) * 100 + '%';
+      el.style.left = newX * 100 + '%';
+      el.style.top  = newY * 100 + '%';
     }
 
     async function onUp(e) {
@@ -2913,8 +2930,8 @@ function attachPoiDrag(el, poi) {
       const rect = wrap.getBoundingClientRect();
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      const newX = Math.max(0, Math.min(1, (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom)));
-      const newY = Math.max(0, Math.min(1, (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom)));
+      const newX = (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom);
+      const newY = (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom);
       try {
         const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${poi.id}`, { xPct: newX, yPct: newY });
         const idx = state.map.pois.findIndex(p => p.id === poi.id);
@@ -3089,8 +3106,13 @@ async function deleteCurrentPoi() {
 /* ══════════════════════════════════════
    MAP — RULER TOOL
 ══════════════════════════════════════ */
-const MAP_CELL_PX        = 44;
-const MAP_MILES_PER_CELL = 5;
+const MAP_CELL_PX = 44;
+
+/** Returns the miles-per-cell scale for the active world (default 5). */
+function getMapMilesPerCell() {
+  const world = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  return (world?.milesPerCell) || 5;
+}
 
 function handleRulerClick(xPct, yPct) {
   if (state.map.rulerStep === 0) {
@@ -3104,7 +3126,7 @@ function handleRulerClick(xPct, yPct) {
     const rect  = wrap.getBoundingClientRect();
     const dx    = (xPct - state.map.rulerStart.x) * rect.width;
     const dy    = (yPct - state.map.rulerStart.y) * rect.height;
-    const miles = (Math.sqrt(dx * dx + dy * dy) / MAP_CELL_PX) * MAP_MILES_PER_CELL;
+    const miles = (Math.sqrt(dx * dx + dy * dy) / MAP_CELL_PX) * getMapMilesPerCell();
     state.map.ruler      = { x1: state.map.rulerStart.x, y1: state.map.rulerStart.y, x2: xPct, y2: yPct, miles };
     state.map.rulerStep  = 0;
     state.map.rulerStart = null;

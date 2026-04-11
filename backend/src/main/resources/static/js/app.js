@@ -358,6 +358,7 @@ function renderSectionTabs() {
 }
 
 function selectSection(section) {
+  pushUrl(buildUrl(state.ui.activeWorldId, section));
   showPage(section);
 }
 
@@ -376,6 +377,8 @@ async function selectWorld(worldId) {
 
   const section = ['timeline', 'wiki', 'map'].includes(state.ui.currentPage)
     ? state.ui.currentPage : 'timeline';
+
+  pushUrl(buildUrl(worldId, section));
 
   // Switch the visible page (showPage is not called here to avoid double data loads)
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));

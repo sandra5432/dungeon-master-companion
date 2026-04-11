@@ -1550,7 +1550,7 @@ async function init() {
     renderItemTagFilter();
     applyAuthUI();
     loadPoiTypes();
-    showPage('timeline');
+    await navigateToUrl(parseUrl(), false);
     loadWikiTitles();
     if (state.auth.mustChangePassword) showPasswordChangeOverlay();
   } catch (e) {

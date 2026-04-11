@@ -1021,7 +1021,8 @@ async function doLogout() {
   state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
   // Clear all cached wiki data fetched under the previous session so no
   // privileged content (spoiler sections, ownership controls) leaks to the
-  // logged-out view.
+  // logged-out view. Titles contain no spoiler content, so reload them
+  // immediately so auto-links keep working in the logged-out timeline.
   state.wikiTitles = [];
   state.wikiAllEntries = [];
   state.wikiFullGraph = null;
@@ -1034,6 +1035,7 @@ async function doLogout() {
   const editorPanel = document.getElementById('wiki-editor-panel');
   if (editorPanel) editorPanel.style.display = 'none';
   applyAuthUI();
+  await loadWikiTitles();
   renderTimeline();
   renderItems();
   showPage('items');
@@ -1636,6 +1638,13 @@ async function initWikiPage() {
     state.ui.wikiActiveWorldId = state.worlds[0].id;
     state.ui.activeWorldId     = state.ui.wikiActiveWorldId;
   }
+
+  // Close any open article before loading — prevents stale content from a previous world
+  // flashing on screen. This runs synchronously before the first await so no repaint occurs.
+  closeWikiArticle();
+  const editorPanel = document.getElementById('wiki-editor-panel');
+  if (editorPanel) editorPanel.style.display = 'none';
+
   // wiki-world-tabs div no longer exists; section tabs are global
 
   // Restore search input

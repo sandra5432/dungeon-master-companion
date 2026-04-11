@@ -823,9 +823,14 @@ function onUndatedClick(e, id) {
   const dy = Math.abs(e.clientY - mouseDownY);
   if (didDrag || dx > 6 || dy > 6) return;
   e.stopPropagation();
-  if (state.ui.detailId === id && state.ui.detailSource === 'undated') { closeDetail(); return; }
+  if (state.ui.detailId === id && state.ui.detailSource === 'undated') {
+    closeDetail();
+    pushUrl(buildUrl(state.ui.activeWorldId, 'timeline'));
+    return;
+  }
   populateDetail(id, 'undated');
   openDetailPanel();
+  pushUrl(buildUrl(state.ui.activeWorldId, 'timeline', id));
 }
 
 /* ══════════════════════════════════════
@@ -848,9 +853,14 @@ function openUndatedAdd() {
 ══════════════════════════════════════ */
 function onTLCardClick(e, id) {
   e.stopPropagation();
-  if (state.ui.detailId === id && state.ui.detailSource === 'tl') { closeDetail(); return; }
+  if (state.ui.detailId === id && state.ui.detailSource === 'tl') {
+    closeDetail();
+    pushUrl(buildUrl(state.ui.activeWorldId, 'timeline'));
+    return;
+  }
   populateDetail(id, 'tl');
   openDetailPanel();
+  pushUrl(buildUrl(state.ui.activeWorldId, 'timeline', id));
 }
 
 function populateDetail(id, source) {
@@ -922,6 +932,7 @@ document.addEventListener('click', e => {
   if (panel.contains(e.target)) return;
   if (e.target.closest('.event-card') || e.target.closest('.undated-card')) return;
   closeDetail();
+  pushUrl(buildUrl(state.ui.activeWorldId, 'timeline'));
 });
 
 /* ══════════════════════════════════════
@@ -2261,6 +2272,7 @@ async function openEventFromWiki(eventId, worldId) {
   showPage('timeline');
   populateDetail(eventId, 'tl');
   openDetailPanel();
+  pushUrl(buildUrl(worldId, 'timeline', eventId));
 }
 
 async function addWikiSpoilerReader(entryId) {

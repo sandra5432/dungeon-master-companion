@@ -2565,10 +2565,12 @@ async function initMapPage() {
   const scaleVal    = document.getElementById('map-bg-scale-val');
   if (scaleSlider) scaleSlider.value = state.map.bgScale;
   if (scaleVal)    scaleVal.textContent = Math.round(state.map.bgScale * 100) + '%';
+  // Set initial zoom so the full bgScale-extended image fits in the canvas
+  state.map.zoom = Math.max(0.25, Math.min(4.0, 1.0 / state.map.bgScale));
   const zoomSlider = document.getElementById('map-zoom-slider');
   const zoomVal    = document.getElementById('map-zoom-val');
-  if (zoomSlider) zoomSlider.value = 100;
-  if (zoomVal)    zoomVal.textContent = '100%';
+  if (zoomSlider) zoomSlider.value = Math.round(state.map.zoom * 100);
+  if (zoomVal)    zoomVal.textContent = Math.round(state.map.zoom * 100) + '%';
   renderPoiTypeSidebar();
   renderMap();
   renderRuler();
@@ -2604,6 +2606,7 @@ function setMapTool(tool) {
   if (tool !== 'ruler') {
     state.map.rulerStep  = 0;
     state.map.rulerStart = null;
+    state.map.ruler      = null;
     renderRuler();
   }
   document.querySelectorAll('.map-tool').forEach(btn => btn.classList.remove('active'));
@@ -3126,7 +3129,7 @@ function handleRulerClick(xPct, yPct) {
     const rect  = wrap.getBoundingClientRect();
     const dx    = (xPct - state.map.rulerStart.x) * rect.width;
     const dy    = (yPct - state.map.rulerStart.y) * rect.height;
-    const miles = (Math.sqrt(dx * dx + dy * dy) / MAP_CELL_PX) * getMapMilesPerCell();
+    const miles = (Math.sqrt(dx * dx + dy * dy) / (MAP_CELL_PX * state.map.bgScale)) * getMapMilesPerCell();
     state.map.ruler      = { x1: state.map.rulerStart.x, y1: state.map.rulerStart.y, x2: xPct, y2: yPct, miles };
     state.map.rulerStep  = 0;
     state.map.rulerStart = null;

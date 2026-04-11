@@ -2928,6 +2928,7 @@ nav {
   pointer-events: none;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 /* ── POI markers ── */
@@ -2967,14 +2968,14 @@ nav {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: .6rem;
   color: var(--t2);
-  background: rgba(13,17,23,.8);
+  background: rgba(13,17,23,.5);
   padding: 1px 6px;
   border-radius: 3px;
   white-space: nowrap;
   border: 1px solid var(--bd);
   cursor: pointer;
 }
-:root[data-theme="light"] .map-poi-label { background: rgba(245,240,232,.88); }
+:root[data-theme="light"] .map-poi-label { background: rgba(245,240,232,.6); }
 .map-poi-label.wiki-linked { color: var(--gold); }
 .map-poi-label.wiki-linked::after {
   content: ' ↗';
@@ -2993,7 +2994,7 @@ nav {
   white-space: nowrap;
   user-select: none;
   cursor: grab;
-  text-shadow: 0 1px 3px rgba(0,0,0,.65), 0 0 8px rgba(0,0,0,.4);
+  text-shadow: -1px -1px 0 rgba(0,0,0,.9), 1px -1px 0 rgba(0,0,0,.9), -1px 1px 0 rgba(0,0,0,.9), 1px 1px 0 rgba(0,0,0,.9), 0 1px 3px rgba(0,0,0,.65), 0 0 8px rgba(0,0,0,.4);
   pointer-events: all;
 }
 .map-poi-text.wiki-linked {

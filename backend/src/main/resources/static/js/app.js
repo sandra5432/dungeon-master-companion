@@ -1565,6 +1565,7 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', () => { init(); wireUndatedDropZone(); });
+window.addEventListener('popstate', () => { navigateToUrl(parseUrl(), false); });
 
 document.addEventListener('click', e => {
   if (!e.target.closest('#wiki-filter-toggle') && !e.target.closest('#wiki-filter-panel')) {

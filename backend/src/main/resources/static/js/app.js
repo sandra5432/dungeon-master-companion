@@ -2764,6 +2764,12 @@ async function initMapPage() {
   const worldId = state.ui.activeWorldId;
   if (!worldId) return;
 
+  // Clean up resize handler from any previous map page visit
+  if (window._mapResizeHandler) {
+    window.removeEventListener('resize', window._mapResizeHandler);
+    window._mapResizeHandler = null;
+  }
+
   // Reset ruler, tool, and viewport on page load; bgScale is loaded from server inside loadMapData
   state.map.activeTool = 'interact';
   state.map.ruler      = null;
@@ -2791,6 +2797,15 @@ async function initMapPage() {
   renderRuler();
   bindMapCanvasEvents();
   applyAuthUI();
+
+  // Re-render POIs on window resize so image-relative coordinates stay accurate
+  // as the container dimensions (and thus letterbox bounds) change.
+  let _mapResizeTimer = null;
+  window._mapResizeHandler = () => {
+    clearTimeout(_mapResizeTimer);
+    _mapResizeTimer = setTimeout(renderMapPois, 100);
+  };
+  window.addEventListener('resize', window._mapResizeHandler);
   const scaleLbl = document.getElementById('map-scale-label');
   if (scaleLbl) {
     const mpc = getMapMilesPerCell();
@@ -2901,24 +2916,33 @@ function renderMap() {
       bgImg.src = state.map.bgUrl;
       bgImg.style.display = '';
       bgImg.style.transform = state.map.bgScale !== 1.0 ? `scale(${state.map.bgScale})` : '';
+      // Re-render POIs once the image has loaded so letterbox bounds are accurate
+      bgImg.onload = () => renderMapPois();
     } else {
       bgImg.style.display = 'none';
+      bgImg.onload = null;
     }
   }
   const grid = document.getElementById('map-grid');
   if (grid) grid.style.transform = state.map.bgScale !== 1.0 ? `scale(${state.map.bgScale})` : '';
 
+  renderMapPois();
+  applyMapViewport();
+}
+
+/**
+ * Re-renders only the POI elements into the POI layer.
+ * Called from renderMap and on window resize / image load to keep
+ * POI positions accurate after letterbox bounds change.
+ */
+function renderMapPois() {
   const layer = document.getElementById('map-pois-layer');
   if (!layer) return;
   layer.innerHTML = '';
   layer.style.pointerEvents = 'none';
-
   for (const poi of state.map.pois) {
-    const el = buildPoiElement(poi);
-    layer.appendChild(el);
+    layer.appendChild(buildPoiElement(poi));
   }
-
-  applyMapViewport();
 }
 
 /**
@@ -2943,8 +2967,34 @@ function setMapZoom(zoom) {
 }
 
 /**
- * Converts screen coordinates to map percentage position, accounting for
- * the current zoom and pan transform of the viewport.
+ * Returns the rendered image bounds as fractions of the map-canvas-wrap,
+ * accounting for object-fit:contain letterboxing.
+ * Falls back to {x:0,y:0,w:1,h:1} (full container) when the image is not loaded.
+ * @returns {{ x: number, y: number, w: number, h: number }}
+ */
+function getImageBoundsInViewport() {
+  const img  = document.getElementById('map-bg-img');
+  const wrap = document.getElementById('map-canvas-wrap');
+  if (!img || !img.naturalWidth || !img.naturalHeight || !wrap) return { x: 0, y: 0, w: 1, h: 1 };
+  const cW = wrap.clientWidth;
+  const cH = wrap.clientHeight;
+  if (!cW || !cH) return { x: 0, y: 0, w: 1, h: 1 };
+  const imgA = img.naturalWidth / img.naturalHeight;
+  const cA   = cW / cH;
+  let imgW, imgH, imgX, imgY;
+  if (cA > imgA) {
+    // Container wider than image: letterbox left/right
+    imgH = cH; imgW = cH * imgA; imgX = (cW - imgW) / 2; imgY = 0;
+  } else {
+    // Container taller than image: letterbox top/bottom
+    imgW = cW; imgH = cW / imgA; imgX = 0; imgY = (cH - imgH) / 2;
+  }
+  return { x: imgX / cW, y: imgY / cH, w: imgW / cW, h: imgH / cH };
+}
+
+/**
+ * Converts screen coordinates to map percentage position relative to the image,
+ * accounting for zoom, pan, and object-fit:contain letterboxing.
  * @param {number} clientX
  * @param {number} clientY
  * @returns {{ xPct: number, yPct: number }}
@@ -2952,10 +3002,11 @@ function setMapZoom(zoom) {
 function screenToMapPct(clientX, clientY) {
   const wrap = document.getElementById('map-canvas-wrap');
   if (!wrap) return { xPct: 0, yPct: 0 };
-  const rect = wrap.getBoundingClientRect();
-  const xPct = 0.5 + (clientX - rect.left - rect.width  / 2 - state.map.panX) / (rect.width  * state.map.zoom);
-  const yPct = 0.5 + (clientY - rect.top  - rect.height / 2 - state.map.panY) / (rect.height * state.map.zoom);
-  return { xPct, yPct };
+  const rect   = wrap.getBoundingClientRect();
+  const ib     = getImageBoundsInViewport();
+  const cxFrac = 0.5 + (clientX - rect.left - rect.width  / 2 - state.map.panX) / (rect.width  * state.map.zoom);
+  const cyFrac = 0.5 + (clientY - rect.top  - rect.height / 2 - state.map.panY) / (rect.height * state.map.zoom);
+  return { xPct: (cxFrac - ib.x) / ib.w, yPct: (cyFrac - ib.y) / ib.h };
 }
 
 function buildPoiElement(poi) {
@@ -2963,8 +3014,9 @@ function buildPoiElement(poi) {
   const gc = gesinnungClass(poi.gesinnung);
   wrap.className = 'map-poi' + (gc ? ' ' + gc : '');
   wrap.dataset.poiId = poi.id;
-  wrap.style.left = (poi.xPct * 100) + '%';
-  wrap.style.top  = (poi.yPct * 100) + '%';
+  const ib = getImageBoundsInViewport();
+  wrap.style.left = ((ib.x + poi.xPct * ib.w) * 100) + '%';
+  wrap.style.top  = ((ib.y + poi.yPct * ib.h) * 100) + '%';
   wrap.style.pointerEvents = 'auto';
 
   if (poi.poiTypeShape === 'TEXT') {
@@ -3154,8 +3206,11 @@ function attachPoiDrag(el, poi) {
       const rect = wrap.getBoundingClientRect();
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      const newX = (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom);
-      const newY = (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom);
+      const newCxFrac = (parseFloat(origLeft) / 100) + dx / (rect.width  * state.map.zoom);
+      const newCyFrac = (parseFloat(origTop)  / 100) + dy / (rect.height * state.map.zoom);
+      const ib = getImageBoundsInViewport();
+      const newX = (newCxFrac - ib.x) / ib.w;
+      const newY = (newCyFrac - ib.y) / ib.h;
       try {
         const updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/map/pois/${poi.id}`, { xPct: newX, yPct: newY });
         const idx = state.map.pois.findIndex(p => p.id === poi.id);

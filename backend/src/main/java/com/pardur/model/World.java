@@ -25,6 +25,15 @@ public class World {
     @Column(name = "miles_per_cell", nullable = false)
     private Integer milesPerCell = 5;
 
+    @Column(name = "chronicle_enabled", nullable = false)
+    private boolean chronicleEnabled = true;
+
+    @Column(name = "wiki_enabled", nullable = false)
+    private boolean wikiEnabled = true;
+
+    @Column(name = "map_enabled", nullable = false)
+    private boolean mapEnabled = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -42,6 +51,12 @@ public class World {
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
     public Integer getMilesPerCell() { return milesPerCell; }
     public void setMilesPerCell(Integer v) { this.milesPerCell = v; }
+    public boolean isChronicleEnabled() { return chronicleEnabled; }
+    public void setChronicleEnabled(boolean v) { this.chronicleEnabled = v; }
+    public boolean isWikiEnabled() { return wikiEnabled; }
+    public void setWikiEnabled(boolean v) { this.wikiEnabled = v; }
+    public boolean isMapEnabled() { return mapEnabled; }
+    public void setMapEnabled(boolean v) { this.mapEnabled = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

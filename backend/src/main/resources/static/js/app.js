@@ -178,6 +178,14 @@ async function navigateToUrl({ page, worldId, subId }, push) {
     return;
   }
 
+  // Guests cannot access world pages — send them to Marktplatz
+  if (!state.auth.loggedIn) {
+    if (push) pushUrl('/');
+    showPage('items');
+    console.debug('[navigateToUrl] ← not logged in, fallback to items');
+    return;
+  }
+
   const world = worldId ? state.worlds.find(w => w.id === worldId) : null;
   if (!world) {
     if (push) pushUrl('/');
@@ -199,6 +207,16 @@ async function navigateToUrl({ page, worldId, subId }, push) {
     state.ui.activeTypes = new Set();
   }
 
+  // Redirect to first enabled section if the requested page is disabled for this world
+  if (!isSectionEnabled(world, page)) {
+    const fallback = firstEnabledSection(world);
+    if (fallback && fallback !== page) {
+      console.debug('[navigateToUrl] page disabled, redirecting to', fallback);
+      return navigateToUrl({ page: fallback, worldId, subId: null }, push);
+    }
+    // All sections disabled — fall through and show nothing
+  }
+
   if (page === 'timeline') {
     if (worldChanged || !state.events.length) {
       try {
@@ -206,10 +224,13 @@ async function navigateToUrl({ page, worldId, subId }, push) {
           api('GET', `/worlds/${worldId}/events`),
           api('GET', `/worlds/${worldId}/events/unpositioned`),
         ]);
+        // Stale-check: bail if another navigation changed the world while we were loading
+        if (state.ui.activeWorldId !== worldId) return;
         state.events  = ev  || [];
         state.undated = und || [];
       } catch (e) { console.error('[navigateToUrl] load events failed', e); }
     }
+    if (state.ui.activeWorldId !== worldId) return;
     if (push) pushUrl(buildUrl(worldId, 'timeline', subId));
     showPage('timeline');
     if (subId) {
@@ -334,6 +355,7 @@ function renderTopNavWorlds() {
   const marktplatz = document.getElementById('nav-items');
   linksEl.innerHTML = '';
   if (marktplatz) linksEl.appendChild(marktplatz);
+  if (!state.auth.loggedIn) return; // guests see only Marktplatz
   state.worlds.forEach(w => {
     const btn = document.createElement('button');
     btn.className = 'nav-link' + (w.id === state.ui.activeWorldId ? ' active' : '');
@@ -344,20 +366,58 @@ function renderTopNavWorlds() {
   });
 }
 
+/**
+ * Returns true if the given section ('timeline'|'wiki'|'map') is enabled for the world object.
+ * @param {object} world  A world object from state.worlds (may be undefined)
+ * @param {string} section
+ * @returns {boolean}
+ */
+function isSectionEnabled(world, section) {
+  if (!world) return true; // no world selected — don't restrict
+  if (section === 'timeline') return world.chronicleEnabled !== false;
+  if (section === 'wiki')     return world.wikiEnabled      !== false;
+  if (section === 'map')      return world.mapEnabled        !== false;
+  return true;
+}
+
+/**
+ * Returns the first enabled section for the given world, or null if none are enabled.
+ * @param {object} world
+ * @returns {string|null}
+ */
+function firstEnabledSection(world) {
+  for (const s of ['timeline', 'wiki', 'map']) {
+    if (isSectionEnabled(world, s)) return s;
+  }
+  return null;
+}
+
 function renderSectionTabs() {
   const tabs = document.getElementById('section-tabs');
   if (!tabs) return;
   const isWorldPage = ['timeline', 'wiki', 'map'].includes(state.ui.currentPage);
   tabs.style.display = (state.ui.activeWorldId && isWorldPage) ? '' : 'none';
+  const world       = state.worlds.find(w => w.id === state.ui.activeWorldId);
   const tabTimeline = document.getElementById('tab-timeline');
   const tabWiki     = document.getElementById('tab-wiki');
   const tabMap      = document.getElementById('tab-map');
-  if (tabTimeline) tabTimeline.classList.toggle('active', state.ui.currentPage === 'timeline');
-  if (tabWiki)     tabWiki.classList.toggle('active',     state.ui.currentPage === 'wiki');
-  if (tabMap)      tabMap.classList.toggle('active',      state.ui.currentPage === 'map');
+  if (tabTimeline) {
+    tabTimeline.style.display = isSectionEnabled(world, 'timeline') ? '' : 'none';
+    tabTimeline.classList.toggle('active', state.ui.currentPage === 'timeline');
+  }
+  if (tabWiki) {
+    tabWiki.style.display = isSectionEnabled(world, 'wiki') ? '' : 'none';
+    tabWiki.classList.toggle('active', state.ui.currentPage === 'wiki');
+  }
+  if (tabMap) {
+    tabMap.style.display = isSectionEnabled(world, 'map') ? '' : 'none';
+    tabMap.classList.toggle('active', state.ui.currentPage === 'map');
+  }
 }
 
 function selectSection(section) {
+  const world = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  if (!isSectionEnabled(world, section)) return;
   pushUrl(buildUrl(state.ui.activeWorldId, section));
   showPage(section);
 }
@@ -375,8 +435,9 @@ async function selectWorld(worldId) {
   state.ui.activeChars   = new Set();
   state.ui.activeTypes   = new Set();
 
-  const section = ['timeline', 'wiki', 'map'].includes(state.ui.currentPage)
-    ? state.ui.currentPage : 'timeline';
+  const world = state.worlds.find(w => w.id === worldId);
+  // Always land on the first visible section tab for this world
+  const section = firstEnabledSection(world) || 'timeline';
 
   pushUrl(buildUrl(worldId, section));
 
@@ -386,6 +447,8 @@ async function selectWorld(worldId) {
   const pageEl = document.getElementById('page-' + section);
   if (pageEl) pageEl.classList.add('active');
   state.ui.currentPage = section;
+  renderTopNavWorlds();
+  renderSectionTabs();
 
   if (section === 'timeline') {
     try {
@@ -393,18 +456,18 @@ async function selectWorld(worldId) {
         api('GET', `/worlds/${worldId}/events`),
         api('GET', `/worlds/${worldId}/events/unpositioned`),
       ]);
+      // Stale-check: another navigation may have changed the active world while we were loading
+      if (state.ui.activeWorldId !== worldId) return;
       state.events  = events;
       state.undated = undated;
     } catch (e) { console.error('Failed to load world events', e); }
+    if (state.ui.activeWorldId !== worldId) return;
     renderTimeline();
   } else if (section === 'wiki') {
     await initWikiPage();
   } else if (section === 'map') {
     await initMapPage();
   }
-
-  renderTopNavWorlds();
-  renderSectionTabs();
 }
 
 /* ══════════════════════════════════════
@@ -1066,6 +1129,9 @@ function openAddWorldModal() {
   document.getElementById('fw-n').value     = '';
   document.getElementById('fw-d').value     = '';
   document.getElementById('fw-miles').value = 5;
+  document.getElementById('fw-chronicle').checked = true;
+  document.getElementById('fw-wiki').checked      = true;
+  document.getElementById('fw-map').checked       = true;
   openModal();
 }
 
@@ -1080,6 +1146,9 @@ function openEditWorldModal(worldId, e) {
   document.getElementById('fw-n').value     = w.name || '';
   document.getElementById('fw-d').value     = w.description || '';
   document.getElementById('fw-miles').value = w.milesPerCell ?? 5;
+  document.getElementById('fw-chronicle').checked = w.chronicleEnabled !== false;
+  document.getElementById('fw-wiki').checked      = w.wikiEnabled      !== false;
+  document.getElementById('fw-map').checked       = w.mapEnabled        !== false;
   openModal();
 }
 
@@ -1132,7 +1201,7 @@ async function doLogin(username, password) {
       showPasswordChangeOverlay();
       return;
     }
-    location.reload();
+    location.href = '/'; // always land on Marktplatz after login
   } catch (e) {
     const errEl = document.getElementById('fl-err');
     if (errEl) { errEl.textContent = 'Anmeldung fehlgeschlagen: ' + e.message; errEl.style.display = 'block'; }
@@ -1147,10 +1216,12 @@ async function doLogout() {
     // ignore logout errors
   }
   state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
-  // Clear all cached wiki data fetched under the previous session so no
-  // privileged content (spoiler sections, ownership controls) leaks to the
-  // logged-out view. Titles contain no spoiler content, so reload them
-  // immediately so auto-links keep working in the logged-out timeline.
+  // Clear all world/wiki data — it is no longer accessible to guests
+  state.worlds = [];
+  state.events = [];
+  state.undated = [];
+  state.ui.activeWorldId = null;
+  state.ui.wikiActiveWorldId = null;
   state.wikiTitles = [];
   state.wikiAllEntries = [];
   state.wikiFullGraph = null;
@@ -1163,9 +1234,8 @@ async function doLogout() {
   const editorPanel = document.getElementById('wiki-editor-panel');
   if (editorPanel) editorPanel.style.display = 'none';
   applyAuthUI();
+  renderTopNavWorlds();
   pushUrl('/');
-  await loadWikiTitles();
-  renderTimeline();
   renderItems();
   showPage('items');
 }
@@ -1195,17 +1265,28 @@ async function _saveEntry() {
 
   // WORLD create/edit
   if (editSource === 'world') {
-    const name  = document.getElementById('fw-n').value.trim();
-    const desc  = document.getElementById('fw-d').value.trim();
-    const miles = Math.max(1, parseInt(document.getElementById('fw-miles').value || '5', 10));
+    const name            = document.getElementById('fw-n').value.trim();
+    const desc            = document.getElementById('fw-d').value.trim();
+    const miles           = Math.max(1, parseInt(document.getElementById('fw-miles').value || '5', 10));
+    const chronicleEnabled = document.getElementById('fw-chronicle').checked;
+    const wikiEnabled      = document.getElementById('fw-wiki').checked;
+    const mapEnabled       = document.getElementById('fw-map').checked;
     if (!name) { alert('Weltname ist Pflicht'); return; }
     try {
       if (editWorldId != null) {
-        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, milesPerCell: miles });
+        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
         const idx = state.worlds.findIndex(w => w.id === editWorldId);
         if (idx > -1) state.worlds[idx] = updated;
+        // If the current page is now disabled for the active world, navigate away
+        if (state.ui.activeWorldId === editWorldId) {
+          const section = firstEnabledSection(updated);
+          if (section && !isSectionEnabled(updated, state.ui.currentPage)) {
+            await navigateToUrl({ page: section, worldId: editWorldId, subId: null }, true);
+          }
+          renderSectionTabs();
+        }
       } else {
-        const created = await api('POST', '/worlds', { name, description: desc, milesPerCell: miles });
+        const created = await api('POST', '/worlds', { name, description: desc, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
         state.worlds.push(created);
         if (!state.ui.activeWorldId) await selectWorld(created.id);
       }
@@ -1506,10 +1587,7 @@ function sortBy(k) {
 async function init() {
   applyThemeFromStorage();
   try {
-    const [authStatus, worlds] = await Promise.all([
-      api('GET', '/auth/status'),
-      api('GET', '/worlds'),
-    ]);
+    const authStatus = await api('GET', '/auth/status');
     state.auth = {
       loggedIn: authStatus.loggedIn || false,
       isAdmin: authStatus.admin || false,
@@ -1518,11 +1596,16 @@ async function init() {
       colorHex: authStatus.colorHex || null,
       mustChangePassword: authStatus.mustChangePassword || false,
     };
-    state.worlds = worlds || [];
 
-    const savedWorldId = parseInt(localStorage.getItem('activeWorldId'));
-    state.ui.activeWorldId = (savedWorldId && state.worlds.find(w => w.id === savedWorldId))
-      ? savedWorldId : (state.worlds[0]?.id ?? null);
+    // Worlds and their content are only available to logged-in users
+    if (state.auth.loggedIn) {
+      const worlds = await api('GET', '/worlds');
+      state.worlds = worlds || [];
+
+      const savedWorldId = parseInt(localStorage.getItem('activeWorldId'));
+      state.ui.activeWorldId = (savedWorldId && state.worlds.find(w => w.id === savedWorldId))
+        ? savedWorldId : (state.worlds[0]?.id ?? null);
+    }
 
     if (state.ui.activeWorldId) {
       const [events, undated, items, tagCounts] = await Promise.all([
@@ -1549,9 +1632,11 @@ async function init() {
     renderItems();
     renderItemTagFilter();
     applyAuthUI();
-    loadPoiTypes();
+    if (state.auth.loggedIn) {
+      loadPoiTypes();
+      loadWikiTitles();
+    }
     await navigateToUrl(parseUrl(), false);
-    loadWikiTitles();
     if (state.auth.mustChangePassword) showPasswordChangeOverlay();
   } catch (e) {
     console.error('Init failed', e);
@@ -1728,6 +1813,7 @@ async function loadWikiEntries() {
   if (!wid) return;
   try {
     const entries = await api('GET', `/wiki?worldId=${wid}`);
+    if (state.ui.wikiActiveWorldId !== wid) return; // stale — world changed while loading
     state.wikiAllEntries = entries;
     applyWikiFilter();
   } catch(e) { console.error(e); }
@@ -1736,6 +1822,7 @@ async function loadWikiEntries() {
 async function loadWikiGraph(worldId) {
   try {
     const graph = await api('GET', `/wiki/graph?worldId=${worldId}`);
+    if (state.ui.activeWorldId !== worldId) return; // stale — world changed while loading
     state.wikiFullGraph = graph;
     renderWikiGraph(filterWikiGraph(graph));
   } catch(e) { console.error(e); }
@@ -2745,13 +2832,17 @@ async function loadPoiTypes() {
 
 async function loadMapData(worldId) {
   try {
-    state.map.pois = await api('GET', `/worlds/${worldId}/map/pois`);
+    const pois = await api('GET', `/worlds/${worldId}/map/pois`);
+    if (state.ui.activeWorldId !== worldId) return; // stale — world changed while loading
+    state.map.pois = pois;
   } catch (e) { console.error('Failed to load map POIs', e); }
 
+  if (state.ui.activeWorldId !== worldId) return;
   if (state.map.bgUrl) { URL.revokeObjectURL(state.map.bgUrl); state.map.bgUrl = null; }
   state.map.bgScale = 1.0;
   try {
     const res = await fetch(`/api/worlds/${worldId}/map/background`);
+    if (state.ui.activeWorldId !== worldId) return; // stale
     if (res.ok) {
       state.map.bgScale = parseFloat(res.headers.get('X-Bg-Scale') || '1.0');
       const blob = await res.blob();
@@ -2975,10 +3066,16 @@ function setMapZoom(zoom) {
 function getImageBoundsInViewport() {
   const img  = document.getElementById('map-bg-img');
   const wrap = document.getElementById('map-canvas-wrap');
-  if (!img || !img.naturalWidth || !img.naturalHeight || !wrap) return { x: 0, y: 0, w: 1, h: 1 };
+  if (!img || !img.naturalWidth || !img.naturalHeight || !wrap) {
+    console.debug('[getImageBoundsInViewport] ← fallback (image not loaded), naturalW=%o naturalH=%o', img?.naturalWidth, img?.naturalHeight);
+    return { x: 0, y: 0, w: 1, h: 1 };
+  }
   const cW = wrap.clientWidth;
   const cH = wrap.clientHeight;
-  if (!cW || !cH) return { x: 0, y: 0, w: 1, h: 1 };
+  if (!cW || !cH) {
+    console.debug('[getImageBoundsInViewport] ← fallback (canvas not sized), cW=%o cH=%o', cW, cH);
+    return { x: 0, y: 0, w: 1, h: 1 };
+  }
   const imgA = img.naturalWidth / img.naturalHeight;
   const cA   = cW / cH;
   let imgW, imgH, imgX, imgY;
@@ -2989,7 +3086,9 @@ function getImageBoundsInViewport() {
     // Container taller than image: letterbox top/bottom
     imgW = cW; imgH = cW / imgA; imgX = 0; imgY = (cH - imgH) / 2;
   }
-  return { x: imgX / cW, y: imgY / cH, w: imgW / cW, h: imgH / cH };
+  const ib = { x: imgX / cW, y: imgY / cH, w: imgW / cW, h: imgH / cH };
+  console.debug('[getImageBoundsInViewport] canvas=%ox%o img=%ox%o ib=', cW, cH, img.naturalWidth, img.naturalHeight, ib);
+  return ib;
 }
 
 /**
@@ -3006,7 +3105,9 @@ function screenToMapPct(clientX, clientY) {
   const ib     = getImageBoundsInViewport();
   const cxFrac = 0.5 + (clientX - rect.left - rect.width  / 2 - state.map.panX) / (rect.width  * state.map.zoom);
   const cyFrac = 0.5 + (clientY - rect.top  - rect.height / 2 - state.map.panY) / (rect.height * state.map.zoom);
-  return { xPct: (cxFrac - ib.x) / ib.w, yPct: (cyFrac - ib.y) / ib.h };
+  const result = { xPct: (cxFrac - ib.x) / ib.w, yPct: (cyFrac - ib.y) / ib.h };
+  console.debug('[screenToMapPct] click=(%o,%o) rect=%ox%o zoom=%o pan=(%o,%o) cFrac=(%o,%o) →', clientX, clientY, rect.width, rect.height, state.map.zoom, state.map.panX, state.map.panY, cxFrac, cyFrac, result);
+  return result;
 }
 
 function buildPoiElement(poi) {
@@ -3015,8 +3116,11 @@ function buildPoiElement(poi) {
   wrap.className = 'map-poi' + (gc ? ' ' + gc : '');
   wrap.dataset.poiId = poi.id;
   const ib = getImageBoundsInViewport();
-  wrap.style.left = ((ib.x + poi.xPct * ib.w) * 100) + '%';
-  wrap.style.top  = ((ib.y + poi.yPct * ib.h) * 100) + '%';
+  const leftPct  = (ib.x + poi.xPct * ib.w) * 100;
+  const topPct   = (ib.y + poi.yPct * ib.h) * 100;
+  console.debug('[buildPoiElement] poi#%o stored=(%o,%o) ib=', poi.id, poi.xPct, poi.yPct, ib, '→ left=%o% top=%o%', leftPct, topPct);
+  wrap.style.left = leftPct + '%';
+  wrap.style.top  = topPct  + '%';
   wrap.style.pointerEvents = 'auto';
 
   if (poi.poiTypeShape === 'TEXT') {

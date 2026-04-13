@@ -37,6 +37,9 @@ public class WorldService {
         world.setName(req.getName());
         world.setDescription(req.getDescription());
         world.setMilesPerCell(req.getMilesPerCell() != null ? req.getMilesPerCell() : 5);
+        world.setChronicleEnabled(req.getChronicleEnabled() == null || req.getChronicleEnabled());
+        world.setWikiEnabled(req.getWikiEnabled() == null || req.getWikiEnabled());
+        world.setMapEnabled(req.getMapEnabled() == null || req.getMapEnabled());
         return toDto(worldRepository.save(world));
     }
 
@@ -47,6 +50,9 @@ public class WorldService {
         world.setName(req.getName());
         world.setDescription(req.getDescription());
         if (req.getMilesPerCell() != null) world.setMilesPerCell(req.getMilesPerCell());
+        if (req.getChronicleEnabled() != null) world.setChronicleEnabled(req.getChronicleEnabled());
+        if (req.getWikiEnabled() != null) world.setWikiEnabled(req.getWikiEnabled());
+        if (req.getMapEnabled() != null) world.setMapEnabled(req.getMapEnabled());
         return toDto(worldRepository.save(world));
     }
 
@@ -63,6 +69,7 @@ public class WorldService {
     }
 
     private WorldDto toDto(World w) {
-        return new WorldDto(w.getId(), w.getName(), w.getDescription(), w.getSortOrder(), w.getMilesPerCell());
+        return new WorldDto(w.getId(), w.getName(), w.getDescription(), w.getSortOrder(), w.getMilesPerCell(),
+                w.isChronicleEnabled(), w.isWikiEnabled(), w.isMapEnabled());
     }
 }

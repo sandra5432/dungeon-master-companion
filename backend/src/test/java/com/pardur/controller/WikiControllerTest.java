@@ -24,14 +24,28 @@ class WikiControllerTest {
     @Autowired ObjectMapper mapper;
 
     @Test
-    void getRecent_returnsOkWithoutAuth() throws Exception {
+    void getRecent_returns4xx_whenUnauthenticated() throws Exception {
+        mvc.perform(get("/api/wiki/recent"))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = {"USER"})
+    void getRecent_returnsOk_whenAuthenticated() throws Exception {
         mvc.perform(get("/api/wiki/recent"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    void getTitles_returnsOkWithoutAuth() throws Exception {
+    void getTitles_returns4xx_whenUnauthenticated() throws Exception {
+        mvc.perform(get("/api/wiki/titles"))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = {"USER"})
+    void getTitles_returnsOk_whenAuthenticated() throws Exception {
         mvc.perform(get("/api/wiki/titles"))
                 .andExpect(status().isOk());
     }

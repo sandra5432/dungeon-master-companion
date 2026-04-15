@@ -9,6 +9,7 @@ import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -72,12 +73,15 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST,   "/api/worlds/*/map/background").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH,  "/api/worlds/*/map/background/scale").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/worlds/*/map/background").hasRole("ADMIN")
+                // Export: admin only (supports both session and Basic Auth)
+                .requestMatchers("/api/export/**").hasRole("ADMIN")
                 // All other world endpoints (GET /api/worlds, GET /api/worlds/{id}, etc.) require login
                 .requestMatchers("/api/worlds/**").hasRole("USER")
                 .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .csrf(csrf -> csrf.disable())
+            .httpBasic(Customizer.withDefaults())
             .logout(logout -> logout
                 .logoutUrl("/api/logout")
                 .logoutSuccessHandler((req, res, authentication) -> res.setStatus(200))

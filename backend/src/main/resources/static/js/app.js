@@ -330,6 +330,22 @@ function renderWorldSelector() {
   }).join('');
 }
 
+/**
+ * Triggers a browser download of the wiki export ZIP for the given world.
+ * Uses a temporary anchor element to initiate the download without a fetch call.
+ * @param {number} worldId  ID of the world to export
+ */
+function exportWorldWiki(worldId) {
+  console.debug('[exportWorldWiki] →', worldId);
+  const a = document.createElement('a');
+  a.href = `/api/export/worlds/${worldId}/wiki`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  console.debug('[exportWorldWiki] ← download triggered');
+}
+
 function renderConfigWorlds() {
   const el = document.getElementById('config-worlds-body');
   if (!el) return;
@@ -343,6 +359,7 @@ function renderConfigWorlds() {
       <td>${escHtml(w.description || '—')}</td>
       <td style="white-space:nowrap">
         <button class="act-btn" onclick="openEditWorldModal(${w.id},event)" title="Bearbeiten">✎</button>
+        <button class="act-btn" onclick="exportWorldWiki(${w.id})" title="Wiki exportieren">⬇</button>
         <button class="act-btn del" onclick="openDeleteWorldConfirm(${w.id},event)" title="Löschen">✕</button>
       </td>
     </tr>

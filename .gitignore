@@ -32,3 +32,6 @@ item-management-list/.env
 
 # Brainstorm / visual companion artefacts
 .superpowers/
+
+# Git worktrees
+.worktrees/

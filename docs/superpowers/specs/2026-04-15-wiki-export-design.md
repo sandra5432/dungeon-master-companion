@@ -18,6 +18,7 @@ Add an admin-only "export wiki" action to the world config menu. When triggered,
 - File organization: hierarchical — parent entries become folders; root entries with no children are flat files at the ZIP root.
 - Filenames: sanitized — spaces → underscores, characters outside `[a-z0-9_-]` stripped (after lowercasing), multiple consecutive underscores collapsed to one.
 - ZIP filename: `<world-name-sanitized>-wiki-export.zip`.
+- **HTTP Basic Auth supported** — the endpoint must accept both session-based auth (browser/SPA) and HTTP Basic Auth (username + password header), so it can be called from scripts or tools without a session cookie.
 
 ---
 
@@ -113,13 +114,21 @@ public class ExportController {
 
 ## Security
 
-Add to `SecurityConfig.filterChain()`:
+Two changes to `SecurityConfig.filterChain()`:
 
-```java
+**1. Enable HTTP Basic Auth** — add `.httpBasic(Customizer.withDefaults())` to the filter chain. Spring Security will then accept either a valid session cookie or a `Authorization: Basic <base64>` header. The existing session-based login flow for the SPA is unaffected.
+
+**2. Add the export rule** — add before the `anyRequest().authenticated()` catch-all:
+
+```
 .requestMatchers("/api/export/**").hasRole("ADMIN")
 ```
 
-Place this before the `anyRequest().authenticated()` catch-all.
+Together these allow both:
+- Browser SPA: session cookie (existing flow, no change)
+- Scripts/tools: `curl -u admin:password https://host/api/export/worlds/1/wiki --output export.zip`
+
+Note: Basic Auth sends credentials on every request. This is acceptable here because the app enforces HTTPS in production and the endpoint is intentionally admin-only.
 
 ---
 
@@ -170,6 +179,8 @@ All tests use `@SpringBootTest`, `@AutoConfigureMockMvc`, `@ActiveProfiles("dev"
 | 6 | `exportWiki_returnsZipWithFolders_whenEntriesHaveChildren` | ZIP contains `parent/parent.md` and `parent/child.md` |
 | 7 | `exportWiki_fileContainsExpectedFrontmatter` | `.md` content has `# Title`, `**Type:**`, `**Created by:**`, body |
 | 8 | `exportWiki_sanitizesFilenamesCorrectly` | Title `"Ä böser Wald!"` → `ae_boser_wald.md` |
+| 9 | `exportWiki_returns200_withBasicAuth` | Admin credentials via `Authorization: Basic` header → `200 OK` |
+| 10 | `exportWiki_returns401_withBasicAuth_wrongPassword` | Wrong password via Basic Auth → `401` |
 
 ---
 

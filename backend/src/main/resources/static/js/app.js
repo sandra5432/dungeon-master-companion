@@ -357,10 +357,12 @@ function renderConfigWorlds() {
     <tr>
       <td>${escHtml(w.name)}</td>
       <td>${escHtml(w.description || '—')}</td>
-      <td style="white-space:nowrap">
-        <button class="act-btn" onclick="openEditWorldModal(${w.id},event)" title="Bearbeiten">✎</button>
-        <button class="act-btn" onclick="exportWorldWiki(${w.id})" title="Wiki exportieren">⬇</button>
-        <button class="act-btn del" onclick="openDeleteWorldConfirm(${w.id},event)" title="Löschen">✕</button>
+      <td>
+        <div class="act-btns">
+          <button class="act-btn" onclick="openEditWorldModal(${w.id},event)" title="Bearbeiten">✎</button>
+          <button class="act-btn" onclick="exportWorldWiki(${w.id})" title="Wiki exportieren" style="font-size:1.1rem">⤓</button>
+          <button class="act-btn del" onclick="openDeleteWorldConfirm(${w.id},event)" title="Löschen">✕</button>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -1145,6 +1147,7 @@ function openAddWorldModal() {
   setSaveBtn('Erstellen', false);
   document.getElementById('fw-n').value     = '';
   document.getElementById('fw-d').value     = '';
+  document.getElementById('fw-seq').value   = '';
   document.getElementById('fw-miles').value = 5;
   document.getElementById('fw-chronicle').checked = true;
   document.getElementById('fw-wiki').checked      = true;
@@ -1162,6 +1165,7 @@ function openEditWorldModal(worldId, e) {
   setSaveBtn('Speichern', false);
   document.getElementById('fw-n').value     = w.name || '';
   document.getElementById('fw-d').value     = w.description || '';
+  document.getElementById('fw-seq').value   = w.sortOrder ? w.sortOrder : '';
   document.getElementById('fw-miles').value = w.milesPerCell ?? 5;
   document.getElementById('fw-chronicle').checked = w.chronicleEnabled !== false;
   document.getElementById('fw-wiki').checked      = w.wikiEnabled      !== false;
@@ -1284,6 +1288,9 @@ async function _saveEntry() {
   if (editSource === 'world') {
     const name            = document.getElementById('fw-n').value.trim();
     const desc            = document.getElementById('fw-d').value.trim();
+    const seqRaw          = document.getElementById('fw-seq').value.trim();
+    const seqVal          = parseInt(seqRaw, 10);
+    const sortOrder       = seqRaw !== '' && seqVal > 0 ? seqVal : 0;
     const miles           = Math.max(1, parseInt(document.getElementById('fw-miles').value || '5', 10));
     const chronicleEnabled = document.getElementById('fw-chronicle').checked;
     const wikiEnabled      = document.getElementById('fw-wiki').checked;
@@ -1291,7 +1298,7 @@ async function _saveEntry() {
     if (!name) { alert('Weltname ist Pflicht'); return; }
     try {
       if (editWorldId != null) {
-        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
+        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, sortOrder, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
         const idx = state.worlds.findIndex(w => w.id === editWorldId);
         if (idx > -1) state.worlds[idx] = updated;
         // If the current page is now disabled for the active world, navigate away
@@ -1303,10 +1310,18 @@ async function _saveEntry() {
           renderSectionTabs();
         }
       } else {
-        const created = await api('POST', '/worlds', { name, description: desc, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
+        const created = await api('POST', '/worlds', { name, description: desc, sortOrder, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
         state.worlds.push(created);
         if (!state.ui.activeWorldId) await selectWorld(created.id);
       }
+      state.worlds.sort((a, b) => {
+        const seqA = a.sortOrder || 0;
+        const seqB = b.sortOrder || 0;
+        const pa = seqA === 0 ? Infinity : seqA;
+        const pb = seqB === 0 ? Infinity : seqB;
+        if (pa !== pb) return pa - pb;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      });
       closeModal();
       renderTimelineWorldTabs();
       renderConfigWorlds();

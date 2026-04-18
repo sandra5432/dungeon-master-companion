@@ -11,6 +11,7 @@ import com.pardur.repository.WorldRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -26,7 +27,10 @@ public class WorldService {
 
     @Transactional(readOnly = true)
     public List<WorldDto> getAllWorlds() {
-        return worldRepository.findAllByOrderBySortOrderAsc().stream()
+        return worldRepository.findAll().stream()
+                .sorted(Comparator
+                        .comparingInt((World w) -> w.getSortOrder() == 0 ? Integer.MAX_VALUE : w.getSortOrder())
+                        .thenComparing(w -> w.getName().toLowerCase()))
                 .map(this::toDto)
                 .toList();
     }
@@ -36,6 +40,7 @@ public class WorldService {
         World world = new World();
         world.setName(req.getName());
         world.setDescription(req.getDescription());
+        world.setSortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0);
         world.setMilesPerCell(req.getMilesPerCell() != null ? req.getMilesPerCell() : 5);
         world.setChronicleEnabled(req.getChronicleEnabled() == null || req.getChronicleEnabled());
         world.setWikiEnabled(req.getWikiEnabled() == null || req.getWikiEnabled());
@@ -49,6 +54,7 @@ public class WorldService {
                 .orElseThrow(() -> new ResourceNotFoundException("World not found with id: " + id));
         world.setName(req.getName());
         world.setDescription(req.getDescription());
+        world.setSortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0);
         if (req.getMilesPerCell() != null) world.setMilesPerCell(req.getMilesPerCell());
         if (req.getChronicleEnabled() != null) world.setChronicleEnabled(req.getChronicleEnabled());
         if (req.getWikiEnabled() != null) world.setWikiEnabled(req.getWikiEnabled());

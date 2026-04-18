@@ -8,10 +8,9 @@ import com.pardur.dto.response.TagCountDto;
 import com.pardur.exception.ResourceNotFoundException;
 import com.pardur.model.*;
 import com.pardur.repository.*;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,15 +24,18 @@ public class TimelineService {
     private final EventTagRepository eventTagRepository;
     private final WorldRepository worldRepository;
     private final UserRepository userRepository;
+    private final WorldPermissionChecker checker;
 
     public TimelineService(TimelineEventRepository eventRepository,
                            EventTagRepository eventTagRepository,
                            WorldRepository worldRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           WorldPermissionChecker checker) {
         this.eventRepository = eventRepository;
         this.eventTagRepository = eventTagRepository;
         this.worldRepository = worldRepository;
         this.userRepository = userRepository;
+        this.checker = checker;
     }
 
     private World requireWorld(Integer worldId) {
@@ -41,37 +43,33 @@ public class TimelineService {
                 .orElseThrow(() -> new ResourceNotFoundException("World not found with id: " + worldId));
     }
 
-    private void checkOwnership(TimelineEvent event, Integer currentUserId, boolean isAdmin) {
-        if (isAdmin) return;
-        Integer ownerId = event.getCreatedBy() != null ? event.getCreatedBy().getId() : null;
-        if (!currentUserId.equals(ownerId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your event");
-        }
-    }
-
     @Transactional(readOnly = true)
-    public List<EventDto> getPositionedEvents(Integer worldId) {
-        requireWorld(worldId);
+    public List<EventDto> getPositionedEvents(Integer worldId, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireRead(world, auth);
         return eventRepository.findAllByWorldIdAndSequenceOrderIsNotNullOrderBySequenceOrderAsc(worldId)
                 .stream().map(this::toDto).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<EventDto> getUnpositionedEvents(Integer worldId) {
-        requireWorld(worldId);
+    public List<EventDto> getUnpositionedEvents(Integer worldId, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireRead(world, auth);
         return eventRepository.findAllByWorldIdAndSequenceOrderIsNullOrderByCreatedAtAsc(worldId)
                 .stream().map(this::toDto).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<TagCountDto> getTagCounts(Integer worldId) {
-        requireWorld(worldId);
+    public List<TagCountDto> getTagCounts(Integer worldId, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireRead(world, auth);
         return eventTagRepository.findTagCountsByWorldId(worldId);
     }
 
     @Transactional(readOnly = true)
-    public EventDto getEvent(Integer worldId, Integer id) {
-        requireWorld(worldId);
+    public EventDto getEvent(Integer worldId, Integer id, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireRead(world, auth);
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         if (!event.getWorld().getId().equals(worldId)) {
@@ -81,10 +79,10 @@ public class TimelineService {
     }
 
     @Transactional
-    public EventDto createEvent(Integer worldId, CreateEventRequest req, Integer creatorUserId) {
+    public EventDto createEvent(Integer worldId, CreateEventRequest req, Authentication auth) {
         World world = requireWorld(worldId);
-        User creator = userRepository.findById(creatorUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + creatorUserId));
+        checker.requireEdit(world, auth);
+        Integer creatorId = WorldPermissionChecker.resolveUserId(auth);
 
         TimelineEvent event = new TimelineEvent();
         event.setWorld(world);
@@ -94,8 +92,13 @@ public class TimelineService {
         event.setType(req.getType());
         event.setDescription(req.getDescription());
         event.setCharacters(joinCharacters(req.getCharacters()));
-        event.setCreatedBy(creator);
         event.setSequenceOrder(null);
+
+        if (creatorId != null) {
+            User creator = userRepository.findById(creatorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + creatorId));
+            event.setCreatedBy(creator);
+        }
 
         TimelineEvent saved = eventRepository.save(event);
         setTags(saved, req.getTags());
@@ -103,16 +106,14 @@ public class TimelineService {
     }
 
     @Transactional
-    public EventDto updateEvent(Integer worldId, Integer id, UpdateEventRequest req,
-                                 Integer currentUserId, boolean isAdmin) {
-        requireWorld(worldId);
+    public EventDto updateEvent(Integer worldId, Integer id, UpdateEventRequest req, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireEdit(world, auth);
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         if (!event.getWorld().getId().equals(worldId)) {
             throw new ResourceNotFoundException("Event " + id + " does not belong to world " + worldId);
         }
-        checkOwnership(event, currentUserId, isAdmin);
-
         event.setTitle(req.getTitle());
         event.setDateLabel(req.getDateLabel());
         event.setTimeLabel(req.getTimeLabel());
@@ -124,8 +125,9 @@ public class TimelineService {
     }
 
     @Transactional
-    public EventDto assignPosition(Integer worldId, Integer id, AssignPositionRequest req) {
-        requireWorld(worldId);
+    public EventDto assignPosition(Integer worldId, Integer id, AssignPositionRequest req, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireEdit(world, auth);
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         if (!event.getWorld().getId().equals(worldId)) {
@@ -133,7 +135,6 @@ public class TimelineService {
         }
 
         BigDecimal newOrder;
-
         if (req.getAfterEventId() == null) {
             Optional<TimelineEvent> first = eventRepository.findFirstByWorldIdAndSequenceOrderIsNotNullOrderBySequenceOrderAsc(worldId);
             if (first.isEmpty()) {
@@ -156,14 +157,14 @@ public class TimelineService {
                         .divide(new BigDecimal("2"), 10, RoundingMode.HALF_UP);
             }
         }
-
         event.setSequenceOrder(newOrder);
         return toDto(eventRepository.save(event));
     }
 
     @Transactional
-    public void unplaceEvent(Integer worldId, Integer id) {
-        requireWorld(worldId);
+    public void unplaceEvent(Integer worldId, Integer id, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireEdit(world, auth);
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         if (!event.getWorld().getId().equals(worldId)) {
@@ -174,14 +175,14 @@ public class TimelineService {
     }
 
     @Transactional
-    public void deleteEvent(Integer worldId, Integer id, Integer currentUserId, boolean isAdmin) {
-        requireWorld(worldId);
+    public void deleteEvent(Integer worldId, Integer id, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireDelete(world, auth);
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         if (!event.getWorld().getId().equals(worldId)) {
             throw new ResourceNotFoundException("Event " + id + " does not belong to world " + worldId);
         }
-        checkOwnership(event, currentUserId, isAdmin);
         eventRepository.delete(event);
     }
 
@@ -230,7 +231,7 @@ public class TimelineService {
             dto.setCreatorUsername(e.getCreatedBy().getUsername());
             dto.setCreatorColorHex(e.getCreatedBy().getColorHex());
         } else {
-            dto.setCreatorUsername("Unbekannt");
+            dto.setCreatorUsername("Anonym");
             dto.setCreatorColorHex("#888888");
         }
         dto.setTags(e.getTags().stream().map(t -> t.getId().getTagName()).toList());

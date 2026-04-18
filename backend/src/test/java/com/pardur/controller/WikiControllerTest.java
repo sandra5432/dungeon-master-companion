@@ -24,9 +24,9 @@ class WikiControllerTest {
     @Autowired ObjectMapper mapper;
 
     @Test
-    void getRecent_returns4xx_whenUnauthenticated() throws Exception {
+    void getRecent_returnsOk_whenUnauthenticated() throws Exception {
         mvc.perform(get("/api/wiki/recent"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -38,9 +38,9 @@ class WikiControllerTest {
     }
 
     @Test
-    void getTitles_returns4xx_whenUnauthenticated() throws Exception {
+    void getTitles_returnsOk_whenUnauthenticated() throws Exception {
         mvc.perform(get("/api/wiki/titles"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -51,10 +51,10 @@ class WikiControllerTest {
     }
 
     @Test
-    void createEntry_returns401_whenNotAuthenticated() throws Exception {
+    void createEntry_returns403_whenGuestAndWorldDeniesEdit() throws Exception {
         CreateWikiEntryRequest req = new CreateWikiEntryRequest();
         req.setTitle("Test");
-        req.setWorldId(1);
+        req.setWorldId(2); // Eldorheim: guest_can_edit=false
         req.setType(WikiEntryType.TERM);
 
         mvc.perform(post("/api/wiki")

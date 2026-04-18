@@ -12,7 +12,6 @@ import com.pardur.model.MapBackground;
 import com.pardur.model.PoiType;
 import com.pardur.repository.MapBackgroundRepository;
 import com.pardur.repository.PoiTypeRepository;
-import com.pardur.security.PardurUserDetails;
 import com.pardur.service.MapPoiService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -89,16 +88,15 @@ public class MapController {
     // ── Map POIs (per world) ──────────────────────────────────────────────────
 
     @GetMapping("/api/worlds/{worldId}/map/pois")
-    public ResponseEntity<List<MapPoiDto>> listPois(@PathVariable Integer worldId) {
-        return ResponseEntity.ok(poiService.listPois(worldId));
+    public ResponseEntity<List<MapPoiDto>> listPois(@PathVariable Integer worldId, Authentication auth) {
+        return ResponseEntity.ok(poiService.listPois(worldId, auth));
     }
 
     @PostMapping("/api/worlds/{worldId}/map/pois")
     public ResponseEntity<MapPoiDto> createPoi(@PathVariable Integer worldId,
                                                 @Valid @RequestBody CreateMapPoiRequest req,
                                                 Authentication auth) {
-        Integer userId = resolve(auth).getUserId();
-        return ResponseEntity.status(201).body(poiService.createPoi(worldId, req, userId));
+        return ResponseEntity.status(201).body(poiService.createPoi(worldId, req, auth));
     }
 
     @PutMapping("/api/worlds/{worldId}/map/pois/{poiId}")
@@ -106,18 +104,14 @@ public class MapController {
                                                 @PathVariable Integer poiId,
                                                 @Valid @RequestBody UpdateMapPoiRequest req,
                                                 Authentication auth) {
-        PardurUserDetails u = resolve(auth);
-        return ResponseEntity.ok(
-            poiService.updatePoi(worldId, poiId, req, u.getUserId(), "ADMIN".equals(u.getRole()))
-        );
+        return ResponseEntity.ok(poiService.updatePoi(worldId, poiId, req, auth));
     }
 
     @DeleteMapping("/api/worlds/{worldId}/map/pois/{poiId}")
     public ResponseEntity<Void> deletePoi(@PathVariable Integer worldId,
                                            @PathVariable Integer poiId,
                                            Authentication auth) {
-        PardurUserDetails u = resolve(auth);
-        poiService.deletePoi(worldId, poiId, u.getUserId(), "ADMIN".equals(u.getRole()));
+        poiService.deletePoi(worldId, poiId, auth);
         return ResponseEntity.noContent().build();
     }
 
@@ -172,10 +166,4 @@ public class MapController {
                               t.isDefault(), t.isHasGesinnung(), t.isHasLabel());
     }
 
-    private PardurUserDetails resolve(Authentication auth) {
-        if (auth == null || !(auth.getPrincipal() instanceof PardurUserDetails u)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        return u;
-    }
 }

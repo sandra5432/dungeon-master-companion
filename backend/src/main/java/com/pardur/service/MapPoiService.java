@@ -6,43 +6,65 @@ import com.pardur.dto.response.MapPoiDto;
 import com.pardur.exception.ResourceNotFoundException;
 import com.pardur.model.*;
 import com.pardur.repository.*;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @Service
 public class MapPoiService {
 
-    private final MapPoiRepository  poiRepo;
-    private final PoiTypeRepository typeRepo;
-    private final WorldRepository   worldRepo;
-    private final UserRepository    userRepo;
+    private final MapPoiRepository     poiRepo;
+    private final PoiTypeRepository    typeRepo;
+    private final WorldRepository      worldRepo;
+    private final UserRepository       userRepo;
+    private final WorldPermissionChecker checker;
 
     public MapPoiService(MapPoiRepository poiRepo, PoiTypeRepository typeRepo,
-                         WorldRepository worldRepo, UserRepository userRepo) {
+                         WorldRepository worldRepo, UserRepository userRepo,
+                         WorldPermissionChecker checker) {
         this.poiRepo   = poiRepo;
         this.typeRepo  = typeRepo;
         this.worldRepo = worldRepo;
         this.userRepo  = userRepo;
+        this.checker   = checker;
     }
 
+    /**
+     * Returns all POIs on the world's map. Requires read permission on the world.
+     *
+     * @param worldId target world
+     * @param auth    caller's authentication (may be null for guests)
+     * @return list of POI DTOs ordered by creation time
+     * @throws ResourceNotFoundException if the world does not exist
+     */
     @Transactional(readOnly = true)
-    public List<MapPoiDto> listPois(Integer worldId) {
+    public List<MapPoiDto> listPois(Integer worldId, Authentication auth) {
+        World world = requireWorld(worldId);
+        checker.requireRead(world, auth);
         return poiRepo.findAllByWorldIdOrderByCreatedAtAsc(worldId)
                 .stream().map(this::toDto).toList();
     }
 
+    /**
+     * Places a new POI on the world's map. Requires edit permission on the world.
+     * Anonymous creates (guests with edit permission) are stored with a null creator.
+     *
+     * @param worldId target world
+     * @param req     validated create request
+     * @param auth    caller's authentication (may be null for guests with edit permission)
+     * @return the persisted POI as a DTO
+     * @throws ResourceNotFoundException if the world or POI type does not exist
+     */
     @Transactional
-    public MapPoiDto createPoi(Integer worldId, CreateMapPoiRequest req, Integer userId) {
-        World   world = worldRepo.findById(worldId)
-                .orElseThrow(() -> new ResourceNotFoundException("World not found: " + worldId));
+    public MapPoiDto createPoi(Integer worldId, CreateMapPoiRequest req, Authentication auth) {
+        World   world = requireWorld(worldId);
+        checker.requireEdit(world, auth);
         PoiType type  = typeRepo.findById(req.getPoiTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("POI type not found: " + req.getPoiTypeId()));
-        User    user  = userRepo.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        Integer creatorId = WorldPermissionChecker.resolveUserId(auth);
 
         MapPoi poi = new MapPoi();
         poi.setWorld(world);
@@ -57,16 +79,33 @@ public class MapPoiService {
             poi.setTextItalic(req.getTextItalic() != null ? req.getTextItalic() : false);
             poi.setTextSize(req.getTextSize() != null ? req.getTextSize() : 14);
         }
-        poi.setCreatedBy(user);
+
+        if (creatorId != null) {
+            User creator = userRepo.findById(creatorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + creatorId));
+            poi.setCreatedBy(creator);
+        }
+
         return toDto(poiRepo.save(poi));
     }
 
+    /**
+     * Updates an existing POI. Requires edit permission on the POI's world.
+     * Any user with world edit permission may update any POI.
+     *
+     * @param worldId target world
+     * @param poiId   POI to update
+     * @param req     partial update request
+     * @param auth    caller's authentication
+     * @return the updated POI as a DTO
+     * @throws ResourceNotFoundException if the POI does not exist
+     */
     @Transactional
     public MapPoiDto updatePoi(Integer worldId, Integer poiId,
-                               UpdateMapPoiRequest req, Integer userId, boolean isAdmin) {
+                               UpdateMapPoiRequest req, Authentication auth) {
         MapPoi poi = poiRepo.findById(poiId)
                 .orElseThrow(() -> new ResourceNotFoundException("POI not found: " + poiId));
-        checkOwnership(poi, userId, isAdmin);
+        checker.requireEdit(poi.getWorld(), auth);
 
         if (req.getXPct()      != null) poi.setXPct(req.getXPct());
         if (req.getYPct()      != null) poi.setYPct(req.getYPct());
@@ -83,22 +122,30 @@ public class MapPoiService {
         return toDto(poiRepo.save(poi));
     }
 
+    /**
+     * Deletes a POI. Requires delete permission on the POI's world.
+     * Any user with world delete permission may delete any POI.
+     *
+     * @param worldId target world
+     * @param poiId   POI to delete
+     * @param auth    caller's authentication
+     * @throws ResourceNotFoundException if the POI does not exist
+     */
     @Transactional
-    public void deletePoi(Integer worldId, Integer poiId, Integer userId, boolean isAdmin) {
+    public void deletePoi(Integer worldId, Integer poiId, Authentication auth) {
         MapPoi poi = poiRepo.findById(poiId)
                 .orElseThrow(() -> new ResourceNotFoundException("POI not found: " + poiId));
-        checkOwnership(poi, userId, isAdmin);
+        checker.requireDelete(poi.getWorld(), auth);
         poiRepo.delete(poi);
     }
 
-    private void checkOwnership(MapPoi poi, Integer userId, boolean isAdmin) {
-        if (isAdmin) return;
-        if (!poi.getCreatedBy().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your POI");
-        }
+    private World requireWorld(Integer id) {
+        return worldRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("World not found: " + id));
     }
 
     private MapPoiDto toDto(MapPoi p) {
+        Integer creatorId = p.getCreatedBy() != null ? p.getCreatedBy().getId() : null;
         return new MapPoiDto(
             p.getId(),
             p.getWorld().getId(),
@@ -110,7 +157,7 @@ public class MapPoiService {
             p.getYPct(),
             p.getLabel(),
             p.getGesinnung() != null ? p.getGesinnung().name() : null,
-            p.getCreatedBy().getId(),
+            creatorId,
             p.getTextBold(),
             p.getTextItalic(),
             p.getTextSize()

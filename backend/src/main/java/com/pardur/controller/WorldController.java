@@ -6,6 +6,7 @@ import com.pardur.dto.response.WorldDto;
 import com.pardur.service.WorldService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,8 +22,8 @@ public class WorldController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WorldDto>> getAll() {
-        return ResponseEntity.ok(worldService.getAllWorlds());
+    public ResponseEntity<List<WorldDto>> getAll(Authentication auth) {
+        return ResponseEntity.ok(worldService.getAllWorlds(auth));
     }
 
     @PostMapping

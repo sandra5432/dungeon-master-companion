@@ -43,40 +43,55 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                // Public: static assets, auth endpoints, items (Marktplatz is view-only for guests)
+                // Static assets and auth endpoints — always public
                 .requestMatchers("/", "/index.html", "/js/**", "/css/**", "/favicon.ico", "/world/**").permitAll()
                 .requestMatchers("/api/login", "/api/logout", "/api/auth/status", "/api/auth/change-password").permitAll()
+                // Items (Marktplatz) — always public reads
                 .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
-                // Admin-only: world management (create/edit/delete), item management, user management
+                // World list + per-world GET — world-level permissions enforced in service
+                .requestMatchers(HttpMethod.GET,    "/api/worlds").permitAll()
+                .requestMatchers(HttpMethod.GET,    "/api/worlds/*").permitAll()
+                // Admin-only: world CRUD
                 .requestMatchers(HttpMethod.POST,   "/api/worlds").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT,    "/api/worlds/{id:[0-9]+}").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/worlds/{id:[0-9]+}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/worlds/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/worlds/*").hasRole("ADMIN")
+                // Admin-only: item management
                 .requestMatchers(HttpMethod.POST,   "/api/items/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/items/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/items/**").hasRole("ADMIN")
+                // User management
                 .requestMatchers(HttpMethod.GET, "/api/admin/users/names").hasRole("USER")
                 .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
-                // Wiki: any logged-in user can read/write/delete own entries
-                .requestMatchers("/api/wiki/**").hasRole("USER")
-                // Timeline events: any logged-in user can read/create/edit/delete; ownership enforced in service
-                .requestMatchers("/api/worlds/*/events/**").hasRole("USER")
-                .requestMatchers(HttpMethod.POST, "/api/worlds/*/events").hasRole("USER")
-                // Map: any logged-in user can read; logged-in users manage POIs; admin manages types + background
-                .requestMatchers(HttpMethod.GET,    "/api/poi-types").hasRole("USER")
+                // Wiki images and spoiler-readers — require login (before the permitAll catch-all below)
+                .requestMatchers(HttpMethod.POST,   "/api/wiki/*/images").hasRole("USER")
+                .requestMatchers(HttpMethod.PUT,    "/api/wiki/images/**").hasRole("USER")
+                .requestMatchers(HttpMethod.DELETE, "/api/wiki/images/**").hasRole("USER")
+                .requestMatchers(HttpMethod.POST,   "/api/wiki/*/spoiler-readers/**").hasRole("USER")
+                .requestMatchers(HttpMethod.DELETE, "/api/wiki/*/spoiler-readers/**").hasRole("USER")
+                // Wiki entry CRUD — world-level permissions enforced in service
+                .requestMatchers(HttpMethod.GET,    "/api/wiki/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/wiki").permitAll()
+                .requestMatchers(HttpMethod.PUT,    "/api/wiki/{id:[0-9]+}").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/wiki/{id:[0-9]+}").permitAll()
+                // Timeline events — world-level permissions enforced in service
+                .requestMatchers("/api/worlds/*/events/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/worlds/*/events").permitAll()
+                // POI types
+                .requestMatchers(HttpMethod.GET,    "/api/poi-types").permitAll()
                 .requestMatchers(HttpMethod.POST,   "/api/poi-types").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/poi-types/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/poi-types/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET,    "/api/worlds/*/map/**").hasRole("USER")
-                .requestMatchers(HttpMethod.POST,   "/api/worlds/*/map/pois").hasRole("USER")
-                .requestMatchers(HttpMethod.PUT,    "/api/worlds/*/map/pois/**").hasRole("USER")
-                .requestMatchers(HttpMethod.DELETE, "/api/worlds/*/map/pois/**").hasRole("USER")
+                // Map — world-level permissions for reads and POI mutations; background admin-only
+                .requestMatchers(HttpMethod.GET,    "/api/worlds/*/map/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/worlds/*/map/pois").permitAll()
+                .requestMatchers(HttpMethod.PUT,    "/api/worlds/*/map/pois/**").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/worlds/*/map/pois/**").permitAll()
                 .requestMatchers(HttpMethod.POST,   "/api/worlds/*/map/background").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH,  "/api/worlds/*/map/background/scale").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/worlds/*/map/background").hasRole("ADMIN")
-                // Export: admin only (supports both session and Basic Auth)
+                // Export
                 .requestMatchers("/api/export/**").hasRole("ADMIN")
-                // All other world endpoints (GET /api/worlds, GET /api/worlds/{id}, etc.) require login
-                .requestMatchers("/api/worlds/**").hasRole("USER")
+                // Everything else requires login
                 .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

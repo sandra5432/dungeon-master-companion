@@ -37,81 +37,71 @@ public class WikiController {
             @RequestParam(required = false) Integer worldId,
             @RequestParam(required = false) String q,
             Authentication auth) {
-        PardurUserDetails user = resolve(auth);
-        Integer userId = user != null ? user.getUserId() : null;
-        boolean isAdmin = user != null && "ADMIN".equals(user.getRole());
-        return ResponseEntity.ok(wikiService.list(worldId, q, userId, isAdmin));
+        return ResponseEntity.ok(wikiService.list(worldId, q, auth));
     }
 
     @GetMapping("/recent")
-    public ResponseEntity<List<WikiEntryListItemDto>> recent() {
-        return ResponseEntity.ok(wikiService.recent());
+    public ResponseEntity<List<WikiEntryListItemDto>> recent(Authentication auth) {
+        return ResponseEntity.ok(wikiService.recent(auth));
     }
 
     @GetMapping("/titles")
-    public ResponseEntity<List<Map<String, Object>>> titles() {
-        return ResponseEntity.ok(wikiService.getAllTitles());
+    public ResponseEntity<List<Map<String, Object>>> titles(Authentication auth) {
+        return ResponseEntity.ok(wikiService.getAllTitles(auth));
     }
 
     /**
      * Returns a short plain-text preview of the entry body (first 1–2 sentences).
-     * Public endpoint — no auth required.
+     * Access follows the world's read permission.
      *
-     * @param id entry ID
+     * @param id   entry ID
+     * @param auth caller's authentication (may be null for guests)
      * @return map with a single {@code preview} key
      */
     @GetMapping("/{id}/preview")
-    public ResponseEntity<Map<String, String>> preview(@PathVariable Integer id) {
-        return ResponseEntity.ok(Map.of("preview", wikiService.getPreview(id)));
+    public ResponseEntity<Map<String, String>> preview(@PathVariable Integer id, Authentication auth) {
+        return ResponseEntity.ok(Map.of("preview", wikiService.getPreview(id, auth)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<WikiEntryDto> get(@PathVariable Integer id, Authentication auth) {
-        PardurUserDetails user = resolve(auth);
-        Integer userId = user != null ? user.getUserId() : null;
-        boolean isAdmin = user != null && "ADMIN".equals(user.getRole());
-        return ResponseEntity.ok(wikiService.get(id, userId, isAdmin));
+        return ResponseEntity.ok(wikiService.get(id, auth));
     }
 
     @PostMapping
     public ResponseEntity<WikiEntryDto> create(@Valid @RequestBody CreateWikiEntryRequest req,
                                                 Authentication auth) {
-        PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
-        return ResponseEntity.status(201).body(wikiService.create(req, user.getUserId()));
+        return ResponseEntity.status(201).body(wikiService.create(req, auth));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<WikiEntryDto> update(@PathVariable Integer id,
                                                 @Valid @RequestBody UpdateWikiEntryRequest req,
                                                 Authentication auth) {
-        PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(user.getRole());
-        return ResponseEntity.ok(wikiService.update(id, req, user.getUserId(), isAdmin));
+        return ResponseEntity.ok(wikiService.update(id, req, auth));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication auth) {
-        PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(user.getRole());
-        wikiService.delete(id, user.getUserId(), isAdmin);
+        wikiService.delete(id, auth);
         return ResponseEntity.noContent().build();
     }
 
     // ── Auto-linking ─────────────────────────────────────────────────────────
 
     @GetMapping("/{id}/linked-events")
-    public ResponseEntity<List<EventDto>> linkedEvents(@PathVariable Integer id) {
-        return ResponseEntity.ok(wikiService.getLinkedEvents(id));
+    public ResponseEntity<List<EventDto>> linkedEvents(@PathVariable Integer id, Authentication auth) {
+        return ResponseEntity.ok(wikiService.getLinkedEvents(id, auth));
     }
 
     @GetMapping("/{id}/linked-entries")
-    public ResponseEntity<List<WikiEntryListItemDto>> linkedEntries(@PathVariable Integer id) {
-        return ResponseEntity.ok(wikiService.getLinkedEntries(id));
+    public ResponseEntity<List<WikiEntryListItemDto>> linkedEntries(@PathVariable Integer id, Authentication auth) {
+        return ResponseEntity.ok(wikiService.getLinkedEntries(id, auth));
     }
 
     @GetMapping("/graph")
-    public ResponseEntity<WikiGraphDto> graph(@RequestParam Integer worldId) {
-        return ResponseEntity.ok(wikiService.getGraph(worldId));
+    public ResponseEntity<WikiGraphDto> graph(@RequestParam Integer worldId, Authentication auth) {
+        return ResponseEntity.ok(wikiService.getGraph(worldId, auth));
     }
 
     // ── Images ───────────────────────────────────────────────────────────────
@@ -154,18 +144,14 @@ public class WikiController {
 
     @GetMapping("/{id}/spoiler-readers")
     public ResponseEntity<List<Integer>> getSpoilerReaders(@PathVariable Integer id, Authentication auth) {
-        PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(user.getRole());
-        return ResponseEntity.ok(wikiService.getSpoilerReaders(id, user.getUserId(), isAdmin));
+        return ResponseEntity.ok(wikiService.getSpoilerReaders(id, auth));
     }
 
     @PostMapping("/{id}/spoiler-readers/{userId}")
     public ResponseEntity<Void> addSpoilerReader(@PathVariable Integer id,
                                                   @PathVariable Integer userId,
                                                   Authentication auth) {
-        PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(user.getRole());
-        wikiService.addSpoilerReader(id, userId, user.getUserId(), isAdmin);
+        wikiService.addSpoilerReader(id, userId, auth);
         return ResponseEntity.noContent().build();
     }
 
@@ -173,17 +159,7 @@ public class WikiController {
     public ResponseEntity<Void> removeSpoilerReader(@PathVariable Integer id,
                                                      @PathVariable Integer userId,
                                                      Authentication auth) {
-        PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(user.getRole());
-        wikiService.removeSpoilerReader(id, userId, user.getUserId(), isAdmin);
+        wikiService.removeSpoilerReader(id, userId, auth);
         return ResponseEntity.noContent().build();
-    }
-
-    // ── Util ─────────────────────────────────────────────────────────────────
-
-    private PardurUserDetails resolve(Authentication auth) {
-        if (auth == null || !auth.isAuthenticated()) return null;
-        Object p = auth.getPrincipal();
-        return p instanceof PardurUserDetails d ? d : null;
     }
 }

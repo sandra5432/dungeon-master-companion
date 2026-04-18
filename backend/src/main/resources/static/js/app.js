@@ -284,14 +284,38 @@ function showPage(p) {
 /* ══════════════════════════════════════
    AUTH VISIBILITY
 ══════════════════════════════════════ */
+
+/** Returns true if the current user (logged-in or guest) may create/edit content in the active world. */
+function canEditActiveWorld() {
+  if (state.auth.loggedIn) return true;
+  const w = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  return w?.guestCanEdit === true;
+}
+
+/** Returns true if the current user may delete content in the active world. */
+function canDeleteActiveWorld() {
+  if (state.auth.loggedIn) return true;
+  const w = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  return w?.guestCanDelete === true;
+}
+
 function applyAuthUI() {
   const { loggedIn, isAdmin, username } = state.auth;
+  const activeWorld = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  const canEditWorld  = loggedIn || activeWorld?.guestCanEdit   === true;
+  const canDeleteWorld = loggedIn || activeWorld?.guestCanDelete === true;
 
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? '' : 'none';
   });
   document.querySelectorAll('.user-action-only').forEach(el => {
     el.style.display = loggedIn ? '' : 'none';
+  });
+  document.querySelectorAll('.world-edit-only').forEach(el => {
+    el.style.display = canEditWorld ? '' : 'none';
+  });
+  document.querySelectorAll('.world-delete-only').forEach(el => {
+    el.style.display = canDeleteWorld ? '' : 'none';
   });
 
   const btnLogin = document.getElementById('btn-login');
@@ -374,7 +398,6 @@ function renderTopNavWorlds() {
   const marktplatz = document.getElementById('nav-items');
   linksEl.innerHTML = '';
   if (marktplatz) linksEl.appendChild(marktplatz);
-  if (!state.auth.loggedIn) return; // guests see only Marktplatz
   state.worlds.forEach(w => {
     const btn = document.createElement('button');
     btn.className = 'nav-link' + (w.id === state.ui.activeWorldId ? ' active' : '');
@@ -468,6 +491,7 @@ async function selectWorld(worldId) {
   state.ui.currentPage = section;
   renderTopNavWorlds();
   renderSectionTabs();
+  applyAuthUI();
 
   if (section === 'timeline') {
     try {
@@ -622,7 +646,7 @@ function renderTimeline() {
     const predecessorId = lastEventId(groups[gi]);
     const predStr = predecessorId !== null ? predecessorId : 'null';
 
-    if (state.auth.loggedIn) {
+    if (canEditActiveWorld()) {
       html += `<div class="rope-gap" data-gap="${gi}" data-predecessor="${predStr}" onclick="onRopeClick(event,${predStr})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
     } else {
       html += `<div class="rope-gap" style="pointer-events:none"></div>`;
@@ -673,7 +697,7 @@ function renderTimeline() {
   });
 
   // Final rope gap (bottom = oldest slot, predecessor null = insert before everything)
-  if (state.auth.loggedIn) {
+  if (canEditActiveWorld()) {
     html += `<div class="rope-gap" data-gap="${groups.length}" data-predecessor="null" onclick="onRopeClick(event,null)"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
   } else {
     html += `<div class="rope-gap" style="pointer-events:none"></div>`;
@@ -920,7 +944,7 @@ function onUndatedClick(e, id) {
 ══════════════════════════════════════ */
 function onRopeClick(e, afterEventId) {
   if (state.ui.dragId !== null) return;
-  if (!state.auth.loggedIn) return;
+  if (!canEditActiveWorld()) return;
   // afterEventId is the predecessor event id (or null for top)
   openTLModal(afterEventId === 'null' ? null : afterEventId);
 }
@@ -950,7 +974,7 @@ function populateDetail(id, source) {
   if (!ev) return;
   state.ui.detailId     = id;
   state.ui.detailSource = source;
-  const crName  = ev.creatorUsername  || 'Unbekannt';
+  const crName  = ev.creatorUsername  || 'Anonym';
   const crColor = ev.creatorColorHex  || '#888888';
   const dateLbl = source === 'undated' ? 'Datum unbekannt' : (ev.displayDate || '');
   document.getElementById('dp-title').innerHTML = linkifyWikiTitles(escHtml(ev.title));
@@ -983,8 +1007,9 @@ function populateDetail(id, source) {
   const dpEdit    = document.getElementById('dp-edit');
   const dpDel     = document.getElementById('dp-del');
   const dpActions = document.getElementById('dp-actions');
-  const canEdit   = state.auth.loggedIn && (state.auth.isAdmin || ev.createdByUserId === state.auth.userId);
-  const canDelete = state.auth.loggedIn && (state.auth.isAdmin || ev.createdByUserId === state.auth.userId);
+  const evWorld   = state.worlds.find(w => w.id === ev.worldId);
+  const canEdit   = state.auth.loggedIn || evWorld?.guestCanEdit   === true;
+  const canDelete = state.auth.loggedIn || evWorld?.guestCanDelete === true;
   if (dpActions) dpActions.style.display = (canEdit || canDelete) ? '' : 'none';
   if (dpEdit) dpEdit.style.display = canEdit ? '' : 'none';
   if (dpDel)  dpDel.style.display  = canDelete ? '' : 'none';
@@ -1140,6 +1165,45 @@ function openDeleteItem(itemId) {
   openModal();
 }
 
+/**
+ * Attaches change listeners to the 6 world permission checkboxes so that
+ * enforceWorldPermissionConstraints() runs on every toggle.
+ * Safe to call multiple times — replaces existing listeners via cloneNode trick.
+ */
+function attachWorldPermissionListeners() {
+  ['fw-guest-read','fw-guest-edit','fw-guest-delete','fw-user-read','fw-user-edit','fw-user-delete'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const fresh = el.cloneNode(true);
+    el.parentNode.replaceChild(fresh, el);
+    fresh.addEventListener('change', enforceWorldPermissionConstraints);
+  });
+}
+
+/**
+ * Enforces permission checkbox constraints:
+ * - edit or delete → read must be enabled (within-tier implication)
+ * - guest permission → corresponding user permission must also be enabled (guest ≤ user)
+ */
+function enforceWorldPermissionConstraints() {
+  const guestRead   = document.getElementById('fw-guest-read');
+  const guestEdit   = document.getElementById('fw-guest-edit');
+  const guestDelete = document.getElementById('fw-guest-delete');
+  const userRead    = document.getElementById('fw-user-read');
+  const userEdit    = document.getElementById('fw-user-edit');
+  const userDelete  = document.getElementById('fw-user-delete');
+  if (!guestRead) return;
+
+  // edit or delete implies read
+  if (guestEdit.checked || guestDelete.checked) guestRead.checked = true;
+  if (userEdit.checked  || userDelete.checked)  userRead.checked  = true;
+
+  // guest permissions cannot exceed user permissions
+  if (guestRead.checked   && !userRead.checked)   userRead.checked   = true;
+  if (guestEdit.checked   && !userEdit.checked)   userEdit.checked   = true;
+  if (guestDelete.checked && !userDelete.checked) userDelete.checked = true;
+}
+
 function openAddWorldModal() {
   editWorldId = null; editSource = 'world';
   document.getElementById('m-title').textContent = 'Welt hinzufügen';
@@ -1152,6 +1216,13 @@ function openAddWorldModal() {
   document.getElementById('fw-chronicle').checked = true;
   document.getElementById('fw-wiki').checked      = true;
   document.getElementById('fw-map').checked       = true;
+  document.getElementById('fw-guest-read').checked   = false;
+  document.getElementById('fw-guest-edit').checked   = false;
+  document.getElementById('fw-guest-delete').checked = false;
+  document.getElementById('fw-user-read').checked    = true;
+  document.getElementById('fw-user-edit').checked    = true;
+  document.getElementById('fw-user-delete').checked  = true;
+  attachWorldPermissionListeners();
   openModal();
 }
 
@@ -1170,6 +1241,13 @@ function openEditWorldModal(worldId, e) {
   document.getElementById('fw-chronicle').checked = w.chronicleEnabled !== false;
   document.getElementById('fw-wiki').checked      = w.wikiEnabled      !== false;
   document.getElementById('fw-map').checked       = w.mapEnabled        !== false;
+  document.getElementById('fw-guest-read').checked   = w.guestCanRead   === true;
+  document.getElementById('fw-guest-edit').checked   = w.guestCanEdit   === true;
+  document.getElementById('fw-guest-delete').checked = w.guestCanDelete === true;
+  document.getElementById('fw-user-read').checked    = w.userCanRead    !== false;
+  document.getElementById('fw-user-edit').checked    = w.userCanEdit    !== false;
+  document.getElementById('fw-user-delete').checked  = w.userCanDelete  !== false;
+  attachWorldPermissionListeners();
   openModal();
 }
 
@@ -1237,8 +1315,6 @@ async function doLogout() {
     // ignore logout errors
   }
   state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
-  // Clear all world/wiki data — it is no longer accessible to guests
-  state.worlds = [];
   state.events = [];
   state.undated = [];
   state.ui.activeWorldId = null;
@@ -1254,6 +1330,12 @@ async function doLogout() {
   }
   const editorPanel = document.getElementById('wiki-editor-panel');
   if (editorPanel) editorPanel.style.display = 'none';
+  // Reload worlds — server returns only those the guest may read
+  try {
+    state.worlds = await api('GET', '/worlds') || [];
+  } catch (e) {
+    state.worlds = [];
+  }
   applyAuthUI();
   renderTopNavWorlds();
   pushUrl('/');
@@ -1295,10 +1377,17 @@ async function _saveEntry() {
     const chronicleEnabled = document.getElementById('fw-chronicle').checked;
     const wikiEnabled      = document.getElementById('fw-wiki').checked;
     const mapEnabled       = document.getElementById('fw-map').checked;
+    const guestCanRead     = document.getElementById('fw-guest-read').checked;
+    const guestCanEdit     = document.getElementById('fw-guest-edit').checked;
+    const guestCanDelete   = document.getElementById('fw-guest-delete').checked;
+    const userCanRead      = document.getElementById('fw-user-read').checked;
+    const userCanEdit      = document.getElementById('fw-user-edit').checked;
+    const userCanDelete    = document.getElementById('fw-user-delete').checked;
     if (!name) { alert('Weltname ist Pflicht'); return; }
+    const permissions = { guestCanRead, guestCanEdit, guestCanDelete, userCanRead, userCanEdit, userCanDelete };
     try {
       if (editWorldId != null) {
-        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, sortOrder, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
+        const updated = await api('PUT', '/worlds/' + editWorldId, { name, description: desc, sortOrder, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled, ...permissions });
         const idx = state.worlds.findIndex(w => w.id === editWorldId);
         if (idx > -1) state.worlds[idx] = updated;
         // If the current page is now disabled for the active world, navigate away
@@ -1310,7 +1399,7 @@ async function _saveEntry() {
           renderSectionTabs();
         }
       } else {
-        const created = await api('POST', '/worlds', { name, description: desc, sortOrder, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled });
+        const created = await api('POST', '/worlds', { name, description: desc, sortOrder, milesPerCell: miles, chronicleEnabled, wikiEnabled, mapEnabled, ...permissions });
         state.worlds.push(created);
         if (!state.ui.activeWorldId) await selectWorld(created.id);
       }
@@ -1629,8 +1718,8 @@ async function init() {
       mustChangePassword: authStatus.mustChangePassword || false,
     };
 
-    // Worlds and their content are only available to logged-in users
-    if (state.auth.loggedIn) {
+    // Load worlds — server filters to only those readable by the current caller (guests included)
+    {
       const worlds = await api('GET', '/worlds');
       state.worlds = worlds || [];
 
@@ -2216,7 +2305,9 @@ function renderWikiArticle(entry) {
 
   const isOwner           = state.auth.loggedIn && entry.createdByUserId === state.auth.userId;
   const isAdmin           = state.auth.isAdmin;
-  const canEdit           = state.auth.loggedIn;
+  const entryWorld        = state.worlds.find(w => w.id === entry.worldId);
+  const canEdit           = state.auth.loggedIn || entryWorld?.guestCanEdit   === true;
+  const canDeleteEntry    = state.auth.loggedIn || entryWorld?.guestCanDelete === true;
   const canManageSpoilers = isOwner || isAdmin;
 
   const breadcrumbHtml = entry.parentId
@@ -2277,7 +2368,7 @@ function renderWikiArticle(entry) {
       ${canEdit ? `
         <button class="wiki-icon-btn" title="Bearbeiten" onclick="openWikiEditor(${entry.id})">✎</button>
       ` : ''}
-      ${canManageSpoilers ? `
+      ${canDeleteEntry ? `
         <button class="wiki-icon-btn wiki-icon-btn--del" title="Löschen" onclick="deleteWikiEntry(${entry.id})">🗑</button>
       ` : ''}
       <span class="wiki-article-world">${escHtml(entry.worldName)}</span>
@@ -2306,7 +2397,7 @@ function renderWikiArticle(entry) {
         <td><div id="wiki-linked-events-${entry.id}">Lade…</div></td>
       </tr>
     </table>
-    <div class="wiki-article-meta">Erstellt von <strong>${escHtml(entry.createdByUsername)}</strong></div>
+    <div class="wiki-article-meta">Erstellt von <strong>${escHtml(entry.createdByUsername || 'Anonym')}</strong></div>
   `;
 
   panel.style.display = '';
@@ -2943,11 +3034,11 @@ async function initMapPage() {
 function renderPoiTypeSidebar() {
   const el = document.getElementById('map-poi-type-list');
   if (!el) return;
-  const loggedIn = state.auth.loggedIn;
+  const canPlace = canEditActiveWorld();
   el.innerHTML = state.map.poiTypes.map(t => `
     <button class="map-tool poi-type-btn" data-type-id="${t.id}"
             onclick="setMapTool('place-${t.id}')"
-            ${!loggedIn ? 'disabled title="Bitte einloggen"' : ''}>
+            ${!canPlace ? 'disabled title="Keine Berechtigung"' : ''}>
       <span class="map-tool-sym">${poiShapeHtml(t.shape, t.icon)}</span> ${escHtml(t.name)}
       ${state.auth.isAdmin ? `<span class="poi-type-edit-link" onclick="event.stopPropagation();openPoiTypeManager(${t.id})" title="Bearbeiten">✎</span>` : ''}
     </button>
@@ -3402,7 +3493,7 @@ function openPoiDialog(poiId) {
       if (italicInp) italicInp.checked = poi.textItalic ?? false;
       if (sizeInp)   sizeInp.value   = poi.textSize   ?? 14;
     }
-    const canDelete = state.auth.isAdmin || poi.createdByUserId === state.auth.userId;
+    const canDelete = state.auth.isAdmin || canDeleteActiveWorld();
     if (delBtn) delBtn.style.display = canDelete ? '' : 'none';
   } else {
     const typeId = parseInt(state.map.activeTool.split('-')[1], 10);

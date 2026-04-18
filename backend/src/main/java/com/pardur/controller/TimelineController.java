@@ -5,7 +5,6 @@ import com.pardur.dto.request.CreateEventRequest;
 import com.pardur.dto.request.UpdateEventRequest;
 import com.pardur.dto.response.EventDto;
 import com.pardur.dto.response.TagCountDto;
-import com.pardur.security.PardurUserDetails;
 import com.pardur.service.TimelineService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -25,67 +24,58 @@ public class TimelineController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EventDto>> getPositioned(@PathVariable Integer worldId) {
-        return ResponseEntity.ok(timelineService.getPositionedEvents(worldId));
+    public ResponseEntity<List<EventDto>> getPositioned(@PathVariable Integer worldId, Authentication auth) {
+        return ResponseEntity.ok(timelineService.getPositionedEvents(worldId, auth));
     }
 
     @GetMapping("/unpositioned")
-    public ResponseEntity<List<EventDto>> getUnpositioned(@PathVariable Integer worldId) {
-        return ResponseEntity.ok(timelineService.getUnpositionedEvents(worldId));
+    public ResponseEntity<List<EventDto>> getUnpositioned(@PathVariable Integer worldId, Authentication auth) {
+        return ResponseEntity.ok(timelineService.getUnpositionedEvents(worldId, auth));
     }
 
     @GetMapping("/tags")
-    public ResponseEntity<List<TagCountDto>> getTags(@PathVariable Integer worldId) {
-        return ResponseEntity.ok(timelineService.getTagCounts(worldId));
+    public ResponseEntity<List<TagCountDto>> getTags(@PathVariable Integer worldId, Authentication auth) {
+        return ResponseEntity.ok(timelineService.getTagCounts(worldId, auth));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EventDto> getOne(@PathVariable Integer worldId,
-                                           @PathVariable Integer id) {
-        return ResponseEntity.ok(timelineService.getEvent(worldId, id));
+    public ResponseEntity<EventDto> getOne(@PathVariable Integer worldId, @PathVariable Integer id,
+                                           Authentication auth) {
+        return ResponseEntity.ok(timelineService.getEvent(worldId, id, auth));
     }
 
     @PostMapping
     public ResponseEntity<EventDto> create(@PathVariable Integer worldId,
                                            @Valid @RequestBody CreateEventRequest req,
-                                           Authentication authentication) {
-        PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
-        return ResponseEntity.status(201).body(
-                timelineService.createEvent(worldId, req, details.getUserId()));
+                                           Authentication auth) {
+        return ResponseEntity.status(201).body(timelineService.createEvent(worldId, req, auth));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EventDto> update(@PathVariable Integer worldId,
-                                           @PathVariable Integer id,
+    public ResponseEntity<EventDto> update(@PathVariable Integer worldId, @PathVariable Integer id,
                                            @Valid @RequestBody UpdateEventRequest req,
-                                           Authentication authentication) {
-        PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(details.getRole());
-        return ResponseEntity.ok(
-                timelineService.updateEvent(worldId, id, req, details.getUserId(), isAdmin));
+                                           Authentication auth) {
+        return ResponseEntity.ok(timelineService.updateEvent(worldId, id, req, auth));
     }
 
     @PatchMapping("/{id}/assign-position")
-    public ResponseEntity<EventDto> assignPosition(@PathVariable Integer worldId,
-                                                    @PathVariable Integer id,
-                                                    @RequestBody AssignPositionRequest req) {
-        return ResponseEntity.ok(timelineService.assignPosition(worldId, id, req));
+    public ResponseEntity<EventDto> assignPosition(@PathVariable Integer worldId, @PathVariable Integer id,
+                                                    @RequestBody AssignPositionRequest req,
+                                                    Authentication auth) {
+        return ResponseEntity.ok(timelineService.assignPosition(worldId, id, req, auth));
     }
 
     @DeleteMapping("/{id}/position")
-    public ResponseEntity<Void> unplace(@PathVariable Integer worldId,
-                                        @PathVariable Integer id) {
-        timelineService.unplaceEvent(worldId, id);
+    public ResponseEntity<Void> unplace(@PathVariable Integer worldId, @PathVariable Integer id,
+                                        Authentication auth) {
+        timelineService.unplaceEvent(worldId, id, auth);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer worldId,
-                                       @PathVariable Integer id,
-                                       Authentication authentication) {
-        PardurUserDetails details = (PardurUserDetails) authentication.getPrincipal();
-        boolean isAdmin = "ADMIN".equals(details.getRole());
-        timelineService.deleteEvent(worldId, id, details.getUserId(), isAdmin);
+    public ResponseEntity<Void> delete(@PathVariable Integer worldId, @PathVariable Integer id,
+                                       Authentication auth) {
+        timelineService.deleteEvent(worldId, id, auth);
         return ResponseEntity.noContent().build();
     }
 }

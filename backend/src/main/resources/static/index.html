@@ -71,15 +71,15 @@
   </aside>
 
   <div class="tl-center">
-    <p class="tl-hint user-action-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
+    <p class="tl-hint world-edit-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
     <div class="timeline" id="timeline"></div>
   </div>
 
   <aside class="sidebar sidebar-right">
     <div class="sb-title">Datum Unbekannt</div>
-    <button class="undated-add-btn user-action-only" onclick="openUndatedAdd()" style="display:none">+ Neuer Eintrag</button>
+    <button class="undated-add-btn world-edit-only" onclick="openUndatedAdd()" style="display:none">+ Neuer Eintrag</button>
     <div class="undated-list" id="undated-list"></div>
-    <div class="undated-hint user-action-only" style="display:none">⠿ Ziehen zum Einordnen</div>
+    <div class="undated-hint world-edit-only" style="display:none">⠿ Ziehen zum Einordnen</div>
   </aside>
 </div>
 
@@ -187,6 +187,18 @@
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fw-chronicle" checked> Chronik</label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fw-wiki" checked> Wiki</label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fw-map" checked> Karte</label>
+          </div>
+        </div>
+        <div class="f-grp"><label class="f-lbl">Berechtigungen</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-top:4px">
+            <div style="font-size:0.75rem;color:var(--t3);font-weight:600;padding-bottom:2px">Gäste (nicht angemeldet)</div>
+            <div style="font-size:0.75rem;color:var(--t3);font-weight:600;padding-bottom:2px">Angemeldete Benutzer</div>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fw-guest-read"> Lesen</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fw-user-read" checked> Lesen</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fw-guest-edit"> Erstellen/Bearbeiten</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fw-user-edit" checked> Erstellen/Bearbeiten</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fw-guest-delete"> Löschen</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fw-user-delete" checked> Löschen</label>
           </div>
         </div>
       </div>
@@ -342,7 +354,7 @@
         <button class="wiki-view-btn" id="wiki-view-alpha" onclick="setWikiView('alpha')" title="Alphabetisch">A–Z</button>
         <button class="wiki-view-btn" id="wiki-view-type" onclick="setWikiView('type')" title="Nach Typ gruppiert">Typ</button>
       </div>
-      <div class="wiki-new-entry-wrap user-action-only" style="display:none">
+      <div class="wiki-new-entry-wrap world-edit-only" style="display:none">
         <button class="btn btn-sm wiki-new-btn" onclick="openWikiEditor(null)">+ Neuer Eintrag</button>
       </div>
       <div id="wiki-recent-list" class="wiki-entry-list"></div>
@@ -449,7 +461,7 @@
     <button class="map-tool active" id="map-tool-interact" onclick="setMapTool('interact')">
       <span class="map-tool-sym">✋</span> Interagieren
     </button>
-    <button class="map-tool user-action-only" id="map-tool-edit" onclick="setMapTool('edit')" style="display:none">
+    <button class="map-tool world-edit-only" id="map-tool-edit" onclick="setMapTool('edit')" style="display:none">
       <span class="map-tool-sym">✏</span> Bearbeiten
     </button>
     <button class="map-tool" id="map-tool-ruler" onclick="setMapTool('ruler')">

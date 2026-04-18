@@ -34,6 +34,13 @@ public class World {
     @Column(name = "map_enabled", nullable = false)
     private boolean mapEnabled = true;
 
+    @Column(name = "guest_can_read",   nullable = false) private boolean guestCanRead   = false;
+    @Column(name = "guest_can_edit",   nullable = false) private boolean guestCanEdit   = false;
+    @Column(name = "guest_can_delete", nullable = false) private boolean guestCanDelete = false;
+    @Column(name = "user_can_read",    nullable = false) private boolean userCanRead    = true;
+    @Column(name = "user_can_edit",    nullable = false) private boolean userCanEdit    = true;
+    @Column(name = "user_can_delete",  nullable = false) private boolean userCanDelete  = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -57,6 +64,18 @@ public class World {
     public void setWikiEnabled(boolean v) { this.wikiEnabled = v; }
     public boolean isMapEnabled() { return mapEnabled; }
     public void setMapEnabled(boolean v) { this.mapEnabled = v; }
+    public boolean isGuestCanRead()    { return guestCanRead; }
+    public void setGuestCanRead(boolean v)   { this.guestCanRead   = v; }
+    public boolean isGuestCanEdit()    { return guestCanEdit; }
+    public void setGuestCanEdit(boolean v)   { this.guestCanEdit   = v; }
+    public boolean isGuestCanDelete()  { return guestCanDelete; }
+    public void setGuestCanDelete(boolean v) { this.guestCanDelete = v; }
+    public boolean isUserCanRead()     { return userCanRead; }
+    public void setUserCanRead(boolean v)    { this.userCanRead    = v; }
+    public boolean isUserCanEdit()     { return userCanEdit; }
+    public void setUserCanEdit(boolean v)    { this.userCanEdit    = v; }
+    public boolean isUserCanDelete()   { return userCanDelete; }
+    public void setUserCanDelete(boolean v)  { this.userCanDelete  = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

@@ -30,8 +30,8 @@ public class WikiEntry {
     @Column(columnDefinition = "TEXT")
     private String body;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by_user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id", nullable = true)
     private User createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)

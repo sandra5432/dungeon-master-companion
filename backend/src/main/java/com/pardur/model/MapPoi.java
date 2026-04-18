@@ -45,8 +45,8 @@ public class MapPoi {
     @Column(name = "text_size")
     private Integer textSize;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", nullable = true)
     private User createdBy;
 
     @CreationTimestamp

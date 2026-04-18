@@ -7,9 +7,10 @@ INSERT INTO users (username, password, role, must_change_password, color_hex, cr
 INSERT INTO users (username, password, role, must_change_password, color_hex, created_at) VALUES ('user', '$2a$12$nWCViL13pxuphLu7ffZp6.MkgEMCGfpNxkB6LXt9DXme7vr27sk7.', 'USER', FALSE, '#2a9a68', CURRENT_TIMESTAMP);
 
 -- ── Worlds ───────────────────────────────────────────────────────────────────
--- id=1: Pardur, id=2: Eldorheim
-INSERT INTO worlds (name, description, sort_order, miles_per_cell, chronicle_enabled, wiki_enabled, map_enabled, created_at, updated_at) VALUES ('Pardur', 'Die Welt der Erbauer und ihrer Geheimnisse', 0, 5, TRUE, TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO worlds (name, description, sort_order, miles_per_cell, chronicle_enabled, wiki_enabled, map_enabled, created_at, updated_at) VALUES ('Eldorheim', '', 1, 5, TRUE, TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+-- id=1: Pardur (guests: read+edit+delete), id=2: Eldorheim (guests: none), id=3: Regeln (guests: read only)
+INSERT INTO worlds (name, description, sort_order, miles_per_cell, chronicle_enabled, wiki_enabled, map_enabled, guest_can_read, guest_can_edit, guest_can_delete, user_can_read, user_can_edit, user_can_delete, created_at, updated_at) VALUES ('Pardur', 'Die Welt der Erbauer und ihrer Geheimnisse', 0, 5, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO worlds (name, description, sort_order, miles_per_cell, chronicle_enabled, wiki_enabled, map_enabled, guest_can_read, guest_can_edit, guest_can_delete, user_can_read, user_can_edit, user_can_delete, created_at, updated_at) VALUES ('Eldorheim', '', 1, 5, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO worlds (name, description, sort_order, miles_per_cell, chronicle_enabled, wiki_enabled, map_enabled, guest_can_read, guest_can_edit, guest_can_delete, user_can_read, user_can_edit, user_can_delete, created_at, updated_at) VALUES ('Regeln', '', 2, 5, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 
 -- ── Items ────────────────────────────────────────────────────────────────────
@@ -375,3 +376,34 @@ INSERT INTO poi_type (name, icon, is_default, has_gesinnung, has_label, shape, c
   ('Unbekannt',   '?',  TRUE, FALSE, FALSE, 'QUESTION', CURRENT_TIMESTAMP),
   ('Erhebung',    '▲',  TRUE, FALSE, TRUE,  'TRIANGLE', CURRENT_TIMESTAMP),
   ('Text',        'T',  TRUE, FALSE, TRUE,  'TEXT',     CURRENT_TIMESTAMP);
+
+-- ── Regeln (world_id=3) seed content ─────────────────────────────────────────
+INSERT INTO wiki_entries (title, type, world_id, body, created_by_user_id, created_at, updated_at) VALUES (
+  'Hausregeln',
+  'TERM',
+  3,
+  '## Allgemeine Regeln
+
+- Sitzungen finden nach Absprache statt.
+- Abwesenheit bitte mindestens 24 Stunden vorher melden.
+- XP wird am Ende jeder Sitzung vergeben.
+
+## Kampfregeln
+
+- Initiative wird zu Beginn jedes Kampfes neu gewürfelt.
+- Kritische Treffer verdoppeln den Würfelschaden (ohne Boni).
+- Fallen unter 0 HP bedeutet Bewusstlosigkeit, nicht sofortigen Tod.
+
+## Magieregeln
+
+- Zauberer können Konzentrationszauber mit einem Konzentrationscheck (KON) aufrechterhalten wenn sie Schaden nehmen.',
+  1,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+);
+
+INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, description, created_by_user_id, created_at, updated_at)
+  VALUES (3, 'Kampagne beginnt', 1.0, 'Sitzung 1', 'WORLD', 'Die erste Sitzung. Die Helden treffen sich zum ersten Mal.', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO map_poi (world_id, poi_type_id, x_pct, y_pct, label, created_by, created_at, updated_at)
+  VALUES (3, 1, 50.0, 50.0, 'Startort', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

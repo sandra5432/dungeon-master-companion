@@ -1,0 +1,27 @@
+{
+  "name": "pardur-app",
+  "version": "1.0.0",
+  "description": "Web application for managing a D&D campaign — items, timeline, wiki.",
+  "main": "playwright.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandra5432/dungeon-master-companion.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sandra5432/dungeon-master-companion/issues"
+  },
+  "homepage": "https://github.com/sandra5432/dungeon-master-companion#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

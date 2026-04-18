@@ -4,8 +4,13 @@ import com.pardur.dto.request.CreateWikiEntryRequest;
 import com.pardur.dto.response.WikiGraphDto;
 import com.pardur.model.*;
 import com.pardur.repository.*;
+import com.pardur.security.PardurUserDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -22,6 +27,7 @@ class WikiServiceTest {
     WorldRepository worldRepo;
     UserRepository userRepo;
     TimelineEventRepository eventRepo;
+    WorldPermissionChecker checker;
     WikiService service;
 
     World world;
@@ -35,7 +41,8 @@ class WikiServiceTest {
         worldRepo   = mock(WorldRepository.class);
         userRepo    = mock(UserRepository.class);
         eventRepo   = mock(TimelineEventRepository.class);
-        service = new WikiService(entryRepo, spoilerRepo, worldRepo, userRepo, eventRepo);
+        checker     = mock(WorldPermissionChecker.class);
+        service = new WikiService(entryRepo, spoilerRepo, worldRepo, userRepo, eventRepo, checker);
 
         world = new World();
         setId(world, World.class, 1);
@@ -50,6 +57,18 @@ class WikiServiceTest {
         setId(admin, User.class, 99);
         admin.setUsername("admin");
         admin.setRole("ADMIN");
+    }
+
+    private Authentication userAuth(int userId) {
+        PardurUserDetails d = new PardurUserDetails(userId, "user" + userId, "", "USER", "#fff", false,
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        return new UsernamePasswordAuthenticationToken(d, null, d.getAuthorities());
+    }
+
+    private Authentication adminAuth() {
+        PardurUserDetails d = new PardurUserDetails(99, "admin", "", "ADMIN", "#fff", false,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        return new UsernamePasswordAuthenticationToken(d, null, d.getAuthorities());
     }
 
     private void setId(Object obj, Class<?> clazz, int id) throws Exception {
@@ -93,19 +112,22 @@ class WikiServiceTest {
         req.setWorldId(1);
         req.setType(WikiEntryType.LOCATION);
 
-        assertThatThrownBy(() -> service.create(req, 10))
+        assertThatThrownBy(() -> service.create(req, userAuth(10)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("already exists");
     }
 
     @Test
-    void delete_throwsForbidden_whenNotOwnerAndNotAdmin() throws Exception {
+    void delete_blockedWhenWorldDeniesDelete() throws Exception {
         WikiEntry entry = new WikiEntry();
         entry.setCreatedBy(admin);
+        entry.setWorld(world);
         setId(entry, WikiEntry.class, 5);
         when(entryRepo.findById(5)).thenReturn(Optional.of(entry));
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied"))
+                .when(checker).requireDelete(eq(world), any());
 
-        assertThatThrownBy(() -> service.delete(5, 10, false))
+        assertThatThrownBy(() -> service.delete(5, userAuth(10)))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
@@ -117,7 +139,7 @@ class WikiServiceTest {
         when(worldRepo.findById(1)).thenReturn(Optional.of(world));
         when(entryRepo.findAllByWorldIdOrderByTitleAsc(1)).thenReturn(List.of(nerathis, nerathari));
 
-        WikiGraphDto graph = service.getGraph(1);
+        WikiGraphDto graph = service.getGraph(1, adminAuth());
         assertThat(graph.getEdges()).hasSize(1);
         assertThat(graph.getEdges().get(0).source()).isEqualTo(1);
         assertThat(graph.getEdges().get(0).target()).isEqualTo(2);
@@ -139,7 +161,7 @@ class WikiServiceTest {
         req.setType(WikiEntryType.LOCATION);
         req.setParentId(100);
 
-        assertThatCode(() -> service.create(req, 10)).doesNotThrowAnyException();
+        assertThatCode(() -> service.create(req, userAuth(10))).doesNotThrowAnyException();
     }
 
     @Test
@@ -160,7 +182,7 @@ class WikiServiceTest {
         req.setType(WikiEntryType.TERM);
         req.setParentId(100);
 
-        assertThatThrownBy(() -> service.create(req, 10))
+        assertThatThrownBy(() -> service.create(req, userAuth(10)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("gleichen Welt");
     }
@@ -187,7 +209,7 @@ class WikiServiceTest {
         req.setType(WikiEntryType.TERM);
         req.setParentId(12);
 
-        assertThatThrownBy(() -> service.create(req, 10))
+        assertThatThrownBy(() -> service.create(req, userAuth(10)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Verschachtelungstiefe");
     }

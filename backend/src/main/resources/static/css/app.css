@@ -1558,7 +1558,7 @@ nav {
 .it th:hover { color: var(--gold); }
 
 .it th.col-price,
-.it td.col-price { text-align: right; }
+.it td.col-price { text-align: right; white-space: nowrap; min-width: 7rem; }
 
 .it td {
   padding: 13px 18px;

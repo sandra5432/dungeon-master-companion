@@ -370,6 +370,21 @@ function exportWorldWiki(worldId) {
   console.debug('[exportWorldWiki] ← download triggered');
 }
 
+/**
+ * Triggers a browser download of the full items export as a Markdown file.
+ * Uses a temporary anchor element to initiate the download without a fetch call.
+ */
+function exportItems() {
+  console.debug('[exportItems] →');
+  const a = document.createElement('a');
+  a.href = '/api/export/items';
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  console.debug('[exportItems] ← download triggered');
+}
+
 function renderConfigWorlds() {
   const el = document.getElementById('config-worlds-body');
   if (!el) return;

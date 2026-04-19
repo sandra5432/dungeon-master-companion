@@ -1,9 +1,11 @@
 package com.pardur.controller;
 
+import com.pardur.model.Item;
 import com.pardur.model.User;
 import com.pardur.model.WikiEntry;
 import com.pardur.model.WikiEntryType;
 import com.pardur.model.World;
+import com.pardur.repository.ItemRepository;
 import com.pardur.repository.UserRepository;
 import com.pardur.repository.WikiEntryRepository;
 import com.pardur.repository.WorldRepository;
@@ -42,6 +44,7 @@ class ExportControllerTest {
     @Autowired WikiEntryRepository wikiEntryRepository;
     @Autowired UserRepository userRepository;
     @Autowired BCryptPasswordEncoder passwordEncoder;
+    @Autowired ItemRepository itemRepository;
 
     World testWorld;
     User adminUser;
@@ -181,6 +184,54 @@ class ExportControllerTest {
         mvc.perform(get("/api/export/worlds/{id}/wiki", testWorld.getId())
                         .with(httpBasic(adminUser.getUsername(), "wrong-password")))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ── /api/export/items ────────────────────────────────────────────────────────
+
+    @Test
+    void exportItems_returns4xx_whenUnauthenticated() throws Exception {
+        mvc.perform(get("/api/export/items"))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = {"USER"})
+    void exportItems_returns403_whenNonAdmin() throws Exception {
+        mvc.perform(get("/api/export/items"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+    void exportItems_returns200WithMarkdown_whenAdmin() throws Exception {
+        mvc.perform(get("/api/export/items"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("text/markdown")))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("items-export.md")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+    void exportItems_markdownContainsItemData() throws Exception {
+        Item item = new Item();
+        item.setName("Testgegenstand-" + System.nanoTime());
+        item.setPrice(new java.math.BigDecimal("42.00"));
+        item = itemRepository.save(item);
+        final int savedId = item.getId();
+
+        try {
+            MvcResult result = mvc.perform(get("/api/export/items"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            String body = result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+            assertThat(body).contains(item.getName());
+            assertThat(body).contains("42.00");
+            assertThat(body).contains("# Marktplatz");
+        } finally {
+            itemRepository.deleteById(savedId);
+        }
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

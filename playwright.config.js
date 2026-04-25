@@ -2,11 +2,11 @@
 const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
-  testDir: './backend/src/test/e2e',
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  testDir: 'backend/src/test/e2e',
   use: {
     baseURL: 'http://localhost:8080',
-    headless: true,
   },
-  timeout: 15000,
+  workers: 1,
+  retries: 0,
+  reporter: [['list']],
 });

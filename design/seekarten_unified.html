@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seekarten der Zeit</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* ══ TOKENS ══ */
+:root[data-theme="dark"]{
+  --bg:#091524;--bg-s:#0d1f38;--bg-c:#112340;--bg-ch:#17304f;
+  --bg-sb:#0b1b30;--bg-un:#0c1e34;
+  --bd:rgba(180,150,80,.22);--bd-s:rgba(180,150,80,.50);
+  --t1:#e8dfc8;--t2:#8aaabf;--t3:#4a6a84;
+  --gold:#c8a84b;--gold2:#e8c870;
+  --blue:#4a8ab8;--blue2:#6aaad8;
+  --tag-bg:rgba(74,138,184,.16);--tag-bd:rgba(74,138,184,.38);
+  --rope:#7a5a0e;--rope2:#b89030;
+  --nav:rgba(9,21,36,.96);--inp:rgba(9,21,36,.75);
+  --sh:0 8px 32px rgba(0,0,0,.55);
+}
+:root[data-theme="light"]{
+  --bg:#ede8dc;--bg-s:#e4ddd0;--bg-c:#f8f4eb;--bg-ch:#fffcf4;
+  --bg-sb:#e2dccf;--bg-un:#e8e2d5;
+  --bd:rgba(110,82,32,.18);--bd-s:rgba(110,82,32,.42);
+  --t1:#1a2b3c;--t2:#3a5068;--t3:#7a9ab0;
+  --gold:#8a6010;--gold2:#b88020;
+  --blue:#2060a0;--blue2:#3880c8;
+  --tag-bg:rgba(32,96,160,.09);--tag-bd:rgba(32,96,160,.32);
+  --rope:#9a7820;--rope2:#c8a840;
+  --nav:rgba(237,232,220,.97);--inp:rgba(255,252,244,.92);
+  --sh:0 8px 32px rgba(0,0,0,.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--t1);min-height:100vh;transition:background .35s,color .35s;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 15% 40%,rgba(74,138,184,.05) 0%,transparent 55%),radial-gradient(ellipse at 85% 15%,rgba(200,168,75,.04) 0%,transparent 50%)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bd-s);border-radius:3px}
+
+/* ══ NAV ══ */
+nav{position:sticky;top:0;z-index:200;height:60px;background:var(--nav);backdrop-filter:blur(16px);border-bottom:1px solid var(--bd-s);display:flex;align-items:center;justify-content:space-between;padding:0 24px;transition:background .35s}
+.nav-brand{display:flex;align-items:center;gap:12px;cursor:pointer}
+.nav-compass{width:32px;height:32px}.nav-compass svg{width:100%;height:100%}
+.compass-needle{transform-origin:center;animation:cSpin 9s ease-in-out infinite}
+@keyframes cSpin{0%,100%{transform:rotate(0)}30%{transform:rotate(10deg)}70%{transform:rotate(-8deg)}}
+.nav-title{font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gold);letter-spacing:.09em;text-transform:uppercase}
+.nav-links{display:flex;gap:2px}
+.nav-link{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);padding:7px 14px;border-radius:3px;border:1px solid transparent;background:none;cursor:pointer;transition:all .2s}
+.nav-link:hover{color:var(--gold);border-color:var(--bd);background:var(--bg-c)}
+.nav-link.active{color:var(--gold2);border-color:var(--bd-s);background:var(--bg-c)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.theme-toggle{width:40px;height:40px;border-radius:50%;border:1px solid var(--bd-s);background:var(--bg-c);color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .3s}
+.theme-toggle:hover{border-color:var(--gold);transform:rotate(22deg)}
+
+/* ══ BUTTONS ══ */
+.btn{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:9px 18px;border-radius:3px;border:1px solid var(--bd-s);background:var(--bg-c);color:var(--gold);cursor:pointer;transition:all .2s}
+.btn:hover{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.btn-sm{padding:6px 12px;font-size:.58rem}
+.btn-danger{color:#e07070;border-color:rgba(200,80,80,.4)}
+.btn-danger:hover{background:rgba(160,40,40,.85);color:#fff;border-color:rgba(160,40,40,.85)}
+
+/* ══ PAGES ══ */
+.page{position:relative;z-index:1;display:none}
+.page.active{display:block}
+#page-timeline{display:none}
+#page-timeline.active{display:grid;grid-template-columns:210px 1fr 210px;min-height:calc(100vh - 60px)}
+
+/* ══ SIDEBARS ══ */
+.sidebar{background:var(--bg-sb);padding:20px 14px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;transition:background .35s}
+.sidebar-left{border-right:1px solid var(--bd)}
+.sidebar-right{border-left:1px solid rgba(180,150,80,.28);background:var(--bg-un)}
+.sb-title{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.sb-title button{font-family:'Cinzel',serif;font-size:.55rem;background:none;border:none;color:var(--t3);cursor:pointer;text-transform:uppercase;transition:color .15s;letter-spacing:.06em}
+.sb-title button:hover{color:var(--gold)}
+
+/* Tag filters */
+.tag-filter-list{display:flex;flex-direction:column;gap:3px}
+.tag-fb{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;transition:all .15s;text-align:left;width:100%}
+.tag-fb:hover{background:var(--bg-c);border-color:var(--bd);color:var(--t1)}
+.tag-fb.on{background:var(--tag-bg);border-color:var(--tag-bd);color:var(--blue2)}
+.tag-count{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--t3);background:var(--bg-s);padding:1px 5px;border-radius:2px;min-width:18px;text-align:center}
+
+/* Creator filters */
+.creator-fb{display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:3px;border:1px solid transparent;background:transparent;cursor:pointer;transition:all .15s;width:100%}
+.creator-fb:hover{background:var(--bg-c);border-color:var(--bd)}
+.creator-fb.on{background:var(--tag-bg);border-color:var(--tag-bd)}
+.creator-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.52rem;font-weight:700;color:#fff;flex-shrink:0}
+.creator-nm{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.05em;color:var(--t2);text-transform:uppercase}
+
+/* Compact toggle */
+.compact-wrap{margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)}
+.compact-lbl{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);display:block;margin-bottom:8px}
+.tog-row{display:flex;align-items:center;gap:10px;cursor:pointer}
+.tog-track{width:36px;height:20px;border-radius:10px;background:var(--bg-s);border:1px solid var(--bd-s);position:relative;flex-shrink:0;transition:background .2s}
+.tog-track.on{background:var(--blue)}
+.tog-thumb{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--t3);transition:transform .2s,background .2s}
+.tog-track.on .tog-thumb{transform:translateX(16px);background:#fff}
+.tog-txt{font-family:'Crimson Pro',serif;font-size:.88rem;color:var(--t2)}
+
+/* Undated cards */
+.undated-list{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.undated-card{background:var(--bg-c);border:1px solid var(--bd);border-radius:4px;padding:10px 12px;cursor:grab;transition:all .2s;position:relative;user-select:none}
+.undated-card:hover{background:var(--bg-ch);border-color:var(--bd-s);transform:translateY(-1px)}
+.undated-card.dragging{opacity:.45;cursor:grabbing}
+.undated-card::before{content:'⠿';position:absolute;right:8px;top:8px;font-size:.8rem;color:var(--t3)}
+.undated-ttl{font-family:'Cinzel',serif;font-size:.68rem;font-weight:600;color:var(--t1);margin-bottom:4px;padding-right:16px;line-height:1.3}
+.undated-tags{display:flex;flex-wrap:wrap;gap:3px}
+.undated-tag{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:2px;background:var(--tag-bg);border:1px solid var(--tag-bd);color:var(--blue2)}
+.undated-cr{font-family:'JetBrains Mono',monospace;font-size:.55rem;color:var(--t3);margin-top:5px;display:flex;align-items:center;gap:5px}
+.undated-av{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.45rem;font-family:'Cinzel',serif;color:#fff;font-weight:700}
+.undated-hint{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);text-align:center;padding:7px;border:1px dashed var(--bd-s);border-radius:3px;margin-top:8px;opacity:.65}
+.undated-empty{font-family:'Crimson Pro',serif;font-style:italic;font-size:.8rem;color:var(--t3);text-align:center;padding:12px 0}
+
+/* ══ TIMELINE CENTER ══ */
+.tl-center{padding:28px 16px 80px;min-width:0}
+.page-hdr{text-align:center;margin-bottom:24px}
+.page-hdr h1{font-family:'Cinzel',serif;font-size:clamp(1.4rem,3vw,2.2rem);font-weight:700;color:var(--t1);letter-spacing:.12em;text-transform:uppercase}
+.page-hdr p{font-style:italic;font-size:1rem;color:var(--t2);margin-top:5px}
+.divider{display:flex;align-items:center;gap:10px;margin:12px auto 0;max-width:300px}
+.dline{flex:1;height:1px;background:linear-gradient(to right,transparent,var(--bd-s),transparent)}
+.ddiamond{width:7px;height:7px;background:var(--gold);transform:rotate(45deg)}
+.tl-legend{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px}
+.leg-item{display:flex;align-items:center;gap:6px;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.leg-dot{width:11px;height:11px;border-radius:50%}
+.leg-dot.world{background:var(--blue);border:2px solid var(--blue2)}
+.leg-dot.local{background:var(--gold);border:2px solid var(--gold2)}
+.tl-hint{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);text-align:center;margin-bottom:16px}
+
+/* ══ ROPE ══ */
+.timeline{position:relative}
+.timeline::before{content:'';position:absolute;left:50%;transform:translateX(-50%);top:0;bottom:0;width:4px;background:repeating-linear-gradient(to bottom,var(--rope) 0,var(--rope) 10px,var(--rope2) 10px,var(--rope2) 12px,var(--rope) 12px,var(--rope) 22px,transparent 22px,transparent 24px);opacity:.75;z-index:1;pointer-events:none}
+
+/* Rope gaps */
+.rope-gap{position:relative;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;border-radius:4px;transition:background .15s}
+.rope-gap-hint{display:flex;align-items:center;gap:6px;opacity:0;transform:scale(.9);transition:all .18s;pointer-events:none;background:var(--bg-c);border:1px dashed var(--bd-s);border-radius:3px;padding:4px 12px;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.1em;color:var(--gold);white-space:nowrap;position:relative;z-index:6}
+.rope-gap:hover .rope-gap-hint{opacity:1;transform:scale(1)}
+.rope-gap.drop-over{background:rgba(200,168,75,.12)}
+.rope-gap.drop-over .rope-gap-hint{opacity:1;transform:scale(1);background:var(--gold);color:var(--bg);border-color:var(--gold)}
+
+/* Event rows */
+.event-row{position:relative;display:flex;align-items:flex-start;min-height:80px}
+.event-row.right{flex-direction:row}.event-row.left{flex-direction:row-reverse}
+.event-row.hidden{display:none}
+.event-node{position:absolute;left:50%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:4;top:12px;transition:transform .2s}
+.event-node.world{background:var(--blue);border:2px solid var(--blue2);box-shadow:0 0 10px rgba(74,138,184,.5)}
+.event-node.local{background:var(--gold);border:2px solid var(--gold2);box-shadow:0 0 10px rgba(200,168,75,.5)}
+.event-node svg{width:11px;height:11px;fill:#fff;opacity:.9}
+.event-conn{position:absolute;height:1px;background:var(--bd-s);top:25px;z-index:3;width:50px}
+.event-row.right .event-conn{left:calc(50% + 13px)}
+.event-row.left  .event-conn{right:calc(50% + 13px)}
+
+/* Event cards */
+.event-card{width:calc(50% - 76px);background:var(--bg-c);border:1px solid var(--bd);border-radius:5px;padding:13px 16px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;animation:fadeUp .3s ease both}
+.event-card:hover{background:var(--bg-ch);border-color:var(--bd-s);box-shadow:var(--sh);transform:translateY(-2px)}
+.event-card.active{border-color:var(--bd-s)!important;box-shadow:0 0 0 2px var(--gold),var(--sh)!important}
+.event-row.right .event-card{margin-left:auto;margin-right:0}
+.event-row.left  .event-card{margin-left:0;margin-right:auto}
+.ev-title{font-family:'Cinzel',serif;font-size:.85rem;font-weight:600;color:var(--t1);margin-bottom:2px;letter-spacing:.03em;line-height:1.3}
+.ev-date{font-family:'JetBrains Mono',monospace;font-size:.67rem;color:var(--gold);margin-bottom:8px}
+.ev-tags{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.ev-tag{font-family:'Cinzel',serif;font-size:.53rem;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:2px;background:var(--tag-bg);border:1px solid var(--tag-bd);color:var(--blue2)}
+.ev-creator{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:#fff;padding:2px 6px;border-radius:2px;margin-left:auto;flex-shrink:0}
+.ev-desc-preview{font-family:'Crimson Pro',serif;font-style:italic;font-size:.82rem;color:var(--t3);margin-top:8px;line-height:1.45;border-top:1px solid var(--bd);padding-top:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Compact mode */
+.timeline.compact .event-row{min-height:32px}
+.timeline.compact .event-card{padding:6px 11px}
+.timeline.compact .ev-title{font-size:.76rem;margin-bottom:0}
+.timeline.compact .ev-date{font-size:.62rem;margin-bottom:0}
+.timeline.compact .ev-tags,.timeline.compact .ev-desc-preview{display:none}
+.timeline.compact .rope-gap{height:28px}
+.timeline.compact .event-node{top:6px}
+.timeline.compact .event-conn{top:19px}
+
+/* ══ DETAIL PANEL ══ */
+.detail-panel{position:fixed;top:60px;right:0;width:320px;height:calc(100vh - 60px);background:var(--bg-c);border-left:1px solid var(--bd-s);z-index:150;transform:translateX(100%);transition:transform .3s cubic-bezier(.25,.8,.25,1);overflow-y:auto}
+.detail-panel.open{transform:translateX(0);box-shadow:-8px 0 40px rgba(0,0,0,.35)}
+.detail-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--t3);font-size:1rem;transition:color .15s;z-index:2}
+.detail-close:hover{color:var(--t1)}
+.detail-inner{padding:26px 22px 32px}
+.detail-title{font-family:'Cinzel',serif;font-size:1.05rem;font-weight:700;color:var(--t1);letter-spacing:.04em;line-height:1.35;margin-bottom:5px;padding-right:22px}
+.detail-date{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--gold);margin-bottom:14px}
+.detail-divider{height:1px;background:var(--bd);margin-bottom:14px}
+.detail-desc{font-family:'Crimson Pro',serif;font-size:1.05rem;color:var(--t2);line-height:1.7;margin-bottom:16px}
+.detail-desc.empty{font-style:italic;color:var(--t3);font-size:.9rem}
+.detail-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.detail-tag{font-family:'Cinzel',serif;font-size:.57rem;letter-spacing:.07em;text-transform:uppercase;padding:3px 10px;border-radius:2px;background:var(--tag-bg);border:1px solid var(--tag-bd);color:var(--blue2)}
+.detail-meta{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);margin-bottom:16px}
+.detail-type{display:flex;align-items:center;gap:7px;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+.detail-type-dot{width:9px;height:9px;border-radius:50%}
+.detail-type-dot.world{background:var(--blue);border:1.5px solid var(--blue2)}
+.detail-type-dot.local{background:var(--gold);border:1.5px solid var(--gold2)}
+.detail-creator{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--t3)}
+.detail-creator-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.55rem;font-weight:700;color:#fff}
+.detail-actions{display:flex;gap:8px}
+.detail-actions .btn{flex:1;text-align:center}
+
+/* ══ RARITY MULTISELECT ══ */
+.rarity-filter{position:relative}
+.rf-trigger{background:var(--inp);border:1px solid var(--bd);border-radius:3px;padding:8px 11px;color:var(--t1);font-family:'Crimson Pro',serif;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;transition:border-color .2s;min-height:38px}
+.rf-trigger:hover,.rf-trigger.open{border-color:var(--gold)}
+.rf-arrow{color:var(--t3);font-size:.7rem;transition:transform .2s;flex-shrink:0}
+.rf-trigger.open .rf-arrow{transform:rotate(180deg)}
+.rf-label{flex:1;overflow:hidden;display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
+.rf-label span.placeholder{color:var(--t3)}
+.rf-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg-s);border:1px solid var(--bd-s);border-radius:4px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:6px;animation:fadeUp .15s ease;display:none}
+.rf-dropdown.open{display:block}
+.rf-option{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:3px;cursor:pointer;transition:background .12s}
+.rf-option:hover{background:var(--bg-c)}
+.rf-option input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
+.rf-sep{height:1px;background:var(--bd);margin:5px 0}
+.rf-clear{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:none;color:var(--t3);cursor:pointer;padding:5px 9px;width:100%;text-align:left;transition:color .15s;border-radius:3px}
+.rf-clear:hover{color:var(--gold);background:var(--bg-c)}
+
+/* ══ ITEMS PAGE ══ */
+#page-items{max-width:1160px;margin:0 auto;padding:30px 24px 80px}
+.pg-hdr{text-align:center;margin-bottom:24px}
+.pg-hdr h1{font-family:'Cinzel',serif;font-size:clamp(1.3rem,3vw,2rem);font-weight:700;color:var(--t1);letter-spacing:.12em;text-transform:uppercase}
+.pg-hdr p{font-style:italic;font-size:.95rem;color:var(--t2);margin-top:5px}
+.toolbar{display:grid;grid-template-columns:2fr 1.5fr 1fr 1fr;gap:10px;margin-bottom:20px;padding:16px 18px;background:var(--bg-c);border:1px solid var(--bd);border-radius:5px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-family:'Cinzel',serif;font-size:.57rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.fi{background:var(--inp);border:1px solid var(--bd);border-radius:3px;padding:8px 11px;color:var(--t1);font-family:'Crimson Pro',serif;font-size:.9rem;outline:none;transition:border-color .2s;width:100%}
+.fi:focus{border-color:var(--gold)}.fi::placeholder{color:var(--t3)}
+.items-wrap{background:var(--bg-c);border:1px solid var(--bd);border-radius:5px;overflow:hidden}
+.it{width:100%;border-collapse:collapse}
+.it th{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:12px 16px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg-s);cursor:pointer;user-select:none}
+.it th:hover{color:var(--gold)}
+.it th.col-price,.it td.col-price{text-align:right}
+.it td{padding:13px 16px;border-bottom:1px solid var(--bd);vertical-align:middle;font-size:.92rem}
+.it tr:last-child td{border-bottom:none}.it tr:hover td{background:var(--bg-ch)}
+.i-name{font-family:'Crimson Pro',serif;color:var(--t1)}
+.i-price{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--gold2)}
+.rarity-badge{display:inline-block;font-family:'Cinzel',serif;font-size:.54rem;letter-spacing:.09em;text-transform:uppercase;padding:3px 9px;border-radius:2px}
+.rarity-common{background:rgba(130,130,130,.14);color:var(--t2);border:1px solid rgba(130,130,130,.26)}
+.rarity-uncommon{background:var(--tag-bg);color:var(--blue2);border:1px solid var(--tag-bd)}
+.rarity-rare{background:rgba(70,120,255,.13);color:#80a8ff;border:1px solid rgba(70,120,255,.28)}
+.rarity-legendary{background:rgba(200,150,20,.13);color:var(--gold2);border:1px solid rgba(200,150,20,.33)}
+.i-link a{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--blue);text-decoration:none;opacity:.8;word-break:break-all}
+.i-link a:hover{opacity:1;color:var(--blue2);text-decoration:underline}
+.act-btns{display:flex;gap:5px}
+.act-btn{width:27px;height:27px;border-radius:3px;border:1px solid var(--bd);background:var(--bg-s);color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.72rem;transition:all .15s}
+.act-btn:hover{border-color:var(--gold);color:var(--gold)}
+.act-btn.del:hover{border-color:#e07070;color:#e07070}
+.t-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--bd);background:var(--bg-s)}
+.t-count{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.1em;color:var(--t3);text-transform:uppercase}
+
+/* ══ MODAL ══ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);z-index:300;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg-s);border:1px solid var(--bd-s);border-radius:7px;padding:26px;width:90%;max-width:500px;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.m-title{font-family:'Cinzel',serif;font-size:.96rem;font-weight:600;color:var(--t1);letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px;padding-bottom:13px;border-bottom:1px solid var(--bd)}
+.m-close{position:absolute;top:13px;right:13px;background:none;border:none;cursor:pointer;color:var(--t3);font-size:1.1rem;transition:color .15s}
+.m-close:hover{color:var(--t1)}
+.f-grid{display:grid;gap:13px}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f-grp{display:flex;flex-direction:column;gap:5px}
+.f-lbl{font-family:'Cinzel',serif;font-size:.57rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.f-inp{background:var(--inp);border:1px solid var(--bd);border-radius:3px;padding:9px 11px;color:var(--t1);font-family:'Crimson Pro',serif;font-size:.9rem;outline:none;transition:border-color .2s;width:100%}
+.f-inp:focus{border-color:var(--gold)}.f-inp::placeholder{color:var(--t3)}
+.f-sel{appearance:none;cursor:pointer}
+.del-confirm{background:rgba(180,50,50,.1);border:1px solid rgba(200,80,80,.35);border-radius:4px;padding:14px 16px}
+.del-confirm-txt{font-family:'Crimson Pro',serif;font-size:.95rem;color:var(--t1);line-height:1.5}
+.del-confirm-name{font-style:italic;color:#e07070}
+.m-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:18px;padding-top:16px;border-top:1px solid var(--bd)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(11px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <div class="nav-brand" onclick="showPage('timeline')">
+    <div class="nav-compass">
+      <svg viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="17" stroke="var(--gold)" stroke-width="1.2" opacity=".4"/>
+        <circle cx="20" cy="20" r="10" stroke="var(--gold)" stroke-width=".6" opacity=".22"/>
+        <g class="compass-needle">
+          <polygon points="20,4 22,20 20,22 18,20" fill="var(--blue2)" opacity=".9"/>
+          <polygon points="20,36 22,20 20,18 18,20" fill="var(--gold)" opacity=".9"/>
+        </g>
+        <circle cx="20" cy="20" r="2" fill="var(--gold)"/>
+      </svg>
+    </div>
+    <span class="nav-title">Seekarten der Zeit</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" id="nav-timeline" onclick="showPage('timeline')">Chronik</button>
+    <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">🌙</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Eintragen</button>
+  </div>
+</nav>
+
+<!-- ══ TIMELINE PAGE ══ -->
+<div class="page" id="page-timeline">
+  <aside class="sidebar sidebar-left">
+    <div class="sb-title">Tags <button onclick="clearTags()">Alle</button></div>
+    <div class="tag-filter-list" id="tag-list"></div>
+    <div style="margin-top:16px">
+      <div class="sb-title">Ersteller <button onclick="clearCreators()">Alle</button></div>
+      <div id="creator-list"></div>
+    </div>
+    <div class="compact-wrap">
+      <span class="compact-lbl">Ansicht</span>
+      <div class="tog-row" onclick="toggleCompact()">
+        <div class="tog-track" id="tog-track"><div class="tog-thumb"></div></div>
+        <span class="tog-txt">Kompakt</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="tl-center">
+    <div class="page-hdr">
+      <h1>Seekarten der Zeit</h1>
+      <p>Verzeichnis der Ereignisse der bekannten Welt</p>
+      <div class="divider"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+    </div>
+    <div class="tl-legend">
+      <div class="leg-item"><div class="leg-dot world"></div>Weltereignis</div>
+      <div class="leg-item"><div class="leg-dot local"></div>Lokales Ereignis</div>
+    </div>
+    <p class="tl-hint">Seil anklicken um ein Ereignis einzutragen</p>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <aside class="sidebar sidebar-right">
+    <div class="sb-title">Datum Unbekannt <button onclick="openUndatedAdd()">+</button></div>
+    <p style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.78rem;color:var(--t3);line-height:1.4;margin-bottom:10px">Auf Seil ziehen zum Einordnen</p>
+    <div class="undated-list" id="undated-list"></div>
+    <div class="undated-hint">⠿ Ziehen zum Einordnen</div>
+  </aside>
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" onclick="closeDetail()">✕</button>
+  <div class="detail-inner">
+    <div class="detail-title" id="dp-title"></div>
+    <div class="detail-date" id="dp-date"></div>
+    <div class="detail-divider"></div>
+    <div class="detail-desc" id="dp-desc"></div>
+    <div class="detail-tags" id="dp-tags"></div>
+    <div class="detail-meta" id="dp-meta"></div>
+    <div class="detail-actions">
+      <button class="btn" id="dp-edit">Bearbeiten</button>
+      <button class="btn btn-danger" id="dp-del">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ITEMS PAGE ══ -->
+<div class="page" id="page-items">
+  <div class="pg-hdr">
+    <h1>Marktplatz</h1>
+    <p>Gegenstände und Artefakte der bekannten Welt</p>
+    <div class="divider" style="margin:10px auto 0"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+  </div>
+  <div class="toolbar">
+    <div class="fg"><label class="fl">Suche</label><input class="fi" id="s-search" type="text" placeholder="Gegenstand…" oninput="renderItems()"></div>
+    <div class="fg">
+      <label class="fl">Seltenheit</label>
+      <div class="rarity-filter" id="rarity-filter">
+        <div class="rf-trigger" id="rf-trigger" onclick="toggleRarityDd(event)">
+          <div class="rf-label" id="rf-label"><span class="placeholder">Alle Seltenheiten</span></div>
+          <span class="rf-arrow">▾</span>
+        </div>
+        <div class="rf-dropdown" id="rf-dropdown">
+          <label class="rf-option"><input type="checkbox" value="Common"    onchange="onRarityChange()"><span class="rarity-badge rarity-common" style="pointer-events:none">Common</span></label>
+          <label class="rf-option"><input type="checkbox" value="Uncommon"  onchange="onRarityChange()"><span class="rarity-badge rarity-uncommon" style="pointer-events:none">Uncommon</span></label>
+          <label class="rf-option"><input type="checkbox" value="Rare"      onchange="onRarityChange()"><span class="rarity-badge rarity-rare" style="pointer-events:none">Rare</span></label>
+          <label class="rf-option"><input type="checkbox" value="Legendary" onchange="onRarityChange()"><span class="rarity-badge rarity-legendary" style="pointer-events:none">Legendary</span></label>
+          <div class="rf-sep"></div>
+          <button class="rf-clear" onclick="clearRarity()">Auswahl aufheben</button>
+        </div>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Min. Preis ⚜</label><input class="fi" id="s-min" type="number" placeholder="0" oninput="renderItems()"></div>
+    <div class="fg"><label class="fl">Max. Preis ⚜</label><input class="fi" id="s-max" type="number" placeholder="∞" oninput="renderItems()"></div>
+  </div>
+  <div class="items-wrap">
+    <table class="it">
+      <thead><tr>
+        <th onclick="sortBy('name')">Name ⇅</th>
+        <th onclick="sortBy('price')" class="col-price">Preis ⚜ ⇅</th>
+        <th onclick="sortBy('rarity')">Seltenheit ⇅</th>
+        <th>Link</th><th>Aktionen</th>
+      </tr></thead>
+      <tbody id="items-body"></tbody>
+    </table>
+    <div class="t-footer">
+      <span class="t-count" id="item-count"></span>
+      <button class="btn btn-sm" onclick="openAddModal()">+ Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ══ -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="m-title" id="m-title">Ereignis eintragen</div>
+    <button class="m-close" onclick="closeModal()">✕</button>
+    <div class="f-grid" id="f-tl">
+      <div class="f-grp"><label class="f-lbl">Titel *</label><input class="f-inp" id="f-ti" type="text" placeholder="z.B. Die Schwarze Flut"></div>
+      <div class="f-row">
+        <div class="f-grp"><label class="f-lbl">Datum (n.Z.) — leer = unbekannt</label><input class="f-inp" id="f-da" type="text" placeholder="-500 oder leer"></div>
+        <div class="f-grp"><label class="f-lbl">Typ</label>
+          <select class="f-inp f-sel" id="f-ty"><option value="world">Weltereignis</option><option value="local">Lokales Ereignis</option></select>
+        </div>
+      </div>
+      <div class="f-grp"><label class="f-lbl">Tags (kommagetrennt)</label><input class="f-inp" id="f-tg" type="text" placeholder="Magie, Ozean, Krieg"></div>
+      <div class="f-grp"><label class="f-lbl">Beschreibung</label>
+        <textarea class="f-inp" id="f-desc" rows="3" placeholder="Was geschah? Details, Personen, Auswirkungen…" style="resize:vertical;min-height:68px"></textarea>
+      </div>
+      <div class="f-grp"><label class="f-lbl">Ersteller-Kürzel *</label><input class="f-inp" id="f-cr" type="text" placeholder="MM" maxlength="3" style="text-transform:uppercase"></div>
+    </div>
+    <div class="f-grid" id="f-it" style="display:none">
+      <div class="f-grp"><label class="f-lbl">Gegenstand *</label><input class="f-inp" id="fi-n" type="text" placeholder="Name"></div>
+      <div class="f-row">
+        <div class="f-grp"><label class="f-lbl">Preis ⚜</label><input class="f-inp" id="fi-p" type="number" placeholder="0"></div>
+        <div class="f-grp"><label class="f-lbl">Seltenheit</label>
+          <select class="f-inp f-sel" id="fi-r"><option>Common</option><option selected>Uncommon</option><option>Rare</option><option>Legendary</option></select>
+        </div>
+      </div>
+      <div class="f-grp"><label class="f-lbl">Link</label><input class="f-inp" id="fi-u" type="url" placeholder="https://…"></div>
+    </div>
+    <div id="f-del" style="display:none">
+      <div class="del-confirm"><div class="del-confirm-txt" id="del-txt"></div></div>
+    </div>
+    <div id="f-drop" style="display:none">
+      <div class="f-grid">
+        <div style="font-family:'Crimson Pro',serif;font-style:italic;font-size:.95rem;color:var(--t2);line-height:1.5" id="drop-intro"></div>
+        <div class="f-grp"><label class="f-lbl">Datum (n.Z.) *</label><input class="f-inp" id="drop-date" type="text" placeholder="-500"></div>
+      </div>
+    </div>
+    <div class="m-actions">
+      <button class="btn" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" id="m-save" onclick="saveEntry()">Eintragen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   DATA
+══════════════════════════════════════ */
+const CREATORS = {
+  SK:{ name:'Sven K.',  color:'#3a7abf' },
+  MM:{ name:'Max M.',   color:'#2a9a68' },
+  AL:{ name:'Anna L.',  color:'#9a4aaa' },
+  RV:{ name:'Ralf V.',  color:'#bf603a' },
+};
+
+let events = [
+  { id:1, title:'Erwachen des Meerestitanen', date:-1200, type:'world', tags:['Titan','Schwarzes Meer','Sturminseln'], creator:'SK', desc:'Der uralte Titan Thalassomor erhob sich aus den Tiefen des Schwarzen Meeres. Sein Erwachen ließ Küsten versinken und gebar die Sturminseln.' },
+  { id:2, title:'Gründung der Hafenliga',     date:-800,  type:'world', tags:['Hafenliga','Aurathia','Handel'],        creator:'MM', desc:'Sieben Hafenstädte unter Führung Aurathias schlossen sich zur Hafenliga zusammen, um Handelswege zu sichern und Piraterie einzudämmen.' },
+  { id:3, title:'Der Grosse Sturm der Magie', date:-342,  type:'world', tags:['Magie','Urkristall','Verbotene Zone'],  creator:'SK', desc:'Ein katastrophaler Überlauf des Urkristalls entfesselte Magieströme. Die Verbotene Zone entstand aus dem Epizentrum.' },
+  { id:4, title:'Kapitänin Lyras Meuterei',   date:44,    type:'local', tags:['Meuterei','Lyra','Hafenliga'],          creator:'AL', desc:'Kapitänin Lyra führte die Besatzung der Eiserne Welle gegen die Hafenliga-Admiralität. Der Aufstand scheiterte, doch Lyras Legende blieb.' },
+  { id:5, title:'Die Schwarze Flut',          date:312,   type:'world', tags:['Katastrophe','Ozean'],                  creator:'RV', desc:'Eine ölige, schwarze Flutwelle unbekannten Ursprungs verschluckte drei Küstenprovinzen. Überlebende berichten von Stimmen unter dem Wasser.' },
+];
+let undated = [
+  { id:101, title:'Das Verschwinden von Aurathia', tags:['Aurathia','Geheimnis'], creator:'MM', desc:'Die gesamte Stadt soll über Nacht spurlos verschwunden sein. Keine Trümmer, keine Überlebenden.' },
+  { id:102, title:'Pakt der Tiefen',               tags:['Magie','Pakt'],        creator:'SK', desc:'Gerüchte von einem Vertrag zwischen den Küstenvölkern und einem Wesen der Tiefe.' },
+];
+let items = [
+  { name:'Sunbaked Cassettes — 1er Pack',  price:50,   rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853820-sunbaked-cassettes' },
+  { name:'Sunbaked Cassettes — 10er Pack', price:400,  rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853820-sunbaked-cassettes' },
+  { name:'Sunbaked Cassettes — 5er Pack',  price:225,  rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853820-sunbaked-cassettes' },
+  { name:'Anglerfish Helmet',              price:3000, rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853507-anglerfish-helm' },
+  { name:'CRT TV and Chicken Timer',       price:2000, rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853551-crt-tv-and-chicken-timer' },
+  { name:'Keytar',                         price:2000, rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853642-keytar' },
+  { name:'Sunbaked Cassettes',             price:3800, rarity:'Uncommon', url:'https://www.dndbeyond.com/magic-items/9853820-sunbaked-cassettes' },
+];
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+let activeTags     = new Set();
+let activeCreators = new Set();
+let compact        = false;
+let currentPage    = 'timeline';
+let undatedMode    = false;
+let nid            = 200;
+let editId         = null;
+let editSource     = null; // 'tl'|'undated'|'item'|'item-del'|'tl-del'|'undated-del'|'drop'
+let editItemIdx    = null;
+let dropId         = null;
+let detailId       = null;
+let detailSource   = null;
+let sKey           = null;
+let sDir           = 1;
+// drag state
+let dragId         = null;
+let mouseDownX     = 0;
+let mouseDownY     = 0;
+let didDrag        = false;
+
+/* ══════════════════════════════════════
+   THEME / NAV
+══════════════════════════════════════ */
+function toggleTheme() {
+  const h = document.documentElement;
+  const dark = h.dataset.theme === 'dark';
+  h.dataset.theme = dark ? 'light' : 'dark';
+  document.getElementById('theme-btn').textContent = dark ? '☀️' : '🌙';
+}
+
+function showPage(p) {
+  currentPage = p;
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.getElementById('nav-' + p).classList.add('active');
+  if (p !== 'timeline') closeDetail();
+  if (p === 'items') renderItems();
+}
+
+/* ══════════════════════════════════════
+   TIMELINE
+══════════════════════════════════════ */
+function sortedEvents() { return [...events].sort((a, b) => a.date - b.date); }
+
+function allTagCounts() {
+  const m = {};
+  events.forEach(e => e.tags.forEach(t => { m[t] = (m[t] || 0) + 1; }));
+  return m;
+}
+
+function isVisible(ev) {
+  if (activeTags.size > 0 && !ev.tags.some(t => activeTags.has(t))) return false;
+  if (activeCreators.size > 0 && !activeCreators.has(ev.creator)) return false;
+  return true;
+}
+
+function wSVG() { return '<svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2c.7 0 1.5.5 2.2 1.5H5.8C6.5 3.5 7.3 3 8 3zM3.5 7h9a5 5 0 010 2h-9a5 5 0 010-2zm.8 4h7.4C10.5 12.5 9.3 13 8 13s-2.5-.5-3.7-2z"/></svg>'; }
+function lSVG() { return '<svg viewBox="0 0 16 16"><circle cx="8" cy="6.5" r="2.5"/><path d="M8 1C5.2 1 3 3.2 3 6c0 4 5 9 5 9s5-5 5-9c0-2.8-2.2-5-5-5z" fill="none" stroke="white" stroke-width="1.5"/></svg>'; }
+
+function renderTimeline() {
+  const tl  = document.getElementById('timeline');
+  const evs = sortedEvents();
+  let html  = '';
+
+  evs.forEach((ev, i) => {
+    const side    = i % 2 === 0 ? 'right' : 'left';
+    const cr      = CREATORS[ev.creator] || { color: '#888' };
+    const vis     = isVisible(ev);
+    const dateStr = ev.date > 0 ? '+' + ev.date + ' n.Z.' : ev.date + ' n.Z.';
+    const isAct   = detailId === ev.id && detailSource === 'tl';
+
+    html += `<div class="rope-gap" data-gap="${i}" onclick="onRopeClick(event,${i})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
+    html += `<div class="event-row ${side}${vis ? '' : ' hidden'}" data-id="${ev.id}">
+      <div class="event-node ${ev.type}">${ev.type === 'world' ? wSVG() : lSVG()}</div>
+      <div class="event-conn"></div>
+      <div class="event-card${isAct ? ' active' : ''}" style="animation-delay:${i * .05}s" onclick="onTLCardClick(event,${ev.id})">
+        <div class="ev-title">${ev.title}</div>
+        <div class="ev-date">${dateStr}</div>
+        <div class="ev-tags">
+          ${ev.tags.map(t => '<span class="ev-tag">' + t + '</span>').join('')}
+          <span class="ev-creator" style="background:${cr.color}">${ev.creator}</span>
+        </div>
+        ${ev.desc ? '<div class="ev-desc-preview">' + ev.desc + '</div>' : ''}
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="rope-gap" data-gap="${evs.length}" onclick="onRopeClick(event,${evs.length})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
+  tl.innerHTML = html;
+  tl.classList.toggle('compact', compact);
+
+  // wire drag-over for rope gaps
+  tl.querySelectorAll('.rope-gap').forEach(gap => {
+    gap.addEventListener('dragover', e => {
+      if (dragId === null) return;
+      e.preventDefault();
+      gap.classList.add('drop-over');
+    });
+    gap.addEventListener('dragleave', () => gap.classList.remove('drop-over'));
+    gap.addEventListener('drop', e => {
+      e.preventDefault();
+      gap.classList.remove('drop-over');
+      if (dragId === null) return;
+      const idx = parseInt(gap.dataset.gap, 10);
+      openDropModal(dragId, idx);
+      dragId = null;
+    });
+  });
+
+  renderTagList();
+  renderCreatorList();
+  renderUndated();
+
+  // refresh detail if open
+  if (detailId !== null) {
+    const src   = detailSource;
+    const id    = detailId;
+    const list  = src === 'undated' ? undated : events;
+    const still = list.find(x => x.id === id);
+    if (still) populateDetail(id, src);
+    else closeDetail();
+  }
+}
+
+/* ══════════════════════════════════════
+   FILTERS
+══════════════════════════════════════ */
+function renderTagList() {
+  const counts = allTagCounts();
+  document.getElementById('tag-list').innerHTML =
+    Object.entries(counts).sort((a, b) => b[1] - a[1])
+    .map(([t, c]) => `<button class="tag-fb${activeTags.has(t) ? ' on' : ''}" onclick="toggleTag('${t}')">${t}<span class="tag-count">${c}</span></button>`)
+    .join('');
+}
+
+function renderCreatorList() {
+  const used = [...new Set(events.map(e => e.creator))];
+  document.getElementById('creator-list').innerHTML = used.map(c => {
+    const cr = CREATORS[c] || { name: c, color: '#888' };
+    return `<button class="creator-fb${activeCreators.has(c) ? ' on' : ''}" onclick="toggleCreator('${c}')">
+      <div class="creator-av" style="background:${cr.color}">${c}</div>
+      <span class="creator-nm">${cr.name}</span>
+    </button>`;
+  }).join('');
+}
+
+function toggleTag(t)     { activeTags.has(t) ? activeTags.delete(t) : activeTags.add(t); renderTimeline(); }
+function clearTags()      { activeTags.clear(); renderTimeline(); }
+function toggleCreator(c) { activeCreators.has(c) ? activeCreators.delete(c) : activeCreators.add(c); renderTimeline(); }
+function clearCreators()  { activeCreators.clear(); renderTimeline(); }
+
+function toggleCompact() {
+  compact = !compact;
+  document.getElementById('tog-track').classList.toggle('on', compact);
+  document.getElementById('timeline').classList.toggle('compact', compact);
+}
+
+/* ══════════════════════════════════════
+   UNDATED PANEL
+══════════════════════════════════════ */
+function renderUndated() {
+  const el = document.getElementById('undated-list');
+  if (!undated.length) { el.innerHTML = '<div class="undated-empty">Keine Einträge</div>'; return; }
+  el.innerHTML = undated.map(ev => {
+    const cr    = CREATORS[ev.creator] || { name: ev.creator, color: '#888' };
+    const isAct = detailId === ev.id && detailSource === 'undated';
+    return `<div class="undated-card${isAct ? ' active' : ''}"
+              draggable="true"
+              data-uid="${ev.id}"
+              onmousedown="onUndatedMouseDown(event)"
+              ondragstart="onUndatedDragStart(event,${ev.id})"
+              ondragend="onUndatedDragEnd(event)"
+              onclick="onUndatedClick(event,${ev.id})">
+      <div class="undated-ttl">${ev.title}</div>
+      <div class="undated-tags">${ev.tags.map(t => '<span class="undated-tag">' + t + '</span>').join('')}</div>
+      <div class="undated-cr"><div class="undated-av" style="background:${cr.color}">${ev.creator}</div>${cr.name}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════
+   DRAG & DROP
+══════════════════════════════════════ */
+function onUndatedMouseDown(e) {
+  mouseDownX = e.clientX;
+  mouseDownY = e.clientY;
+  didDrag    = false;
+}
+
+function onUndatedDragStart(e, id) {
+  didDrag = true;
+  dragId  = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(id));
+  setTimeout(() => {
+    const card = document.querySelector('.undated-card[data-uid="' + id + '"]');
+    if (card) card.classList.add('dragging');
+  }, 0);
+}
+
+function onUndatedDragEnd(e) {
+  dragId = null;
+  document.querySelectorAll('.undated-card.dragging').forEach(c => c.classList.remove('dragging'));
+  document.querySelectorAll('.rope-gap.drop-over').forEach(g => g.classList.remove('drop-over'));
+}
+
+function onUndatedClick(e, id) {
+  const dx = Math.abs(e.clientX - mouseDownX);
+  const dy = Math.abs(e.clientY - mouseDownY);
+  if (didDrag || dx > 6 || dy > 6) return; // was a drag, not a click
+  e.stopPropagation();
+  if (detailId === id && detailSource === 'undated') { closeDetail(); return; }
+  populateDetail(id, 'undated');
+  openDetailPanel();
+}
+
+function openDropModal(id, idx) {
+  dropId = id;
+  const ev = undated.find(x => x.id === id);
+  if (!ev) return;
+  document.getElementById('m-title').textContent = 'Datum festlegen';
+  showForms(false, false, false, true);
+  document.getElementById('drop-intro').innerHTML =
+    'Ereignis <strong style="font-style:normal;color:var(--t1)">' + ev.title + '</strong> in die Chronik einordnen.';
+  document.getElementById('drop-date').value = '';
+  setSaveBtn('Einordnen', false);
+  editSource = 'drop';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('drop-date').focus(), 80);
+}
+
+/* ══════════════════════════════════════
+   ROPE CLICK
+══════════════════════════════════════ */
+function onRopeClick(e, idx) {
+  if (dragId !== null) return; // mid-drag, ignore
+  openTLModal();
+}
+
+function openUndatedAdd() {
+  undatedMode = true;
+  openTLModal();
+}
+
+/* ══════════════════════════════════════
+   DETAIL PANEL
+══════════════════════════════════════ */
+function onTLCardClick(e, id) {
+  e.stopPropagation();
+  if (detailId === id && detailSource === 'tl') { closeDetail(); return; }
+  populateDetail(id, 'tl');
+  openDetailPanel();
+}
+
+function populateDetail(id, source) {
+  const ev = (source === 'undated' ? undated : events).find(x => x.id === id);
+  if (!ev) return;
+  detailId     = id;
+  detailSource = source;
+  const cr      = CREATORS[ev.creator] || { name: ev.creator, color: '#888' };
+  const dateStr = source === 'undated' ? 'Datum unbekannt' : (ev.date > 0 ? '+' + ev.date + ' n.Z.' : ev.date + ' n.Z.');
+  document.getElementById('dp-title').textContent = ev.title;
+  document.getElementById('dp-date').textContent  = dateStr;
+  const descEl = document.getElementById('dp-desc');
+  if (ev.desc && ev.desc.trim()) { descEl.textContent = ev.desc; descEl.className = 'detail-desc'; }
+  else { descEl.textContent = 'Noch keine Beschreibung eingetragen.'; descEl.className = 'detail-desc empty'; }
+  document.getElementById('dp-tags').innerHTML = ev.tags.map(t => '<span class="detail-tag">' + t + '</span>').join('');
+  document.getElementById('dp-meta').innerHTML = `
+    <div class="detail-type"><div class="detail-type-dot ${ev.type}"></div>${ev.type === 'world' ? 'Weltereignis' : 'Lokales Ereignis'}</div>
+    <div class="detail-creator"><div class="detail-creator-av" style="background:${cr.color}">${ev.creator}</div>— ${cr.name}</div>`;
+  document.getElementById('dp-edit').onclick = () => { closeDetail(); openEditModal(id, source); };
+  document.getElementById('dp-del').onclick  = () => { closeDetail(); openDeleteConfirm(id, source); };
+  // highlight card
+  document.querySelectorAll('.event-card.active, .undated-card.active').forEach(c => c.classList.remove('active'));
+  const row = document.querySelector('.event-row[data-id="' + id + '"]');
+  if (row) row.querySelector('.event-card')?.classList.add('active');
+}
+
+function openDetailPanel() {
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.querySelectorAll('.event-card.active, .undated-card.active').forEach(c => c.classList.remove('active'));
+  detailId     = null;
+  detailSource = null;
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('detail-panel');
+  if (!panel.classList.contains('open')) return;
+  if (panel.contains(e.target)) return;
+  if (e.target.closest('.event-card') || e.target.closest('.undated-card')) return;
+  closeDetail();
+});
+
+/* ══════════════════════════════════════
+   MODAL HELPERS
+══════════════════════════════════════ */
+function showForms(tl, it, del, drop) {
+  document.getElementById('f-tl').style.display   = tl   ? 'grid'  : 'none';
+  document.getElementById('f-it').style.display   = it   ? 'grid'  : 'none';
+  document.getElementById('f-del').style.display  = del  ? 'block' : 'none';
+  document.getElementById('f-drop').style.display = drop ? 'block' : 'none';
+}
+
+function setSaveBtn(label, danger) {
+  const b = document.getElementById('m-save');
+  b.textContent = label;
+  b.className   = danger ? 'btn btn-danger' : 'btn btn-primary';
+}
+
+function openModal()  { document.getElementById('modal').classList.add('open'); }
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editId = null; editSource = null; editItemIdx = null; dropId = null; undatedMode = false;
+}
+document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+/* ══════════════════════════════════════
+   OPEN MODALS
+══════════════════════════════════════ */
+function openTLModal() {
+  editId = null; editSource = 'tl';
+  document.getElementById('m-title').textContent = 'Ereignis eintragen';
+  showForms(true, false, false, false);
+  setSaveBtn('Eintragen', false);
+  ['f-ti','f-da','f-tg','f-cr'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-ty').value   = 'world';
+  openModal();
+}
+
+function openAddModal() {
+  if (currentPage === 'items') {
+    editId = null; editSource = 'item';
+    document.getElementById('m-title').textContent = 'Gegenstand hinzufügen';
+    showForms(false, true, false, false);
+    setSaveBtn('Hinzufügen', false);
+    ['fi-n','fi-u'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fi-p').value = '';
+    openModal();
+  } else {
+    openTLModal();
+  }
+}
+
+function openEditModal(id, source) {
+  editId = id; editSource = source;
+  const ev = (source === 'undated' ? undated : events).find(x => x.id === id);
+  if (!ev) return;
+  document.getElementById('m-title').textContent = 'Ereignis bearbeiten';
+  showForms(true, false, false, false);
+  setSaveBtn('Speichern', false);
+  document.getElementById('f-ti').value   = ev.title;
+  document.getElementById('f-da').value   = source === 'undated' ? '' : (ev.date ?? '');
+  document.getElementById('f-ty').value   = ev.type;
+  document.getElementById('f-tg').value   = ev.tags.join(', ');
+  document.getElementById('f-desc').value = ev.desc || '';
+  document.getElementById('f-cr').value   = ev.creator;
+  openModal();
+}
+
+function openEditItem(idx) {
+  editSource = 'item'; editItemIdx = idx;
+  const it = items[idx];
+  document.getElementById('m-title').textContent = 'Gegenstand bearbeiten';
+  showForms(false, true, false, false);
+  setSaveBtn('Speichern', false);
+  document.getElementById('fi-n').value = it.name;
+  document.getElementById('fi-p').value = it.price;
+  document.getElementById('fi-r').value = it.rarity;
+  document.getElementById('fi-u').value = it.url || '';
+  openModal();
+}
+
+function openDeleteConfirm(id, source) {
+  editId = id; editSource = source + '-del';
+  const ev = (source === 'undated' ? undated : events).find(x => x.id === id);
+  if (!ev) return;
+  document.getElementById('m-title').textContent = 'Eintrag löschen';
+  document.getElementById('del-txt').innerHTML =
+    'Soll <span class="del-confirm-name">„' + ev.title + '"</span> wirklich aus der Chronik entfernt werden?';
+  showForms(false, false, true, false);
+  setSaveBtn('Endgültig löschen', true);
+  openModal();
+}
+
+function openDeleteItem(idx) {
+  editSource = 'item-del'; editItemIdx = idx;
+  document.getElementById('m-title').textContent = 'Gegenstand löschen';
+  document.getElementById('del-txt').innerHTML =
+    'Soll <span class="del-confirm-name">„' + items[idx].name + '"</span> wirklich entfernt werden?';
+  showForms(false, false, true, false);
+  setSaveBtn('Endgültig löschen', true);
+  openModal();
+}
+
+/* ══════════════════════════════════════
+   SAVE ENTRY
+══════════════════════════════════════ */
+function saveEntry() {
+  // DROP placement
+  if (editSource === 'drop') {
+    const dateStr = document.getElementById('drop-date').value.trim();
+    if (!dateStr) { alert('Datum ist Pflicht'); return; }
+    const ev = undated.find(x => x.id === dropId);
+    if (ev) {
+      undated = undated.filter(x => x.id !== dropId);
+      ev.date = parseInt(dateStr, 10) || 0;
+      events.push(ev);
+    }
+    closeModal(); renderTimeline(); return;
+  }
+
+  // DELETE
+  if (editSource === 'item-del') {
+    items.splice(editItemIdx, 1); closeModal(); renderItems(); return;
+  }
+  if (editSource === 'tl-del') {
+    events  = events.filter(x => x.id !== editId); closeModal(); renderTimeline(); return;
+  }
+  if (editSource === 'undated-del') {
+    undated = undated.filter(x => x.id !== editId); closeModal(); renderTimeline(); return;
+  }
+
+  // ITEM create/edit
+  if (editSource === 'item') {
+    const name = document.getElementById('fi-n').value.trim();
+    if (!name) { alert('Name ist Pflicht'); return; }
+    const entry = { name, price: parseFloat(document.getElementById('fi-p').value) || 0, rarity: document.getElementById('fi-r').value, url: document.getElementById('fi-u').value.trim() };
+    if (editItemIdx != null) items[editItemIdx] = entry;
+    else items.push(entry);
+    closeModal(); renderItems(); return;
+  }
+
+  // TIMELINE create/edit
+  const title   = document.getElementById('f-ti').value.trim();
+  const dateStr = document.getElementById('f-da').value.trim();
+  const type    = document.getElementById('f-ty').value;
+  const tagsRaw = document.getElementById('f-tg').value.trim();
+  const desc    = document.getElementById('f-desc').value.trim();
+  const creator = document.getElementById('f-cr').value.trim().toUpperCase();
+  if (!title)   { alert('Titel ist Pflicht'); return; }
+  if (!creator) { alert('Ersteller-Kürzel ist Pflicht'); return; }
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  if (editId != null) {
+    // edit existing
+    if (editSource === 'undated') {
+      const idx = undated.findIndex(x => x.id === editId);
+      if (idx > -1) {
+        if (dateStr) { undated.splice(idx, 1); events.push({ id: editId, title, type, tags, creator, desc, date: parseInt(dateStr, 10) || 0 }); }
+        else { undated[idx] = { ...undated[idx], title, type, tags, creator, desc }; }
+      }
+    } else {
+      const idx = events.findIndex(x => x.id === editId);
+      if (idx > -1) {
+        if (!dateStr) { events.splice(idx, 1); undated.push({ id: editId, title, type, tags, creator, desc }); }
+        else { events[idx] = { ...events[idx], title, type, tags, creator, desc, date: parseInt(dateStr, 10) || 0 }; }
+      }
+    }
+  } else {
+    // create new
+    const ev = { id: nid++, title, type, tags, creator, desc };
+    if (!dateStr || undatedMode) undated.push(ev);
+    else { ev.date = parseInt(dateStr, 10) || 0; events.push(ev); }
+  }
+  closeModal(); renderTimeline();
+}
+
+/* ══════════════════════════════════════
+   RARITY MULTISELECT
+══════════════════════════════════════ */
+function toggleRarityDd(e) {
+  e.stopPropagation();
+  const dd  = document.getElementById('rf-dropdown');
+  const tr  = document.getElementById('rf-trigger');
+  const open = dd.classList.toggle('open');
+  tr.classList.toggle('open', open);
+}
+
+function onRarityChange() {
+  updateRarityLabel();
+  renderItems();
+}
+
+function updateRarityLabel() {
+  const checked = [...document.querySelectorAll('#rf-dropdown input:checked')];
+  const lbl = document.getElementById('rf-label');
+  if (checked.length === 0 || checked.length === 4) {
+    lbl.innerHTML = '<span class="placeholder">Alle Seltenheiten</span>';
+  } else {
+    lbl.innerHTML = checked.map(cb =>
+      '<span class="rarity-badge rarity-' + cb.value.toLowerCase() + '" style="font-size:.5rem;padding:2px 7px">' + cb.value + '</span>'
+    ).join('');
+  }
+}
+
+function clearRarity() {
+  document.querySelectorAll('#rf-dropdown input').forEach(cb => cb.checked = false);
+  updateRarityLabel();
+  renderItems();
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('rarity-filter').contains(e.target)) {
+    document.getElementById('rf-dropdown').classList.remove('open');
+    document.getElementById('rf-trigger').classList.remove('open');
+  }
+});
+
+/* ══════════════════════════════════════
+   ITEMS
+══════════════════════════════════════ */
+function renderItems() {
+  const search  = document.getElementById('s-search').value.toLowerCase();
+  const checked = [...document.querySelectorAll('#rf-dropdown input:checked')].map(cb => cb.value.toLowerCase());
+  const minP    = parseFloat(document.getElementById('s-min').value) || 0;
+  const maxP    = parseFloat(document.getElementById('s-max').value) || Infinity;
+
+  let f = items.filter(i =>
+    i.name.toLowerCase().includes(search) &&
+    (checked.length === 0 || checked.includes(i.rarity.toLowerCase())) &&
+    i.price >= minP && i.price <= maxP
+  );
+
+  if (sKey) f.sort((a, b) => {
+    let va = a[sKey], vb = b[sKey];
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    return va < vb ? -sDir : va > vb ? sDir : 0;
+  });
+
+  document.getElementById('items-body').innerHTML = f.map((it, i) => `
+    <tr style="animation-delay:${i * .04}s">
+      <td><span class="i-name">${it.name}</span></td>
+      <td class="col-price"><span class="i-price">${it.price.toLocaleString('de-DE')} ⚜</span></td>
+      <td><span class="rarity-badge rarity-${it.rarity.toLowerCase()}">${it.rarity}</span></td>
+      <td class="i-link"><a href="${it.url || '#'}" target="_blank">${it.url || '—'}</a></td>
+      <td><div class="act-btns">
+        <button class="act-btn" title="Bearbeiten" onclick="openEditItem(${items.indexOf(it)})">✎</button>
+        <button class="act-btn del" title="Löschen" onclick="openDeleteItem(${items.indexOf(it)})">✕</button>
+      </div></td>
+    </tr>`).join('');
+
+  document.getElementById('item-count').textContent = f.length + ' Eintr' + (f.length === 1 ? 'ag' : 'äge');
+}
+
+function sortBy(k) { sKey === k ? sDir *= -1 : (sKey = k, sDir = 1); renderItems(); }
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+renderTimeline();
+renderItems();
+</script>
+</body>
+</html>

@@ -7,11 +7,14 @@ const { loginAsAdmin, ADMIN_HEADERS } = require('./helpers');
  * Requires the app running on http://localhost:8080 with the dev profile.
  */
 
+/** Navigates to the user management page and waits for the user table to be populated. */
 async function openUsersPage(page) {
   await page.goto('/');
   await loginAsAdmin(page);
   await page.locator('#btn-gear').click();
   await expect(page.locator('#page-users')).toBeVisible({ timeout: 5000 });
+  // renderUsers() is async and not awaited by showPage — wait for tbody to have rows
+  await expect(page.locator('#users-body tr')).not.toHaveCount(0, { timeout: 5000 });
 }
 
 // ── AL-C1-001: Nutzerliste anzeigen ──────────────────────────────────────────
@@ -93,6 +96,7 @@ test.describe('AL-C1-003 — Nutzerrolle und Farbe bearbeiten', () => {
       headers: ADMIN_HEADERS,
       data: { username: editUsername, password: 'test1234', role: 'USER' },
     });
+    expect(res.ok(), `beforeEach: POST /api/admin/users returned ${res.status()}`).toBeTruthy();
     userId = (await res.json()).id;
   });
 
@@ -131,6 +135,7 @@ test.describe('AL-C1-004 — Nutzer löschen', () => {
       headers: ADMIN_HEADERS,
       data: { username: delUsername, password: 'test1234', role: 'USER' },
     });
+    expect(res.ok(), `beforeEach: POST /api/admin/users returned ${res.status()}`).toBeTruthy();
     userId = (await res.json()).id;
   });
 
@@ -161,6 +166,7 @@ test.describe('AL-C1-005 — Passwort zurücksetzen (wird auf Benutzername geset
       headers: ADMIN_HEADERS,
       data: { username: resetUsername, password: 'original-pw', role: 'USER' },
     });
+    expect(res.ok(), `beforeEach: POST /api/admin/users returned ${res.status()}`).toBeTruthy();
     userId = (await res.json()).id;
   });
 
@@ -174,7 +180,8 @@ test.describe('AL-C1-005 — Passwort zurücksetzen (wird auf Benutzername geset
     await expect(page.locator('#user-modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#um-reset-grp')).toBeVisible();
     await expect(page.locator('#um-reset-pw')).toBeVisible();
-    await page.locator('button:has-text("Abbrechen")').last().click();
+    await page.locator('#user-modal button:has-text("Abbrechen")').click();
+    await expect(page.locator('#user-modal')).toBeHidden({ timeout: 3000 });
   });
 
   test('after reset, user can log in with their username as password', async ({ page, request: apiCtx }) => {

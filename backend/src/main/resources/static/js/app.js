@@ -178,15 +178,16 @@ async function navigateToUrl({ page, worldId, subId }, push) {
     return;
   }
 
-  // Guests cannot access world pages — send them to Marktplatz
-  if (!state.auth.loggedIn) {
+  const world = worldId ? state.worlds.find(w => w.id === worldId) : null;
+
+  // Guests can only navigate to worlds the server already returned (guestCanRead filter).
+  if (!state.auth.loggedIn && !world) {
     if (push) pushUrl('/');
     showPage('items');
-    console.debug('[navigateToUrl] ← not logged in, fallback to items');
+    console.debug('[navigateToUrl] ← guest, no accessible world, fallback to items');
     return;
   }
 
-  const world = worldId ? state.worlds.find(w => w.id === worldId) : null;
   if (!world) {
     if (push) pushUrl('/');
     showPage('items');
@@ -287,23 +288,25 @@ function showPage(p) {
 
 /** Returns true if the current user (logged-in or guest) may create/edit content in the active world. */
 function canEditActiveWorld() {
-  if (state.auth.loggedIn) return true;
+  if (state.auth.isAdmin) return true;
   const w = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  if (state.auth.loggedIn) return w?.userCanEdit !== false;
   return w?.guestCanEdit === true;
 }
 
 /** Returns true if the current user may delete content in the active world. */
 function canDeleteActiveWorld() {
-  if (state.auth.loggedIn) return true;
+  if (state.auth.isAdmin) return true;
   const w = state.worlds.find(w => w.id === state.ui.activeWorldId);
+  if (state.auth.loggedIn) return w?.userCanDelete !== false;
   return w?.guestCanDelete === true;
 }
 
 function applyAuthUI() {
   const { loggedIn, isAdmin, username } = state.auth;
   const activeWorld = state.worlds.find(w => w.id === state.ui.activeWorldId);
-  const canEditWorld  = loggedIn || activeWorld?.guestCanEdit   === true;
-  const canDeleteWorld = loggedIn || activeWorld?.guestCanDelete === true;
+  const canEditWorld   = isAdmin || (loggedIn ? activeWorld?.userCanEdit   !== false : activeWorld?.guestCanEdit   === true);
+  const canDeleteWorld = isAdmin || (loggedIn ? activeWorld?.userCanDelete !== false : activeWorld?.guestCanDelete === true);
 
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? '' : 'none';
@@ -329,30 +332,6 @@ function applyAuthUI() {
 
 // keep old name as alias so nothing else breaks
 function updateAdminVisibility() { applyAuthUI(); }
-
-/* ══════════════════════════════════════
-   WORLD SELECTOR
-══════════════════════════════════════ */
-function renderWorldSelector() {
-  const el = document.getElementById('world-selector');
-  if (!el) return;
-  if (!state.worlds.length) {
-    el.innerHTML = '<div style="font-style:italic;font-size:.78rem;color:var(--t3);text-align:center;padding:8px 0">Keine Welten vorhanden</div>';
-    return;
-  }
-  el.innerHTML = state.worlds.map(w => {
-    const isActive = w.id === state.ui.activeWorldId;
-    const editBtns = state.auth.isAdmin
-      ? `<span class="world-edit-btns">
-           <button class="world-edit-btn" title="Bearbeiten" onclick="openEditWorldModal(${w.id},event)">✎</button>
-           <button class="world-edit-btn del" title="Löschen" onclick="openDeleteWorldConfirm(${w.id},event)">✕</button>
-         </span>`
-      : '';
-    return `<div class="world-btn${isActive ? ' active' : ''}" onclick="selectWorld(${w.id})">
-      <span>${escHtml(w.name)}</span>${editBtns}
-    </div>`;
-  }).join('');
-}
 
 /**
  * Triggers a browser download of the wiki export ZIP for the given world.
@@ -1768,10 +1747,8 @@ async function init() {
     renderItems();
     renderItemTagFilter();
     applyAuthUI();
-    if (state.auth.loggedIn) {
-      loadPoiTypes();
-      loadWikiTitles();
-    }
+    loadPoiTypes();
+    loadWikiTitles();
     await navigateToUrl(parseUrl(), false);
     if (state.auth.mustChangePassword) showPasswordChangeOverlay();
   } catch (e) {

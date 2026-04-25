@@ -55,7 +55,8 @@ test.describe('AL-C1-002 — Nutzer erstellen', () => {
     await page.locator('button:has-text("+ Nutzer anlegen")').click();
     await expect(page.locator('#user-modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#um-username')).toBeVisible();
-    await page.locator('button:has-text("Abbrechen")').last().click();
+    await page.locator('#user-modal button:has-text("Abbrechen")').click();
+    await expect(page.locator('#user-modal')).toBeHidden({ timeout: 3000 });
   });
 
   test('admin can create a new user and it appears in the list', async ({ page }) => {
@@ -75,7 +76,8 @@ test.describe('AL-C1-002 — Nutzer erstellen', () => {
     await page.locator('#um-username').fill('');
     await page.locator('#um-save').click();
     await expect(page.locator('#um-err')).toBeVisible({ timeout: 3000 });
-    await page.locator('button:has-text("Abbrechen")').last().click();
+    await page.locator('#user-modal button:has-text("Abbrechen")').click();
+    await expect(page.locator('#user-modal')).toBeHidden({ timeout: 3000 });
   });
 
 });
@@ -102,7 +104,8 @@ test.describe('AL-C1-003 — Nutzerrolle und Farbe bearbeiten', () => {
     await openUsersPage(page);
     await page.locator('#users-body tr').filter({ hasText: editUsername }).locator('button').first().click();
     await expect(page.locator('#user-modal')).toBeVisible({ timeout: 3000 });
-    await page.locator('button:has-text("Abbrechen")').last().click();
+    await page.locator('#user-modal button:has-text("Abbrechen")').click();
+    await expect(page.locator('#user-modal')).toBeHidden({ timeout: 3000 });
   });
 
   test('admin can change user role to ADMIN', async ({ page }) => {
@@ -138,13 +141,9 @@ test.describe('AL-C1-004 — Nutzer löschen', () => {
   test('admin can delete a user and it disappears from the list', async ({ page }) => {
     await openUsersPage(page);
     const row = page.locator('#users-body tr').filter({ hasText: delUsername });
-    // Click the delete button (last action button in the row)
-    await row.locator('button.act-btn.del, button[title="Löschen"]').last().click();
-    // Confirm if modal appears
-    const modal = page.locator('#modal');
-    if (await modal.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await page.locator('#m-save').click();
-    }
+    // deleteUser() uses window.confirm — accept it before clicking
+    page.once('dialog', dialog => dialog.accept());
+    await row.locator('button.act-btn.del').click();
     await expect(page.locator('#users-body').filter({ hasText: delUsername })).toBeHidden({ timeout: 5000 });
     userId = null;
   });

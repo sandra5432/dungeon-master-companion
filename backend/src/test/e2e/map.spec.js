@@ -151,6 +151,7 @@ test.describe('AL-B3-006 — POI löschen', () => {
     await page.locator('#map-tool-edit').click();
     await page.locator(`.map-poi[data-poi-id="${poiId}"]`).click();
     await expect(page.locator('#poi-modal')).toBeVisible({ timeout: 3000 });
+    page.once('dialog', dialog => dialog.accept());
     await page.locator('#poi-delete-btn').click();
     await expect(page.locator('#poi-modal')).toBeHidden({ timeout: 5000 });
     await expect(page.locator(`.map-poi[data-poi-id="${poiId}"]`)).toBeHidden({ timeout: 5000 });
@@ -278,11 +279,14 @@ test.describe('AL-B3-005 — POI verschieben (API)', () => {
     expect(updated.yPct).toBeCloseTo(80.0, 1);
   });
 
-  test('guest cannot move a POI when not the creator', async ({ request: apiCtx }) => {
-    // POI was created by admin; guest (no auth) should get 403
-    const res = await apiCtx.put(`/api/worlds/1/map/pois/${poiId}`, {
+  test('guest cannot move a POI when not the creator', async ({ playwright }) => {
+    // The shared apiCtx carries an admin session cookie from beforeEach — use a fresh context instead
+    const freshCtx = await playwright.request.newContext({ baseURL: 'http://localhost:8080' });
+    const res = await freshCtx.put(`/api/worlds/1/map/pois/${poiId}`, {
       data: { xPct: 50.0, yPct: 50.0 },
     });
+    await freshCtx.dispose();
+    // POI was created by admin; guest (no auth) has no ownership → 403
     expect([403, 401]).toContain(res.status());
   });
 

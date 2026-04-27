@@ -178,9 +178,9 @@ test.describe('AL-B2-008/009 — Wiki-Eintrag erstellen und bearbeiten', () => {
     }
   });
 
-  test('create button is hidden for guests', async ({ page }) => {
+  test('create button is visible for guests (Pardur has guestCanEdit=true)', async ({ page }) => {
     await goToPardurWiki(page);
-    await expect(page.locator('.wiki-new-entry-wrap')).toBeHidden();
+    await expect(page.locator('.wiki-new-entry-wrap')).toBeVisible();
   });
 
   test('create button is visible for admin', async ({ page }) => {
@@ -207,7 +207,7 @@ test.describe('AL-B2-008/009 — Wiki-Eintrag erstellen und bearbeiten', () => {
     await page.locator('.wiki-new-btn').click();
     await page.locator('#wiki-ed-title').fill(entryTitle);
     await page.locator('#wiki-ed-type').selectOption('PERSON');
-    await page.locator('button:has-text("Speichern")').last().click();
+    await page.locator('#wiki-editor-panel button:has-text("Speichern")').click();
     await expect(page.locator('#wiki-editor-panel')).toBeHidden({ timeout: 5000 });
     await expect(page.locator('#wiki-recent-list').filter({ hasText: entryTitle })).toBeVisible({ timeout: 5000 });
 
@@ -224,7 +224,7 @@ test.describe('AL-B2-008/009 — Wiki-Eintrag erstellen und bearbeiten', () => {
     await goToPardurWiki(page);
     await page.locator('.wiki-new-btn').click();
     await page.locator('#wiki-ed-title').fill('');
-    await page.locator('button:has-text("Speichern")').last().click();
+    await page.locator('#wiki-editor-panel button:has-text("Speichern")').click();
     await expect(page.locator('#wiki-editor-error')).toBeVisible({ timeout: 3000 });
     await page.locator('#wiki-editor-panel .wiki-panel-close').click();
   });
@@ -248,7 +248,7 @@ test.describe('AL-B2-008/009 — Wiki-Eintrag erstellen und bearbeiten', () => {
     await expect(page.locator('#wiki-editor-panel')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#wiki-ed-title')).toHaveValue(entryTitle);
     await page.locator('#wiki-ed-title').fill(updatedTitle);
-    await page.locator('button:has-text("Speichern")').last().click();
+    await page.locator('#wiki-editor-panel button:has-text("Speichern")').click();
     await expect(page.locator('#wiki-recent-list').filter({ hasText: updatedTitle })).toBeVisible({ timeout: 5000 });
   });
 
@@ -286,12 +286,9 @@ test.describe('AL-B2-010 — Wiki-Eintrag löschen', () => {
     await goToPardurWiki(page);
     await page.locator('#wiki-recent-list').getByText(deleteTitle).first().click();
     await expect(page.locator('#wiki-article-panel')).toBeVisible({ timeout: 5000 });
-    await page.locator('#wiki-article-panel button:has-text("Löschen"), #wiki-article-content button:has-text("Löschen")').first().click();
-    // Confirm deletion if a confirmation dialog appears
-    const modal = page.locator('#modal');
-    if (await modal.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await page.locator('#m-save').click();
-    }
+    // The delete button has class wiki-icon-btn--del and triggers a native confirm() dialog
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#wiki-article-panel button.wiki-icon-btn--del, #wiki-article-content button.wiki-icon-btn--del').first().click();
     await expect(page.locator('#wiki-recent-list').filter({ hasText: deleteTitle })).toBeHidden({ timeout: 5000 });
     entryId = null;
   });
@@ -348,8 +345,8 @@ test.describe('AL-B2-016 — Wiki-Einträge in Body verlinken', () => {
     await goToPardurWiki(page);
     await page.locator('#wiki-recent-list').getByText('Glimmquali').first().click();
     await expect(page.locator('#wiki-article-panel')).toBeVisible({ timeout: 5000 });
-    // Tavari is mentioned in Glimmquali body — it should be auto-linked
-    await expect(page.locator('#wiki-article-content .wiki-inline-link').filter({ hasText: 'Tavari' })).toBeVisible({ timeout: 5000 });
+    // Tavari appears multiple times in Glimmquali body; use .first() to avoid strict-mode violation
+    await expect(page.locator('#wiki-article-content .wiki-inline-link').filter({ hasText: 'Tavari' }).first()).toBeVisible({ timeout: 5000 });
   });
 
 });
@@ -425,9 +422,9 @@ test.describe('AL-B2-007 — Vorschau-Tooltip bei Hover', () => {
 // ── AL-B2-012: Bild-Lightbox ──────────────────────────────────────────────────
 
 test.describe('AL-B2-012 — Bild-Lightbox', () => {
-  // Minimal 1×1 white pixel WebP (VP8L lossless)
-  const MINIMAL_WEBP = Buffer.from(
-    'UklGRlYAAABXRUJQVlA4IEoAAADQAQCdASoBAAEAAkA4JYgCdAEO/gHOAADN3wAA7+aAAA==',
+  // Minimal 1×1 red pixel PNG — Java ImageIO reads this natively without plugins
+  const MINIMAL_PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     'base64'
   );
   let entryId;
@@ -438,16 +435,18 @@ test.describe('AL-B2-012 — Bild-Lightbox', () => {
       headers: ADMIN_HEADERS,
       data: { title: `LightboxTest-${Date.now()}`, type: 'TERM', worldId: 1, body: '' },
     });
+    expect(res.ok()).toBeTruthy();
     entryId = (await res.json()).id;
 
-    // Upload the minimal WebP image
-    await apiCtx.post(`/api/wiki/${entryId}/images`, {
+    // Upload a minimal PNG image with a caption
+    const uploadRes = await apiCtx.post(`/api/wiki/${entryId}/images`, {
       headers: { Authorization: ADMIN_HEADERS.Authorization },
       multipart: {
-        file: { name: 'test.webp', mimeType: 'image/webp', buffer: MINIMAL_WEBP },
+        file: { name: 'test.png', mimeType: 'image/png', buffer: MINIMAL_PNG },
         caption: 'Testbild',
       },
     });
+    expect(uploadRes.ok()).toBeTruthy();
   });
 
   test.afterEach(async ({ request: apiCtx }) => {
@@ -517,6 +516,8 @@ test.describe('AL-B2-014 — Spoiler-Block erstellen', () => {
     await page.locator('.wiki-new-btn').click();
     await expect(page.locator('#wiki-editor-panel')).toBeVisible({ timeout: 3000 });
     await page.locator('#wiki-ed-body').click();
+    // wikiToolbar('spoiler') opens a native prompt() dialog — accept it with a name
+    page.once('dialog', dialog => dialog.accept('Testspoiler'));
     await page.locator('#wiki-toolbar-spoiler').click();
     const bodyValue = await page.locator('#wiki-ed-body').inputValue();
     expect(bodyValue).toContain(':::spoiler');
@@ -572,8 +573,11 @@ test.describe('AL-B2-015 — Spoiler-Zugriff verwalten', () => {
     expect(res.ok()).toBeTruthy();
   });
 
-  test('unauthenticated request to add spoiler reader returns 401 or 403', async ({ request: apiCtx }) => {
-    const res = await apiCtx.post(`/api/wiki/${entryId}/spoiler-readers/${userId}`);
+  test('unauthenticated request to add spoiler reader returns 401 or 403', async ({ playwright }) => {
+    // The shared apiCtx carries an admin session cookie from beforeEach — use a fresh context instead
+    const freshCtx = await playwright.request.newContext({ baseURL: 'http://localhost:8080' });
+    const res = await freshCtx.post(`/api/wiki/${entryId}/spoiler-readers/${userId}`);
+    await freshCtx.dispose();
     expect([401, 403]).toContain(res.status());
   });
 

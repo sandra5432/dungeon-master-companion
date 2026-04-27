@@ -46,7 +46,7 @@ test.describe('AL-B1-002 — Ereignis-Detailpanel', () => {
     await page.locator('.event-card').first().click();
     await expect(page.locator('#detail-panel')).toBeVisible({ timeout: 3000 });
     await page.locator('.detail-close').click();
-    await expect(page.locator('#detail-panel')).toBeHidden({ timeout: 3000 });
+    await expect(page.locator('#detail-panel')).not.toHaveClass(/open/, { timeout: 3000 });
   });
 
 });
@@ -86,7 +86,7 @@ test.describe('AL-B1-004 — Ereignis erstellen', () => {
     await page.locator('.rope-gap').first().click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#f-ti')).toBeVisible();
-    await page.locator('.m-close').click();
+    await page.locator('#modal .m-close').click();
   });
 
   test('guest can create a new event and it appears on timeline', async ({ page }) => {
@@ -107,7 +107,7 @@ test.describe('AL-B1-004 — Ereignis erstellen', () => {
     await page.locator('#m-save').click();
     // Modal stays open on validation error
     await expect(page.locator('#modal')).toBeVisible();
-    await page.locator('.m-close').click();
+    await page.locator('#modal .m-close').click();
   });
 
 });
@@ -122,10 +122,14 @@ test.describe('AL-B1-005/006 — Ereignis bearbeiten und löschen', () => {
   test.beforeEach(async ({ request: apiCtx }) => {
     const res = await apiCtx.post('/api/worlds/1/events', {
       headers: ADMIN_HEADERS,
-      data: { title: editTitle, type: 'WORLD' },
+      data: { title: editTitle, type: 'WORLD', dateLabel: 'Jahr 999' },
     });
     const ev = await res.json();
     eventId = ev.id;
+    await apiCtx.patch(`/api/worlds/1/events/${eventId}/assign-position`, {
+      headers: ADMIN_HEADERS,
+      data: { afterEventId: null },
+    });
   });
 
   test.afterEach(async ({ request: apiCtx }) => {
@@ -141,7 +145,7 @@ test.describe('AL-B1-005/006 — Ereignis bearbeiten und löschen', () => {
     await page.locator('#dp-edit').click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#f-ti')).toHaveValue(editTitle);
-    await page.locator('.m-close').click();
+    await page.locator('#modal .m-close').click();
   });
 
   test('admin can update event title', async ({ page }) => {
@@ -163,7 +167,7 @@ test.describe('AL-B1-005/006 — Ereignis bearbeiten und löschen', () => {
     await page.locator('.event-card').filter({ hasText: editTitle }).click();
     await page.locator('#dp-del').click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
-    await page.locator('button:has-text("Abbrechen")').click();
+    await page.locator('#modal button:has-text("Abbrechen")').click();
     await expect(page.locator('.event-card').filter({ hasText: editTitle })).toBeVisible();
   });
 
@@ -241,24 +245,27 @@ test.describe('AL-B1-013 — Wiki-Einträge in Ereignistext verlinken', () => {
   test('event description with wiki title shows inline link', async ({ page }) => {
     // The seeded Glimmquali wiki entry title should be auto-linked in event bodies
     // Create an event whose description mentions the wiki title
-    await goToPardurChronik(page);
+    await page.goto('/');
     await loginAsAdmin(page);
+    await goToPardurChronik(page);
     // Use the undated add button to create an event with a wiki title in description
     await page.locator('.undated-add-btn').click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
-    await page.locator('#f-ti').fill(`Link-Test-${Date.now()}`);
+    const linkTitle = `Link-Test-${Date.now()}`;
+    await page.locator('#f-ti').fill(linkTitle);
     await page.locator('#f-desc').fill('Die Glimmquali sind bekannt für ihre Tavari.');
     await page.locator('#m-save').click();
     await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
 
     // Click the new event in the undated list to open its detail panel
-    const newCard = page.locator('#undated-list .event-card').first();
+    const newCard = page.locator('#undated-list .undated-card').filter({ hasText: linkTitle });
     await newCard.click();
     await expect(page.locator('#detail-panel')).toBeVisible({ timeout: 3000 });
     // Wiki inline link should appear in the description
     await expect(page.locator('#dp-desc .wiki-inline-link').first()).toBeVisible({ timeout: 5000 });
     // Cleanup
     await page.locator('#dp-del').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
     await page.locator('#m-save').click();
   });
 
@@ -291,9 +298,13 @@ test.describe('AL-B1-009 — Charakter-Filter', () => {
   test.beforeEach(async ({ request: apiCtx }) => {
     const res = await apiCtx.post('/api/worlds/1/events', {
       headers: ADMIN_HEADERS,
-      data: { title: charEventTitle, type: 'WORLD', characters: ['Aela'] },
+      data: { title: charEventTitle, type: 'WORLD', characters: ['Aela'], dateLabel: 'Jahr 100' },
     });
     charEventId = (await res.json()).id;
+    await apiCtx.patch(`/api/worlds/1/events/${charEventId}/assign-position`, {
+      headers: ADMIN_HEADERS,
+      data: { afterEventId: null },
+    });
   });
 
   test.afterEach(async ({ request: apiCtx }) => {
@@ -321,7 +332,7 @@ test.describe('AL-B1-009 — Charakter-Filter', () => {
     await expect(page.locator('#char-list')).toBeVisible({ timeout: 3000 });
     await page.locator('#char-list button').filter({ hasText: 'Aela' }).first().click();
     // Now clear all chars
-    await page.locator('#char-list').locator('xpath=../..').getByRole('button', { name: 'Alle' }).click();
+    await page.locator('#char-list').locator('xpath=..').getByRole('button', { name: 'Alle' }).click();
     await expect(page.locator('.event-card').filter({ hasText: 'Ankunft der Erbauer' })).toBeVisible({ timeout: 3000 });
   });
 
@@ -347,36 +358,36 @@ test.describe('AL-B1-011/012 — Drag-to-date / Drag-to-undated (API)', () => {
     });
     const ev = await res.json();
     eventId = ev.id;
-    expect(ev.date).toBeFalsy();
+    expect(ev.dateLabel).toBeFalsy();
 
     // Assign a date
     const updateRes = await apiCtx.put(`/api/worlds/1/events/${eventId}`, {
       headers: ADMIN_HEADERS,
-      data: { ...ev, date: 'Jahr 500' },
+      data: { ...ev, dateLabel: 'Jahr 500' },
     });
     expect(updateRes.ok()).toBeTruthy();
     const updated = await updateRes.json();
-    expect(updated.date).toBe('Jahr 500');
+    expect(updated.dateLabel).toBe('Jahr 500');
   });
 
   test('AL-B1-012: removing the date from a dated event makes it undated', async ({ request: apiCtx }) => {
     // Create dated event
     const res = await apiCtx.post('/api/worlds/1/events', {
       headers: ADMIN_HEADERS,
-      data: { title: `ToUndated-${Date.now()}`, type: 'WORLD', date: 'Jahr 600' },
+      data: { title: `ToUndated-${Date.now()}`, type: 'WORLD', dateLabel: 'Jahr 600' },
     });
     const ev = await res.json();
     eventId = ev.id;
-    expect(ev.date).toBe('Jahr 600');
+    expect(ev.dateLabel).toBe('Jahr 600');
 
     // Remove the date
     const updateRes = await apiCtx.put(`/api/worlds/1/events/${eventId}`, {
       headers: ADMIN_HEADERS,
-      data: { ...ev, date: null },
+      data: { ...ev, dateLabel: null },
     });
     expect(updateRes.ok()).toBeTruthy();
     const updated = await updateRes.json();
-    expect(updated.date == null || updated.date === '').toBeTruthy();
+    expect(updated.dateLabel == null || updated.dateLabel === '').toBeTruthy();
   });
 
 });

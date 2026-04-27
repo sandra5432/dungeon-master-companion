@@ -180,11 +180,14 @@ test.describe('AL-B-006 — Guest delete access (configurable)', () => {
   test('guest can delete own event when guestCanDelete=true', async ({ page, request: apiCtx }) => {
     const title = `GuestDel-${Date.now()}`;
     const res = await apiCtx.post('/api/worlds/1/events', {
-      data: { title, type: 'WORLD' },
+      data: { title, type: 'WORLD', dateLabel: 'Jahr 999' },
     });
     expect(res.ok()).toBeTruthy();
     const ev = await res.json();
     eventId = ev.id;
+    await apiCtx.patch(`/api/worlds/1/events/${eventId}/assign-position`, {
+      data: { afterEventId: null },
+    });
 
     await page.goto('/');
     await page.getByRole('button', { name: /Pardur/i }).first().click();
@@ -202,10 +205,13 @@ test.describe('AL-B-006 — Guest delete access (configurable)', () => {
   test('guest delete button is hidden when guestCanDelete=false', async ({ page, request: apiCtx }) => {
     const title = `GuestDelHide-${Date.now()}`;
     const res = await apiCtx.post('/api/worlds/1/events', {
-      data: { title, type: 'WORLD' },
+      data: { title, type: 'WORLD', dateLabel: 'Jahr 999' },
     });
     const ev = await res.json();
     eventId = ev.id;
+    await apiCtx.patch(`/api/worlds/1/events/${eventId}/assign-position`, {
+      data: { afterEventId: null },
+    });
 
     await setWorldPermissions(apiCtx, 1, {
       guestCanRead: true, guestCanEdit: true, guestCanDelete: false,

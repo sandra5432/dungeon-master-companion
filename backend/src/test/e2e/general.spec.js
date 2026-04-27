@@ -50,7 +50,7 @@ test.describe('AL-G-001 — Einloggen', () => {
     await expect(page.locator('#btn-login')).toBeVisible({ timeout: 5000 });
     await page.locator('#btn-login').click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
-    await page.locator('button:has-text("Abbrechen")').click();
+    await page.locator('#modal button:has-text("Abbrechen")').click();
     await expect(page.locator('#modal')).toBeHidden({ timeout: 3000 });
   });
 

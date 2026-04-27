@@ -94,7 +94,7 @@ test.describe('AL-C1-003 — Nutzerrolle und Farbe bearbeiten', () => {
   test.beforeEach(async ({ request: apiCtx }) => {
     const res = await apiCtx.post('/api/admin/users', {
       headers: ADMIN_HEADERS,
-      data: { username: editUsername, password: 'test1234', role: 'USER' },
+      data: { username: editUsername, role: 'USER', colorHex: '#ff0000' },
     });
     expect(res.ok(), `beforeEach: POST /api/admin/users returned ${res.status()}`).toBeTruthy();
     userId = (await res.json()).id;
@@ -133,7 +133,7 @@ test.describe('AL-C1-004 — Nutzer löschen', () => {
   test.beforeEach(async ({ request: apiCtx }) => {
     const res = await apiCtx.post('/api/admin/users', {
       headers: ADMIN_HEADERS,
-      data: { username: delUsername, password: 'test1234', role: 'USER' },
+      data: { username: delUsername, role: 'USER', colorHex: '#ff0000' },
     });
     expect(res.ok(), `beforeEach: POST /api/admin/users returned ${res.status()}`).toBeTruthy();
     userId = (await res.json()).id;
@@ -164,7 +164,7 @@ test.describe('AL-C1-005 — Passwort zurücksetzen (wird auf Benutzername geset
   test.beforeEach(async ({ request: apiCtx }) => {
     const res = await apiCtx.post('/api/admin/users', {
       headers: ADMIN_HEADERS,
-      data: { username: resetUsername, password: 'original-pw', role: 'USER' },
+      data: { username: resetUsername, role: 'USER', colorHex: '#ff0000' },
     });
     expect(res.ok(), `beforeEach: POST /api/admin/users returned ${res.status()}`).toBeTruthy();
     userId = (await res.json()).id;

@@ -44,7 +44,7 @@ async function loginAsAdmin(page) {
   await expect(page.locator('button:has-text("+ Hinzufügen")')).toBeVisible({ timeout: 5000 });
 }
 
-/** Creates an item via the admin UI and returns its visible row locator. */
+/** Creates an item via the admin UI, filters the list by name, and returns its row locator. */
 async function createItem(page, name, price = '10', tags = '') {
   await page.locator('button:has-text("+ Hinzufügen")').click();
   await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
@@ -53,16 +53,18 @@ async function createItem(page, name, price = '10', tags = '') {
   if (tags) await page.locator('#fi-tags').fill(tags);
   await page.locator('#m-save').click();
   await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+  await page.locator('#s-search').fill(name);
   return page.locator('#items-body tr').filter({ hasText: name });
 }
 
-/** Deletes an item by its table-row name via the admin delete button. */
+/** Deletes an item by name, using the search box to locate it across pagination. */
 async function deleteItem(page, name) {
-  const row = page.locator('#items-body tr').filter({ hasText: name });
-  await row.locator('button.act-btn.del').click();
+  await page.locator('#s-search').fill(name);
+  await page.locator('#items-body tr').filter({ hasText: name }).locator('button.act-btn.del').first().click();
   await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
   await page.locator('#m-save').click();
   await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+  await page.locator('#s-search').fill('');
 }
 
 // ── AL-A-001: Artikelliste anzeigen ──────────────────────────────────────────
@@ -72,15 +74,15 @@ test.describe('AL-A-001 — Artikelliste anzeigen', () => {
   test('guest sees the items page without logging in', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#page-items')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('table.it')).toBeVisible();
+    await expect(page.locator('#page-items table.it')).toBeVisible();
     await expect(page.locator('#item-count')).toBeVisible();
   });
 
   test('items table header columns are visible', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('table.it th').filter({ hasText: 'Name' })).toBeVisible();
-    await expect(page.locator('table.it th.col-price')).toBeVisible();
-    await expect(page.locator('table.it th').filter({ hasText: 'Tags' })).toBeVisible();
+    await expect(page.locator('#page-items table.it th').filter({ hasText: 'Name' })).toBeVisible();
+    await expect(page.locator('#page-items table.it th.col-price')).toBeVisible();
+    await expect(page.locator('#page-items table.it th').filter({ hasText: 'Tags' })).toBeVisible();
   });
 
   test('admin action column is hidden for guest', async ({ page }) => {
@@ -108,7 +110,6 @@ test.describe('AL-A-002 — Artikel suchen', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    await page.locator('#s-search').fill('');
     await deleteItem(page, itemName);
   });
 
@@ -126,7 +127,8 @@ test.describe('AL-A-002 — Artikel suchen', () => {
   test('clearing search restores the item', async ({ page }) => {
     await page.locator('#s-search').fill('xyzABCnomatch');
     await page.locator('#s-search').fill('');
-    await expect(page.locator('#items-body tr').filter({ hasText: itemName })).toBeVisible();
+    // 90 seeded items exist; just verify the list is restored (first row visible)
+    await expect(page.locator('#items-body tr').first()).toBeVisible({ timeout: 3000 });
   });
 
 });
@@ -152,6 +154,7 @@ test.describe('AL-A-003 — Artikel nach Preis filtern', () => {
   });
 
   test('max price filter hides items above the limit', async ({ page }) => {
+    await page.locator('#s-search').fill('');
     await page.locator('#s-max').fill('100');
     await expect(page.locator('#items-body tr').filter({ hasText: cheapItem })).toBeVisible();
     await expect(page.locator('#items-body tr').filter({ hasText: expensiveItem })).toBeHidden();
@@ -164,6 +167,7 @@ test.describe('AL-A-003 — Artikel nach Preis filtern', () => {
   });
 
   test('combined min+max filter shows only items in range', async ({ page }) => {
+    await page.locator('#s-search').fill('');
     await page.locator('#s-min').fill('1');
     await page.locator('#s-max').fill('100');
     await expect(page.locator('#items-body tr').filter({ hasText: cheapItem })).toBeVisible();
@@ -187,9 +191,8 @@ test.describe('AL-A-004 — Artikel nach Tag filtern', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    // Clear tag filter before cleanup
-    const resetBtn = page.locator('#itf-dropdown button:has-text("Zurücksetzen")');
-    if (await resetBtn.isVisible()) await resetBtn.click();
+    // Clear tag filter via the app's own function — avoids dropdown toggle ambiguity
+    await page.evaluate(() => clearItemTags());
     await deleteItem(page, taggedItem);
     await deleteItem(page, untaggedItem);
   });
@@ -200,6 +203,7 @@ test.describe('AL-A-004 — Artikel nach Tag filtern', () => {
   });
 
   test('selecting a tag shows only items with that tag', async ({ page }) => {
+    await page.locator('#s-search').fill('');
     await page.locator('#itf-trigger').click();
     await page.locator(`#itf-dropdown input[value="${tag}"]`).check();
     // Close dropdown by clicking elsewhere
@@ -229,7 +233,10 @@ test.describe('AL-A-005 — Artikelliste sortieren', () => {
   });
 
   test('clicking Name column sorts items ascending', async ({ page }) => {
-    await page.locator('table.it th').filter({ hasText: 'Name' }).click();
+    // Filter to only the 2 test items (unique timestamp) so both fit on page 1
+    const ts = itemA.slice('AAA-sort-'.length);
+    await page.locator('#s-search').fill(ts);
+    await page.locator('#page-items table.it th').filter({ hasText: 'Name' }).click();
     const rows = page.locator('#items-body tr td:first-child');
     const names = await rows.allTextContents();
     const relevant = names.filter(n => n.startsWith('AAA-sort') || n.startsWith('ZZZ-sort'));
@@ -237,7 +244,9 @@ test.describe('AL-A-005 — Artikelliste sortieren', () => {
   });
 
   test('clicking Name column twice reverses sort to descending', async ({ page }) => {
-    const header = page.locator('table.it th').filter({ hasText: 'Name' });
+    const ts = itemA.slice('AAA-sort-'.length);
+    await page.locator('#s-search').fill(ts);
+    const header = page.locator('#page-items table.it th').filter({ hasText: 'Name' });
     await header.click();
     await header.click();
     const rows = page.locator('#items-body tr td:first-child');
@@ -247,7 +256,8 @@ test.describe('AL-A-005 — Artikelliste sortieren', () => {
   });
 
   test('clicking Preis column sorts items by price ascending', async ({ page }) => {
-    await page.locator('table.it th.col-price').click();
+    await page.locator('#s-search').fill('');
+    await page.locator('#page-items table.it th.col-price').click();
     // Both items visible — just verify the sort column click doesn't crash
     await expect(page.locator('#items-body tr').filter({ hasText: itemA })).toBeVisible();
     await expect(page.locator('#items-body tr').filter({ hasText: itemZ })).toBeVisible();
@@ -271,7 +281,7 @@ test.describe('AL-A-006 — Artikel erstellen (Admin only)', () => {
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#fi-n')).toBeVisible();
     await expect(page.locator('#fi-p')).toBeVisible();
-    await page.locator('.m-close').click();
+    await page.locator('#modal .m-close').click();
   });
 
   test('admin can create a new item and it appears in the list', async ({ page }) => {
@@ -293,7 +303,7 @@ test.describe('AL-A-006 — Artikel erstellen (Admin only)', () => {
     await page.locator('#m-save').click();
     // Modal should remain open (validation error prevents save)
     await expect(page.locator('#modal')).toBeVisible();
-    await page.locator('.m-close').click();
+    await page.locator('#modal .m-close').click();
   });
 
 });
@@ -311,9 +321,14 @@ test.describe('AL-A-007 — Artikel bearbeiten (Admin only)', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    // Item may have been renamed; try both names
-    const updated = page.locator('#items-body tr').filter({ hasText: updatedName });
-    if (await updated.isVisible()) {
+    // Re-login if the last test left us as guest
+    if (await page.locator('#btn-login').isVisible().catch(() => false)) {
+      await loginAsAdmin(page);
+    }
+    // Search for the updated name; if not found, fall back to original
+    await page.locator('#s-search').fill(updatedName);
+    const updatedExists = (await page.locator('#items-body tr').filter({ hasText: updatedName }).count()) > 0;
+    if (updatedExists) {
       await deleteItem(page, updatedName);
     } else {
       await deleteItem(page, originalName);
@@ -321,28 +336,32 @@ test.describe('AL-A-007 — Artikel bearbeiten (Admin only)', () => {
   });
 
   test('edit button is not visible for guest', async ({ page }) => {
-    // Log out first by reloading without session
-    await page.goto('/');
-    // Guest: action buttons must be hidden
-    await expect(page.locator('#items-body tr').filter({ hasText: originalName }).locator('button.act-btn')).toBeHidden();
+    await page.locator('#btn-logout').click();
+    await expect(page.locator('#btn-login')).toBeVisible({ timeout: 5000 });
+    await page.locator('#s-search').fill(originalName);
+    await expect(page.locator('#items-body tr').filter({ hasText: originalName }).first().locator('button.act-btn')).toBeHidden({ timeout: 3000 });
+    await page.locator('#s-search').fill('');
   });
 
   test('admin can open the edit modal for an item', async ({ page }) => {
-    const row = page.locator('#items-body tr').filter({ hasText: originalName });
+    const row = page.locator('#items-body tr').filter({ hasText: originalName }).first();
     await row.locator('button.act-btn:not(.del)').click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#fi-n')).toHaveValue(originalName);
-    await page.locator('.m-close').click();
+    await page.locator('#modal .m-close').click();
   });
 
   test('admin can update an item name and the change persists', async ({ page }) => {
-    const row = page.locator('#items-body tr').filter({ hasText: originalName });
+    const row = page.locator('#items-body tr').filter({ hasText: originalName }).first();
     await row.locator('button.act-btn:not(.del)').click();
     await page.locator('#fi-n').fill(updatedName);
     await page.locator('#m-save').click();
     await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+    await page.locator('#s-search').fill(updatedName);
     await expect(page.locator('#items-body tr').filter({ hasText: updatedName })).toBeVisible();
+    await page.locator('#s-search').fill(originalName);
     await expect(page.locator('#items-body tr').filter({ hasText: originalName })).toBeHidden();
+    await page.locator('#s-search').fill('');
   });
 
 });
@@ -359,18 +378,21 @@ test.describe('AL-A-008 — Artikel löschen (Admin only)', () => {
   });
 
   test('delete button is not visible for guest', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('#items-body tr').filter({ hasText: itemName }).locator('button.act-btn.del')).toBeHidden();
+    await page.locator('#btn-logout').click();
+    await expect(page.locator('#btn-login')).toBeVisible({ timeout: 5000 });
+    await page.locator('#s-search').fill(itemName);
+    await expect(page.locator('#items-body tr').filter({ hasText: itemName }).first().locator('button.act-btn.del')).toBeHidden({ timeout: 3000 });
+    await page.locator('#s-search').fill('');
   });
 
   test('admin sees confirmation modal before deleting', async ({ page }) => {
-    const row = page.locator('#items-body tr').filter({ hasText: itemName });
+    const row = page.locator('#items-body tr').filter({ hasText: itemName }).first();
     await row.locator('button.act-btn.del').click();
     await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('#del-txt')).toContainText(itemName);
     // Cancel — item must still be there
-    await page.locator('button:has-text("Abbrechen")').click();
-    await expect(page.locator('#items-body tr').filter({ hasText: itemName })).toBeVisible();
+    await page.locator('#modal button:has-text("Abbrechen")').click();
+    await expect(page.locator('#items-body tr').filter({ hasText: itemName }).first()).toBeVisible();
   });
 
   test('admin can delete an item and it disappears from the list', async ({ page }) => {
@@ -419,10 +441,9 @@ test.describe('AL-A-009 — Artikelliste als Markdown exportieren (Admin only)',
     expect(body).toContain('# Marktplatz');
   });
 
-  test('GET /api/export/items returns 401 for unauthenticated request', async ({ page }) => {
-    const response = await page.request.get('/api/export/items', {
-      headers: { 'Cookie': '' },  // no session cookie
-    });
+  test('GET /api/export/items returns 401 for unauthenticated request', async ({ request }) => {
+    // Use the fresh request fixture (no cookies) rather than page.request (which shares the admin session)
+    const response = await request.get('/api/export/items');
     // Unauthenticated: 401 or 403
     expect([401, 403]).toContain(response.status());
   });

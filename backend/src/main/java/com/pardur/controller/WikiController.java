@@ -109,10 +109,11 @@ public class WikiController {
     @PostMapping("/{id}/images")
     public ResponseEntity<WikiImageDto> uploadImage(@PathVariable Integer id,
                                                      @RequestParam("file") MultipartFile file,
+                                                     @RequestParam(value = "caption", required = false) String caption,
                                                      Authentication auth) throws IOException {
         PardurUserDetails user = (PardurUserDetails) auth.getPrincipal();
         boolean isAdmin = "ADMIN".equals(user.getRole());
-        return ResponseEntity.status(201).body(imageService.upload(id, file, user.getUserId(), isAdmin));
+        return ResponseEntity.status(201).body(imageService.upload(id, file, caption, user.getUserId(), isAdmin));
     }
 
     @GetMapping(value = "/images/{imageId}")

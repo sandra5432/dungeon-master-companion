@@ -34,7 +34,7 @@ public class WikiImageService {
     }
 
     @Transactional
-    public WikiImageDto upload(Integer entryId, MultipartFile file,
+    public WikiImageDto upload(Integer entryId, MultipartFile file, String caption,
                                Integer currentUserId, boolean isAdmin) throws IOException {
         WikiEntry entry = entryRepository.findById(entryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Wiki entry not found: " + entryId));
@@ -45,7 +45,7 @@ public class WikiImageService {
         WikiImage image = new WikiImage();
         image.setEntry(entry);
         image.setData(webpBytes);
-        image.setCaption(null);
+        image.setCaption(caption);
         image.setSortOrder(entry.getImages().size());
         WikiImage saved = imageRepository.save(image);
         return new WikiImageDto(saved.getId(), saved.getCaption(), saved.getSortOrder());

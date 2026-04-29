@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ideenkammer — Seekarten der Zeit</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ══ TOKENS (from Seekarten) ══ */
+:root[data-theme="dark"]{
+  --bg:#091524;--bg-s:#0d1f38;--bg-c:#112340;--bg-ch:#17304f;
+  --bg-sb:#0b1b30;--bg-un:#0c1e34;
+  --bd:rgba(180,150,80,.22);--bd-s:rgba(180,150,80,.50);
+  --t1:#e8dfc8;--t2:#8aaabf;--t3:#4a6a84;
+  --gold:#c8a84b;--gold2:#e8c870;
+  --blue:#4a8ab8;--blue2:#6aaad8;
+  --tag-bg:rgba(74,138,184,.16);--tag-bd:rgba(74,138,184,.38);
+  --rope:#7a5a0e;--rope2:#b89030;
+  --nav:rgba(9,21,36,.96);--inp:rgba(9,21,36,.75);
+  --sh:0 8px 32px rgba(0,0,0,.55);
+  --draft:#8a7a44;--draft2:#b89a54;
+  --doing:#4a8ab8;--doing2:#6aaad8;
+  --done:#4a8a6a;--done2:#8ac8a0;
+  --overdue:#b85a4a;
+}
+:root[data-theme="light"]{
+  --bg:#ede8dc;--bg-s:#e4ddd0;--bg-c:#f8f4eb;--bg-ch:#fffcf4;
+  --bg-sb:#e2dccf;--bg-un:#e8e2d5;
+  --bd:rgba(110,82,32,.18);--bd-s:rgba(110,82,32,.42);
+  --t1:#1a2b3c;--t2:#3a5068;--t3:#7a9ab0;
+  --gold:#8a6010;--gold2:#b88020;
+  --blue:#2060a0;--blue2:#3880c8;
+  --tag-bg:rgba(32,96,160,.09);--tag-bd:rgba(32,96,160,.32);
+  --rope:#9a7820;--rope2:#c8a840;
+  --nav:rgba(237,232,220,.97);--inp:rgba(255,252,244,.92);
+  --sh:0 8px 32px rgba(0,0,0,.10);
+  --draft:#7a5820;--draft2:#a07830;
+  --doing:#2060a0;--doing2:#3880c8;
+  --done:#2a7a4a;--done2:#3a9a6a;
+  --overdue:#a83a2a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--t1);min-height:100vh;transition:background .35s,color .35s;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 15% 40%,rgba(74,138,184,.05) 0%,transparent 55%),radial-gradient(ellipse at 85% 15%,rgba(200,168,75,.04) 0%,transparent 50%)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bd-s);border-radius:3px}
+
+/* ══ NAV ══ */
+nav{position:sticky;top:0;z-index:200;height:60px;background:var(--nav);backdrop-filter:blur(16px);border-bottom:1px solid var(--bd-s);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.nav-brand{display:flex;align-items:center;gap:12px}
+.nav-compass{width:32px;height:32px}
+.compass-needle{transform-origin:center;animation:cSpin 9s ease-in-out infinite}
+@keyframes cSpin{0%,100%{transform:rotate(0)}30%{transform:rotate(10deg)}70%{transform:rotate(-8deg)}}
+.nav-title{font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gold);letter-spacing:.09em;text-transform:uppercase}
+.nav-links{display:flex;gap:2px}
+.nav-link{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);padding:7px 14px;border-radius:3px;border:1px solid transparent;background:none;cursor:pointer;transition:all .2s}
+.nav-link:hover{color:var(--gold);border-color:var(--bd);background:var(--bg-c)}
+.nav-link.active{color:var(--gold2);border-color:var(--bd-s);background:var(--bg-c)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.theme-toggle{width:40px;height:40px;border-radius:50%;border:1px solid var(--bd-s);background:var(--bg-c);color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .3s}
+.theme-toggle:hover{border-color:var(--gold);transform:rotate(22deg)}
+
+/* ══ BUTTONS ══ */
+.btn{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:9px 18px;border-radius:3px;border:1px solid var(--bd-s);background:var(--bg-c);color:var(--gold);cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.btn-sm{padding:6px 12px;font-size:.58rem}
+.btn-danger{color:#e07070;border-color:rgba(200,80,80,.4)}
+.btn-danger:hover{background:rgba(160,40,40,.85);color:#fff;border-color:rgba(160,40,40,.85)}
+.btn-ghost{background:none;border:1px solid var(--bd);color:var(--t2)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);background:var(--bg-c)}
+
+/* user pill */
+.user-pill{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--bd-s);border-radius:20px;background:var(--bg-c);cursor:pointer;transition:border-color .15s}
+.user-pill:hover{border-color:var(--gold)}
+.user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;color:#fff}
+.user-name{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+
+/* ══ VARIANT SWITCHER ══ */
+.variant-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--bg-sb)}
+.variant-bar .vlbl{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.14em;color:var(--t3);text-transform:uppercase;margin-right:18px}
+.var-btn{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:7px 16px;border:1px solid var(--bd);border-right:none;background:var(--bg-c);color:var(--t2);cursor:pointer;transition:all .15s}
+.var-btn:first-of-type{border-radius:3px 0 0 3px}
+.var-btn:last-of-type{border-radius:0 3px 3px 0;border-right:1px solid var(--bd)}
+.var-btn:hover{color:var(--t1);background:var(--bg-ch)}
+.var-btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+
+/* ══ SHARED IDEA HEADER ══ */
+.page-hdr{text-align:center;padding:28px 24px 14px;position:relative;z-index:1}
+.page-hdr h1{font-family:'Cinzel',serif;font-size:clamp(1.4rem,3vw,2.1rem);font-weight:700;color:var(--t1);letter-spacing:.12em;text-transform:uppercase}
+.page-hdr p{font-style:italic;font-size:1rem;color:var(--t2);margin-top:5px}
+.divider{display:flex;align-items:center;gap:10px;margin:12px auto 0;max-width:300px}
+.dline{flex:1;height:1px;background:linear-gradient(to right,transparent,var(--bd-s),transparent)}
+.ddiamond{width:7px;height:7px;background:var(--gold);transform:rotate(45deg)}
+
+.status-legend{display:flex;align-items:center;justify-content:center;gap:20px;margin:14px auto 0}
+.leg-item{display:flex;align-items:center;gap:6px;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+.leg-dot.draft{background:var(--draft);border:2px solid var(--draft2)}
+.leg-dot.doing{background:var(--doing);border:2px solid var(--doing2)}
+.leg-dot.done{background:var(--done);border:2px solid var(--done2)}
+
+/* ══ KANBAN (Variant 1) ══ */
+.v-page{position:relative;z-index:1;display:none}
+.v-page.active{display:block}
+
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:10px 24px 60px;max-width:1360px;margin:0 auto}
+.klane{background:var(--bg-sb);border:1px solid var(--bd);border-radius:6px;display:flex;flex-direction:column;min-height:480px}
+.klane.drop-over{border-color:var(--gold);background:var(--bg-s);box-shadow:inset 0 0 0 1px var(--gold)}
+.klane-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bd)}
+.klane-l{display:flex;align-items:center;gap:10px}
+.klane-dot{width:10px;height:10px;border-radius:50%}
+.klane-dot.draft{background:var(--draft);border:2px solid var(--draft2)}
+.klane-dot.doing{background:var(--doing);border:2px solid var(--doing2)}
+.klane-dot.done{background:var(--done);border:2px solid var(--done2)}
+.klane-name{font-family:'Cinzel',serif;font-size:.7rem;font-weight:700;letter-spacing:.14em;color:var(--t1);text-transform:uppercase}
+.klane-count{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--t3);background:var(--bg-c);padding:2px 8px;border-radius:10px;border:1px solid var(--bd)}
+.klane-body{flex:1;padding:10px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:calc(100vh - 300px)}
+.klane-add{padding:8px 12px;border:1px dashed var(--bd);border-radius:3px;text-align:center;font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.12em;color:var(--t3);cursor:pointer;transition:all .15s;text-transform:uppercase;margin:8px}
+.klane-add:hover{border-color:var(--gold);color:var(--gold);background:var(--bg-c)}
+
+/* ══ IDEA CARD ══ */
+.icard{background:var(--bg-c);border:1px solid var(--bd);border-radius:5px;padding:12px 13px 11px;cursor:grab;transition:background .18s,transform .18s,box-shadow .18s,border-color .18s;position:relative;animation:fadeUp .25s ease both;user-select:none}
+.icard:hover{background:var(--bg-ch);border-color:var(--bd-s);transform:translateY(-2px);box-shadow:var(--sh)}
+.icard.dragging{opacity:.45;cursor:grabbing}
+.icard.active{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),var(--sh)}
+.icard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.icard-ttl{font-family:'Cinzel',serif;font-size:.8rem;font-weight:600;color:var(--t1);letter-spacing:.02em;line-height:1.3;flex:1}
+.icard-status{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.icard-status.draft{background:var(--draft);box-shadow:0 0 0 2px var(--draft2)}
+.icard-status.doing{background:var(--doing);box-shadow:0 0 0 2px var(--doing2)}
+.icard-status.done{background:var(--done);box-shadow:0 0 0 2px var(--done2)}
+.icard-desc{font-family:'Crimson Pro',serif;font-style:italic;font-size:.85rem;color:var(--t2);line-height:1.5;margin-bottom:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.icard-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--t3)}
+.icard-meta .sep{opacity:.5}
+.icard-av{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.5rem;font-weight:700;color:#fff;margin-right:-2px}
+.icard-cmt{display:inline-flex;align-items:center;gap:3px;color:var(--t3)}
+.icard-img{display:inline-flex;align-items:center;gap:3px;color:var(--t3)}
+.icard-wiki{display:inline-flex;align-items:center;gap:3px;color:var(--blue2);opacity:.85}
+
+/* Compact mode */
+.compact .icard{padding:8px 11px}
+.compact .icard-desc,.compact .icard-meta{display:none}
+.compact .icard-top{margin-bottom:0}
+.compact .icard-ttl{font-size:.72rem}
+
+/* ══ FEED (Variant 2) ══ */
+.feed-wrap{max-width:920px;margin:0 auto;padding:6px 24px 60px;display:grid;grid-template-columns:200px 1fr;gap:24px}
+.feed-side{position:sticky;top:124px;align-self:start;padding:14px;background:var(--bg-sb);border:1px solid var(--bd);border-radius:5px}
+.feed-side .sb-title{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.14em;color:var(--t3);text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+.feed-filter{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
+.feed-fb{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:3px;border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;text-align:left;width:100%}
+.feed-fb:hover{background:var(--bg-c);border-color:var(--bd);color:var(--t1)}
+.feed-fb.on{background:var(--tag-bg);border-color:var(--tag-bd);color:var(--blue2)}
+.feed-fb .fb-dot{width:8px;height:8px;border-radius:50%}
+.feed-fb .fb-count{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--t3);background:var(--bg-s);padding:1px 6px;border-radius:2px;min-width:20px;text-align:center}
+.feed-fb.on .fb-count{background:var(--bg-c);color:var(--t1)}
+
+.feed-list{display:flex;flex-direction:column;gap:10px}
+.feed-row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:14px 16px;background:var(--bg-c);border:1px solid var(--bd);border-radius:5px;cursor:pointer;transition:all .18s}
+.feed-row:hover{background:var(--bg-ch);border-color:var(--bd-s);transform:translateX(2px)}
+.feed-row.active{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.feed-status{display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:3px}
+.feed-status-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.feed-status-dot.draft{background:rgba(138,122,68,.18);border:2px solid var(--draft2)}
+.feed-status-dot.doing{background:rgba(74,138,184,.18);border:2px solid var(--doing2)}
+.feed-status-dot.done{background:rgba(74,138,106,.18);border:2px solid var(--done2)}
+.feed-status-dot svg{width:11px;height:11px}
+.feed-status-lbl{font-family:'Cinzel',serif;font-size:.46rem;letter-spacing:.1em;color:var(--t3);text-transform:uppercase}
+.feed-body-r .ft{font-family:'Cinzel',serif;font-size:.88rem;font-weight:600;color:var(--t1);margin-bottom:4px;letter-spacing:.02em}
+.feed-body-r .fd{font-family:'Crimson Pro',serif;font-style:italic;font-size:.92rem;color:var(--t2);line-height:1.55;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.feed-meta{display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--t3)}
+
+/* ══ ROPE (Variant 3) ══ */
+.rope-wrap{max-width:1240px;margin:0 auto;padding:8px 24px 60px;position:relative}
+.rope-rail{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;position:relative;padding:50px 0 30px;min-height:520px}
+.rope-rail::before{content:'';position:absolute;top:30px;left:6%;right:6%;height:3px;background:repeating-linear-gradient(to right,var(--rope) 0,var(--rope) 10px,var(--rope2) 10px,var(--rope2) 12px,var(--rope) 12px,var(--rope) 22px,transparent 22px,transparent 24px);opacity:.75}
+.rope-col{display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;padding:0 14px}
+.rope-col.drop-over{background:rgba(200,168,75,.05);border-radius:6px}
+.rope-knot{position:absolute;top:0;left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-sb);border:2px solid var(--bd-s);box-shadow:0 0 0 3px var(--bg);z-index:3}
+.rope-knot.draft{border-color:var(--draft2)}
+.rope-knot.doing{border-color:var(--doing2)}
+.rope-knot.done{border-color:var(--done2)}
+.rope-knot-inner{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.55rem;font-weight:700;color:#fff;letter-spacing:.06em;text-transform:uppercase}
+.rope-knot-inner.draft{background:var(--draft)}
+.rope-knot-inner.doing{background:var(--doing)}
+.rope-knot-inner.done{background:var(--done)}
+.rope-col-lbl{position:absolute;top:62px;left:50%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;color:var(--t2);text-transform:uppercase;white-space:nowrap}
+.rope-col-cnt{position:absolute;top:82px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--t3);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.rope-add{width:22px;height:22px;border-radius:50%;border:1px solid var(--bd-s);background:var(--bg-c);color:var(--gold);cursor:pointer;font-family:'Cinzel',serif;font-size:.9rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+.rope-add:hover{background:var(--gold);color:var(--bg);border-color:var(--gold);transform:rotate(90deg)}
+.rope-cards{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:120px}
+.rope-cards .icard{width:100%}
+
+/* ══ DETAIL PANEL ══ */
+.detail-panel{position:fixed;top:60px;right:0;width:440px;max-width:96vw;height:calc(100vh - 60px);background:var(--bg-c);border-left:1px solid var(--bd-s);z-index:150;transform:translateX(100%);transition:transform .3s cubic-bezier(.25,.8,.25,1);overflow-y:auto}
+.detail-panel.open{transform:translateX(0);box-shadow:-8px 0 40px rgba(0,0,0,.45)}
+.detail-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--t3);font-size:1.1rem;transition:color .15s;z-index:2;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.detail-close:hover{color:var(--t1);background:var(--bg-s)}
+.detail-inner{padding:28px 26px 40px}
+
+.dp-status-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.dp-status-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.dp-status-pill.draft{background:rgba(138,122,68,.18);color:var(--draft2);border:1px solid rgba(184,154,84,.4)}
+.dp-status-pill.doing{background:rgba(74,138,184,.18);color:var(--doing2);border:1px solid rgba(106,170,216,.4)}
+.dp-status-pill.done{background:rgba(74,138,106,.18);color:var(--done2);border:1px solid rgba(106,170,132,.4)}
+.dp-status-pill .dp-pill-dot{width:7px;height:7px;border-radius:50%}
+.dp-status-pill.draft .dp-pill-dot{background:var(--draft2)}
+.dp-status-pill.doing .dp-pill-dot{background:var(--doing2)}
+.dp-status-pill.done .dp-pill-dot{background:var(--done2)}
+
+.dp-title{font-family:'Cinzel',serif;font-size:1.2rem;font-weight:700;color:var(--t1);letter-spacing:.02em;line-height:1.3;margin-bottom:10px;padding-right:30px}
+.dp-sub{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--t3);margin-bottom:18px}
+.dp-sub .dp-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.55rem;font-weight:700;color:#fff}
+.dp-sub-item{display:flex;align-items:center;gap:6px}
+.dp-sub-item.overdue{color:var(--overdue)}
+
+.dp-progress{margin-bottom:20px}
+.dp-progress-bar{display:flex;height:4px;border-radius:2px;overflow:hidden;background:var(--bg-s);margin-bottom:8px}
+.dp-progress-seg{flex:1;background:var(--bg-s);margin-right:2px;transition:background .25s}
+.dp-progress-seg:last-child{margin-right:0}
+.dp-progress-seg.on.draft{background:var(--draft)}
+.dp-progress-seg.on.doing{background:var(--doing)}
+.dp-progress-seg.on.done{background:var(--done)}
+.dp-progress-steps{display:flex;gap:6px}
+.dp-step-btn{flex:1;padding:8px 10px;border:1px solid var(--bd);border-radius:3px;background:var(--bg-s);color:var(--t2);font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .15s;font-weight:600}
+.dp-step-btn:hover{border-color:var(--gold);color:var(--gold)}
+:root[data-theme="light"] .dp-step-btn{color:var(--t1)}
+.dp-step-btn.current{background:var(--bg-c);border-color:var(--bd-s);color:var(--t1);cursor:default}
+.dp-step-btn.current.draft{background:rgba(138,122,68,.2);border-color:var(--draft2);color:var(--draft2)}
+.dp-step-btn.current.doing{background:rgba(74,138,184,.2);border-color:var(--doing2);color:var(--doing2)}
+.dp-step-btn.current.done{background:rgba(74,138,106,.28);border-color:var(--done2);color:#a8e0bc}
+:root[data-theme="light"] .dp-step-btn.current.draft{background:rgba(138,88,32,.14);color:#6a4810}
+:root[data-theme="light"] .dp-step-btn.current.doing{background:rgba(32,96,160,.14);color:#184878}
+:root[data-theme="light"] .dp-step-btn.current.done{background:rgba(42,122,74,.14);color:#1a5a34}
+
+.dp-section{margin-bottom:22px}
+.dp-section h4{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.14em;color:var(--t3);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.dp-section h4 .count{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.05em;color:var(--t3);background:var(--bg-s);padding:1px 7px;border-radius:2px;border:1px solid var(--bd)}
+
+/* markdown body */
+.md-body{font-family:'Crimson Pro',serif;font-size:1.02rem;color:var(--t1);line-height:1.65}
+.md-body p{margin-bottom:10px}
+.md-body h1,.md-body h2,.md-body h3{font-family:'Cinzel',serif;color:var(--t1);margin:14px 0 8px;letter-spacing:.04em}
+.md-body h1{font-size:1.1rem;text-transform:uppercase}
+.md-body h2{font-size:.95rem}
+.md-body h3{font-size:.85rem;color:var(--gold)}
+.md-body strong{color:var(--t1);font-weight:600}
+.md-body em{font-style:italic;color:var(--t2)}
+.md-body ul,.md-body ol{margin:8px 0 10px 22px}
+.md-body li{margin-bottom:3px}
+.md-body code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:var(--bg-s);padding:1px 5px;border-radius:2px;color:var(--gold2);border:1px solid var(--bd)}
+.md-body blockquote{border-left:2px solid var(--gold);margin:8px 0;padding:4px 12px;color:var(--t2);font-style:italic;background:var(--bg-s)}
+.md-body a.wiki{color:var(--blue2);text-decoration:none;border-bottom:1px dashed var(--blue2);padding-bottom:1px}
+.md-body a.wiki:hover{color:var(--gold);border-bottom-color:var(--gold)}
+.md-body a.wiki.auto{color:var(--blue2);border-bottom-style:dotted}
+.md-body a.external{color:var(--blue2);text-decoration:none;border-bottom:1px solid var(--bd)}
+.md-body a.external:hover{color:var(--gold)}
+.md-body hr{border:none;border-top:1px solid var(--bd);margin:14px 0}
+
+/* images gallery */
+.dp-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.dp-img{aspect-ratio:4/3;border-radius:4px;border:1px solid var(--bd);background:var(--bg-s);overflow:hidden;position:relative;cursor:zoom-in;transition:border-color .15s,transform .15s}
+.dp-img:hover{border-color:var(--gold);transform:translateY(-1px)}
+.dp-img svg{width:100%;height:100%;display:block}
+.dp-img .lbl{position:absolute;left:6px;bottom:5px;font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--t3);background:rgba(9,21,36,.7);padding:1px 5px;border-radius:2px;letter-spacing:.03em}
+.dp-img-add{aspect-ratio:4/3;border-radius:4px;border:1px dashed var(--bd-s);display:flex;align-items:center;justify-content:center;color:var(--t3);font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.dp-img-add:hover{border-color:var(--gold);color:var(--gold);background:var(--bg-s)}
+
+/* wiki link chips */
+.dp-wiki-list{display:flex;flex-direction:column;gap:6px}
+.wiki-chip{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--bd);border-radius:3px;background:var(--bg-s);text-decoration:none;transition:all .15s;cursor:pointer}
+.wiki-chip:hover{border-color:var(--blue2);background:var(--bg-ch)}
+.wiki-chip-ico{width:22px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;background:var(--tag-bg);color:var(--blue2);border:1px solid var(--tag-bd);flex-shrink:0}
+.wiki-chip-ttl{flex:1;font-family:'Cinzel',serif;font-size:.72rem;color:var(--t1);letter-spacing:.03em}
+.wiki-chip-auto{font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;background:var(--bg-c);padding:2px 6px;border-radius:2px;border:1px solid var(--bd)}
+.wiki-chip-auto.manual{color:var(--gold);border-color:var(--bd-s)}
+
+/* comments */
+.cmt{padding:12px 0;border-bottom:1px solid var(--bd);display:grid;grid-template-columns:28px 1fr;gap:12px}
+.cmt:last-child{border-bottom:none}
+.cmt-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;color:#fff}
+.cmt-hdr{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.06em}
+.cmt-name{color:var(--t1);text-transform:uppercase;letter-spacing:.1em}
+.cmt-when{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--t3);text-transform:none;letter-spacing:0}
+.cmt-body{font-family:'Crimson Pro',serif;font-size:.95rem;color:var(--t2);line-height:1.55}
+.cmt-body p{margin-bottom:6px}
+.cmt-body:last-child p:last-child{margin-bottom:0}
+.cmt-collapsed{padding:10px 12px;background:var(--bg-s);border:1px dashed var(--bd);border-radius:3px;color:var(--t3);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-align:center;transition:all .15s}
+.cmt-collapsed:hover{border-color:var(--gold);color:var(--gold);background:var(--bg-c)}
+
+.cmt-compose{margin-top:14px;padding:12px;background:var(--bg-s);border:1px solid var(--bd);border-radius:4px}
+.cmt-compose textarea{width:100%;background:var(--inp);border:1px solid var(--bd);border-radius:3px;padding:8px 10px;color:var(--t1);font-family:'Crimson Pro',serif;font-size:.95rem;line-height:1.5;resize:vertical;min-height:60px;outline:none;transition:border-color .15s}
+.cmt-compose textarea:focus{border-color:var(--gold)}
+.cmt-compose-hint{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--t3)}
+.cmt-compose-hint kbd{font-family:'JetBrains Mono',monospace;font-size:.58rem;background:var(--bg-c);border:1px solid var(--bd);padding:1px 5px;border-radius:2px;color:var(--t2)}
+.cmt-attach-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--bd);border-radius:3px;background:var(--bg-c);color:var(--t2);font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.cmt-attach-btn:hover{border-color:var(--gold);color:var(--gold)}
+.cmt-attach-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.cmt-attach-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 4px;background:var(--bg-c);border:1px solid var(--bd);border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--t2)}
+.cmt-attach-thumb{width:28px;height:22px;border-radius:2px;background:var(--bg-s);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cmt-attach-thumb svg{width:100%;height:100%}
+.cmt-attach-x{background:none;border:none;color:var(--t3);cursor:pointer;font-size:.75rem;padding:0 2px}
+.cmt-attach-x:hover{color:var(--overdue)}
+.cmt-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:8px}
+.cmt-img{aspect-ratio:4/3;border-radius:3px;border:1px solid var(--bd);overflow:hidden;cursor:zoom-in;transition:border-color .15s}
+.cmt-img:hover{border-color:var(--gold)}
+.cmt-img svg{width:100%;height:100%;display:block}
+.cmt-loggedout{padding:14px;text-align:center;background:var(--bg-s);border:1px dashed var(--bd);border-radius:4px;color:var(--t3);font-family:'Crimson Pro',serif;font-style:italic;font-size:.9rem}
+
+.dp-actions{display:flex;gap:8px;margin-top:22px;padding-top:18px;border-top:1px solid var(--bd)}
+.dp-actions .btn{flex:1;text-align:center}
+
+/* ══ TWEAKS panel ══ */
+.tweaks{position:fixed;right:22px;bottom:22px;width:280px;background:var(--bg-c);border:1px solid var(--bd-s);border-radius:6px;padding:14px 16px 16px;box-shadow:var(--sh);z-index:400;display:none;font-family:'Crimson Pro',serif}
+.tweaks.open{display:block}
+.tweaks-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
+.tweaks-ttl{font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.tweaks-x{background:none;border:none;color:var(--t3);cursor:pointer;font-size:.9rem}
+.tweaks-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;gap:10px}
+.tweaks-row + .tweaks-row{border-top:1px solid var(--bd)}
+.tweaks-lbl{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.tweaks-val{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--t3)}
+.tog-track{width:36px;height:20px;border-radius:10px;background:var(--bg-s);border:1px solid var(--bd-s);position:relative;flex-shrink:0;transition:background .2s;cursor:pointer}
+.tog-track.on{background:var(--blue)}
+.tog-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--t3);transition:transform .2s,background .2s}
+.tog-track.on .tog-thumb{transform:translateX(16px);background:#fff}
+
+/* ══ MODAL (new idea) ══ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);z-index:300;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg-s);border:1px solid var(--bd-s);border-radius:7px;padding:26px 28px;width:92%;max-width:540px;box-shadow:0 24px 80px rgba(0,0,0,.55);position:relative}
+.m-title{font-family:'Cinzel',serif;font-size:.96rem;font-weight:700;color:var(--t1);letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px;padding-bottom:13px;border-bottom:1px solid var(--bd)}
+.m-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--t3);font-size:1.1rem}
+.f-grid{display:grid;gap:14px}
+.f-grp{display:flex;flex-direction:column;gap:5px}
+.f-lbl{font-family:'Cinzel',serif;font-size:.57rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.f-inp,.f-area{background:var(--inp);border:1px solid var(--bd);border-radius:3px;padding:9px 11px;color:var(--t1);font-family:'Crimson Pro',serif;font-size:.95rem;outline:none;transition:border-color .2s;width:100%}
+.f-inp:focus,.f-area:focus{border-color:var(--gold)}
+.f-area{min-height:110px;resize:vertical;line-height:1.5}
+.m-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)}
+
+/* empty sidebar filter / loggedout hint */
+.create-note{padding:14px 16px;background:var(--bg-s);border:1px dashed var(--bd-s);border-radius:4px;text-align:center;font-family:'Crimson Pro',serif;color:var(--t3);font-style:italic;font-size:.9rem;margin:10px 24px 0}
+.create-note strong{color:var(--gold);font-family:'Cinzel',serif;font-style:normal;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+
+/* ══ TAG FILTER BAR ══ */
+.tag-filter-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 24px 0;max-width:1240px;margin:0 auto}
+.tag-filter-bar .tfb-lbl{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);flex-shrink:0}
+.tfb{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;border-radius:2px;border:1px solid var(--bd);background:var(--bg-c);color:var(--t2);cursor:pointer;transition:all .15s}
+.tfb:hover{border-color:var(--bd-s);color:var(--t1)}
+.tfb.on{background:var(--tag-bg);border-color:var(--tag-bd);color:var(--blue2)}
+.sort-btn{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:4px 11px;border:1px solid var(--bd);border-radius:2px;background:var(--bg-c);color:var(--t2);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;margin-left:auto}
+.sort-btn:hover{border-color:var(--gold);color:var(--gold)}
+.sort-btn.on{background:rgba(200,168,75,.1);border-color:var(--gold);color:var(--gold)}
+
+/* ══ IDEA TAGS ══ */
+.icard-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+.icard-tag{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:2px;background:var(--tag-bg);border:1px solid var(--tag-bd);color:var(--blue2)}
+
+/* ══ VOTE BUTTON ══ */
+.vote-wrap{display:flex;align-items:center;gap:6px;margin-left:auto}
+.vote-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--bd);border-radius:2px;background:var(--bg-s);font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--t3);cursor:pointer;transition:all .15s;user-select:none}
+.vote-btn:hover{border-color:var(--gold);color:var(--gold)}
+.vote-btn.voted{background:rgba(200,168,75,.15);border-color:var(--gold);color:var(--gold2)}
+
+/* ══ ACTIVITY LOG ══ */
+.act-log{display:flex;flex-direction:column}
+.act-entry{display:grid;grid-template-columns:22px 1fr;gap:9px;padding:7px 0;border-bottom:1px solid var(--bd);align-items:start}
+.act-entry:last-child{border-bottom:none}
+.act-ico{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;margin-top:1px}
+.act-ico.status{background:rgba(74,138,184,.18);color:var(--doing2)}
+.act-ico.done-ev{background:rgba(74,138,106,.18);color:var(--done2)}
+.act-ico.comment{background:var(--bg-s);color:var(--t3);border:1px solid var(--bd)}
+.act-ico.created{background:rgba(200,168,75,.12);color:var(--gold)}
+.act-txt{font-family:'Crimson Pro',serif;font-size:.92rem;color:var(--t2);line-height:1.4}
+.act-txt strong{color:var(--t1);font-weight:600}
+.act-when{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--t3);display:block;margin-top:2px}
+
+/* ══ WIKI TOAST ══ */
+.wiki-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg-c);border:1px solid var(--done2);border-radius:5px;padding:13px 20px;display:flex;align-items:center;gap:14px;box-shadow:var(--sh);z-index:600;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap}
+.wiki-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.wiki-toast-ico{font-size:1.1rem}
+.wiki-toast-body{font-family:'Crimson Pro',serif;font-size:.95rem;color:var(--t1)}
+.wiki-toast-body em{font-style:normal;font-family:'Cinzel',serif;font-size:.68rem;color:var(--done2);letter-spacing:.05em}
+.wiki-toast-lnk{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--done2);text-decoration:none;border-bottom:1px solid var(--done2);padding-bottom:1px;cursor:pointer;transition:color .15s;flex-shrink:0}
+.wiki-toast-lnk:hover{color:var(--gold);border-bottom-color:var(--gold)}
+.wiki-toast-x{background:none;border:none;color:var(--t3);cursor:pointer;font-size:.8rem;margin-left:8px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulseGold{0%,100%{box-shadow:0 0 0 0 rgba(200,168,75,.4)}50%{box-shadow:0 0 0 6px rgba(200,168,75,0)}}
+
+/* responsive */
+@media(max-width:680px){
+  .kanban{grid-template-columns:1fr;max-width:640px}
+  .feed-wrap{grid-template-columns:1fr}
+  .feed-side{position:static}
+  .rope-rail{grid-template-columns:1fr;gap:40px}
+  .rope-rail::before{display:none}
+  .rope-cards{margin-top:100px}
+  .detail-panel{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-compass">
+      <svg viewBox="0 0 40 40" fill="none" width="32" height="32">
+        <circle cx="20" cy="20" r="17" stroke="var(--gold)" stroke-width="1.2" opacity=".4"/>
+        <circle cx="20" cy="20" r="10" stroke="var(--gold)" stroke-width=".6" opacity=".22"/>
+        <g class="compass-needle">
+          <polygon points="20,4 22,20 20,22 18,20" fill="var(--blue2)" opacity=".9"/>
+          <polygon points="20,36 22,20 20,18 18,20" fill="var(--gold)" opacity=".9"/>
+        </g>
+        <circle cx="20" cy="20" r="2" fill="var(--gold)"/>
+      </svg>
+    </div>
+    <span class="nav-title">Seekarten der Zeit</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link">Chronik</button>
+    <button class="nav-link">Marktplatz</button>
+    <button class="nav-link active">Ideenkammer</button>
+    <button class="nav-link">Wiki</button>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="theme-btn">🌙</button>
+    <div id="auth-slot"></div>
+  </div>
+</nav>
+
+<!-- variant switcher -->
+<div class="variant-bar">
+  <span class="vlbl">Layout</span>
+  <button class="var-btn active" data-variant="kanban">Kanban</button>
+  <button class="var-btn" data-variant="feed">Feed</button>
+  <button class="var-btn" data-variant="rope">Seil</button>
+</div>
+
+<!-- subtitle only -->
+<div class="page-hdr" style="padding:24px 24px 8px">
+  <p>Entwürfe, Vorhaben und vollendete Fäden</p>
+  <div class="divider"><div class="dline"></div><div class="ddiamond"></div><div class="dline"></div></div>
+</div>
+
+<!-- create banner for logged-out -->
+<div class="create-note" id="loggedout-note" style="display:none">
+  <strong>Nur angemeldete Chronisten</strong> &nbsp;·&nbsp; können Ideen eintragen, bearbeiten und kommentieren.
+</div>
+
+<!-- wiki stub toast -->
+<div class="wiki-toast" id="wiki-toast">
+  <span class="wiki-toast-ico">◈</span>
+  <span class="wiki-toast-body">Wiki-Stub angelegt: <em id="wiki-toast-title"></em></span>
+  <a class="wiki-toast-lnk" id="wiki-toast-lnk">Seite öffnen</a>
+  <button class="wiki-toast-x" id="wiki-toast-x">✕</button>
+</div>
+
+<!-- ══ VARIANT 1 — KANBAN ══ -->
+<div class="v-page active" id="v-kanban" data-screen-label="01 Kanban">
+  <div class="kanban">
+    <div class="klane" data-status="draft">
+      <div class="klane-hdr">
+        <div class="klane-l"><span class="klane-dot draft"></span><span class="klane-name">Entwurf</span></div>
+        <span class="klane-count" data-count="draft">0</span>
+      </div>
+      <div class="klane-body" data-status="draft"></div>
+      <div class="klane-add user-action-only" data-add-status="draft">+ Neue Idee</div>
+    </div>
+    <div class="klane" data-status="doing">
+      <div class="klane-hdr">
+        <div class="klane-l"><span class="klane-dot doing"></span><span class="klane-name">In Arbeit</span></div>
+        <span class="klane-count" data-count="doing">0</span>
+      </div>
+      <div class="klane-body" data-status="doing"></div>
+    </div>
+    <div class="klane" data-status="done">
+      <div class="klane-hdr">
+        <div class="klane-l"><span class="klane-dot done"></span><span class="klane-name">Vollendet</span></div>
+        <span class="klane-count" data-count="done">0</span>
+      </div>
+      <div class="klane-body" data-status="done"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VARIANT 2 — FEED ══ -->
+<div class="v-page" id="v-feed" data-screen-label="02 Feed">
+  <div class="feed-wrap">
+    <aside class="feed-side">
+      <div class="sb-title">Status</div>
+      <div class="feed-filter" id="feed-filter"></div>
+      <div class="sb-title">Ansicht</div>
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" id="feed-compact-toggle">
+        <div class="tog-track" id="feed-tog"><div class="tog-thumb"></div></div>
+        <span style="font-family:'Crimson Pro',serif;font-size:.88rem;color:var(--t2)">Kompakt</span>
+      </div>
+    </aside>
+    <div class="feed-list" id="feed-list"></div>
+  </div>
+</div>
+
+<!-- ══ VARIANT 3 — ROPE ══ -->
+<div class="v-page" id="v-rope" data-screen-label="03 Seil">
+  <div id="tag-filter-bar-wrap"></div>
+  <div class="rope-wrap">
+    <div class="rope-rail">
+      <div class="rope-col" data-status="draft">
+        <div class="rope-knot draft"><div class="rope-knot-inner draft">I</div></div>
+        <div class="rope-col-lbl">Entwurf</div>
+        <div class="rope-col-cnt" data-count="draft"><span data-cnt></span><button class="rope-add user-action-only" id="rope-add-btn" title="Neue Idee als Entwurf">+</button></div>
+        <div class="rope-cards" data-status="draft"></div>
+      </div>
+      <div class="rope-col" data-status="doing">
+        <div class="rope-knot doing"><div class="rope-knot-inner doing">II</div></div>
+        <div class="rope-col-lbl">In Arbeit</div>
+        <div class="rope-col-cnt" data-count="doing">0</div>
+        <div class="rope-cards" data-status="doing"></div>
+      </div>
+      <div class="rope-col" data-status="done">
+        <div class="rope-knot done"><div class="rope-knot-inner done">III</div></div>
+        <div class="rope-col-lbl">Vollendet</div>
+        <div class="rope-col-cnt" data-count="done">0</div>
+        <div class="rope-cards" data-status="done"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" id="dp-close">✕</button>
+  <div class="detail-inner" id="dp-inner"></div>
+</div>
+
+<!-- new idea modal -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <button class="m-close" id="m-close">✕</button>
+    <div class="m-title">Neue Idee</div>
+    <div class="f-grid">
+      <div class="f-grp">
+        <label class="f-lbl">Titel</label>
+        <input class="f-inp" id="ni-title" placeholder="z.B. Unterarten von Ozeandrachen ausarbeiten">
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Beschreibung (Markdown)</label>
+        <textarea class="f-area" id="ni-desc" placeholder="**Fett**, *kursiv*, [manueller Link](Seitentitel), Wiki-Titel werden automatisch verlinkt."></textarea>
+      </div>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-ghost" id="m-cancel">Abbrechen</button>
+      <button class="btn btn-primary" id="m-save">Entwurf anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- tweaks -->
+<div class="tweaks" id="tweaks">
+  <div class="tweaks-hdr">
+    <span class="tweaks-ttl">Tweaks</span>
+    <button class="tweaks-x" id="tweaks-x">✕</button>
+  </div>
+  <div class="tweaks-row">
+    <span class="tweaks-lbl">Kompakte Karten</span>
+    <div class="tog-track" id="tw-compact"><div class="tog-thumb"></div></div>
+  </div>
+  <div class="tweaks-row">
+    <span class="tweaks-lbl">Angemeldet</span>
+    <div class="tog-track on" id="tw-auth"><div class="tog-thumb"></div></div>
+  </div>
+  <div class="tweaks-row">
+    <span class="tweaks-lbl">Layout</span>
+    <span class="tweaks-val" id="tw-layout">Kanban</span>
+  </div>
+  <div class="tweaks-row">
+    <span class="tweaks-lbl">Thema</span>
+    <span class="tweaks-val" id="tw-theme">Dunkel</span>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+ *  STATE + DEFAULTS
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "compactCards": false,
+  "loggedIn": true,
+  "variant": "rope",
+  "theme": "light"
+}/*EDITMODE-END*/;
+
+// Creators from the Seekarten seed (CLAUDE.md)
+const CREATORS = {
+  SK: { name:'Sven K.',  color:'#3a7abf' },
+  MM: { name:'Max M.',   color:'#2a9a68' },
+  AL: { name:'Anna L.',  color:'#9a4aaa' },
+  RV: { name:'Ralf V.',  color:'#bf603a' },
+};
+
+// Wiki index (so idea titles/body can auto-link on matching terms)
+const WIKI = [
+  { title:'Ozeandrachen',       slug:'ozeandrachen' },
+  { title:'Nevenia',            slug:'nevenia' },
+  { title:'Urkristall',         slug:'urkristall' },
+  { title:'Die Schattenlande',  slug:'die-schattenlande' },
+  { title:'Sven K.',            slug:'sven-k' },
+  { title:'Der Grosse Sturm',   slug:'grosser-sturm' },
+  { title:'Seekarten',          slug:'seekarten' },
+  { title:'Hafenstadt Caldra',  slug:'caldra' },
+  { title:'Runenmagie',         slug:'runenmagie' },
+  { title:'Magierrat',          slug:'magierrat' },
+  { title:'Verbotene Zone',     slug:'verbotene-zone' },
+  { title:'Ash',                slug:'ash' },
+  { title:'Magie',              slug:'magie' },
+];
+
+const IDEAS = [
+  {
+    id: 1,
+    title: 'Unterarten von Ozeandrachen ausarbeiten',
+    status: 'doing',
+    creator: 'SK',
+    createdAt: '2026-03-02',
+    dueAt: '2026-05-15',
+    description:
+`Wir brauchen mindestens **drei Unterarten** damit die Begegnung im Tiefseebecken variantenreich bleibt.
+
+### Ausgangspunkt
+Der Eintrag zu Ozeandrachen beschreibt bisher nur die klassische Form.
+
+- **Abyssaler Drache** — tief, kalt, biolumineszent
+- **Riffdrache** — seicht, gesellig, magisch geladen
+- **Sturmdrache** — Oberflächenjäger, fliegend
+
+> "Was unter der Linie des Mondes wohnt, bleibt selten Legende."
+
+Bezug: siehe auch Nevenia nach dem Grossen Sturm.`,
+    comments: [
+      { id:101, creator:'MM', at:'vor 3 Tagen', body:'Der Sturmdrache überschneidet sich m.E. zu stark mit den *Greifen* — vielleicht nur zwei plus ein Boss-Encounter?' },
+      { id:102, creator:'AL', at:'vor 2 Tagen', body:'Ich habe eine Skizze für den Riffdrachen — siehe Anhang.', images:['riff-1.png','riff-2.png'] },
+      { id:103, creator:'SK', at:'vor 4 Stunden', body:'Gute Punkte. Ich verdichte den Sturmdrachen zu einer **Variante** des Abyssalen und mache den Riffdrachen eigenständig.' },
+    ],
+    images: 2,
+    manualLinks: ['Magierrat'],
+    tags: ['Drachen','Encounter','Weltenbau'],
+    votes: ['MM','AL','RV'],
+    activity: [
+      {type:'comment', actor:'SK', at:'vor 4 Std.'},
+      {type:'comment', actor:'AL', at:'vor 2 Tagen'},
+      {type:'comment', actor:'MM', at:'vor 3 Tagen'},
+      {type:'status',  actor:'SK', from:'draft', to:'doing', at:'vor 3 Wochen'},
+      {type:'created', actor:'SK', at:'vor 7 Wochen'},
+    ],
+  },
+  {
+    id: 2,
+    title: 'Runenmagie-Kapitel schreiben',
+    status: 'draft',
+    creator: 'AL',
+    createdAt: '2026-04-01',
+    dueAt: null,
+    description:
+`Erste Sammlung von Ideen, bevor ich dem Wiki einen eigenen Eintrag gebe.
+
+- Herkunft der Runen
+- Verhältnis zum Magierrat
+- *Was passiert wenn Runen verbrennen?*
+
+Siehe [die alte Notiz zu Ash](Ash).`,
+    comments: [
+      { id:201, creator:'SK', at:'vor 5 Tagen', body:'Stimme zu dass wir hier erst den Überblick brauchen bevor wir ins Detail gehen.' },
+    ],
+    images: 0,
+    manualLinks: [],
+    tags: ['Weltenbau','Wiki'],
+    votes: ['SK','RV'],
+    activity: [
+      {type:'comment', actor:'SK', at:'vor 5 Tagen'},
+      {type:'created', actor:'AL', at:'vor 25 Tagen'},
+    ],
+  },
+  {
+    id: 3,
+    title: 'Hafenstadt Caldra als Startpunkt etablieren',
+    status: 'doing',
+    creator: 'SK',
+    createdAt: '2026-02-18',
+    dueAt: '2026-04-22',
+    description:
+`Caldra soll die **erste Stadt** sein die die Gruppe betritt.
+
+### Pflichtelemente
+1. Eine Taverne mit eindeutigem Namen
+2. Ein Hafen mit Schmuggler-Subplot
+3. Ein lokaler NPC für das Kanzlei-Intro
+
+Vgl. [Karten-Layout](Seekarten).`,
+    comments: [
+      { id:301, creator:'RV', at:'vor 1 Woche',   body:'Taverne: *"Zur gedankenschweren Möwe"* — als Arbeitsname.' },
+      { id:302, creator:'SK', at:'vor 4 Tagen',    body:'Hafen-Subplot gekürzt — rein für die ersten beiden Sitzungen.' },
+    ],
+    images: 3,
+    manualLinks: [],
+    tags: ['Ort','Kampagne'],
+    votes: ['MM','AL','RV','SK'],
+    activity: [
+      {type:'comment', actor:'SK', at:'vor 4 Tagen'},
+      {type:'comment', actor:'RV', at:'vor 1 Woche'},
+      {type:'status',  actor:'SK', from:'draft', to:'doing', at:'vor 5 Wochen'},
+      {type:'created', actor:'SK', at:'vor 9 Wochen'},
+    ],
+  },
+  {
+    id: 4,
+    title: 'Kampagnen-Kalender mit zwei Monden',
+    status: 'draft',
+    creator: 'MM',
+    createdAt: '2026-04-08',
+    dueAt: null,
+    description:
+`Zwei Monde, 13 + 11 Wochen pro Jahr. Das macht Runenmagie-Kapitel thematisch rund.
+
+Offene Frage: synchronisieren wir das mit dem Urkristall-Zyklus?`,
+    comments: [],
+    images: 0,
+    manualLinks: [],
+    tags: ['Weltenbau','Kalender'],
+    votes: ['AL'],
+    activity: [
+      {type:'created', actor:'MM', at:'vor 18 Tagen'},
+    ],
+  },
+  {
+    id: 5,
+    title: 'Verbotene Zone als dauerhaften Rückzugsort',
+    status: 'done',
+    creator: 'SK',
+    createdAt: '2026-01-12',
+    dueAt: '2026-03-01',
+    description:
+`**Status:** abgeschlossen nach Sitzung 14.
+
+Die Verbotene Zone dient jetzt als Rückzugsort zwischen Akt II und III. Der Grosse Sturm bleibt unlösbares Hintergrundrätsel.`,
+    comments: [
+      { id:501, creator:'AL', at:'vor 3 Wochen',  body:'Passt.' },
+      { id:502, creator:'SK', at:'vor 3 Wochen',  body:'Verknüpft mit Der Grosse Sturm.' },
+      { id:503, creator:'MM', at:'vor 2 Wochen',  body:'Schöner Abschluss.' },
+    ],
+    images: 1,
+    manualLinks: ['Magie'],
+    tags: ['Ort','Kampagne'],
+    votes: ['AL','MM','RV','SK'],
+    activity: [
+      {type:'status',  actor:'SK', from:'doing', to:'done', at:'vor 3 Wochen'},
+      {type:'comment', actor:'MM', at:'vor 2 Wochen'},
+      {type:'created', actor:'SK', at:'vor 3 Monaten'},
+    ],
+  },
+  {
+    id: 6,
+    title: 'NPC-Katalog: Händler von Nevenia',
+    status: 'doing',
+    creator: 'RV',
+    createdAt: '2026-03-22',
+    dueAt: '2026-04-30',
+    description:
+`Für jede wiederkehrende Handelsroute brauchen wir **1–2 NPCs** mit klaren Motivationen.
+
+### Shortlist
+- Alaran, Seidenhändlerin aus Nevenia
+- Old Borne, Salzhändler, schweigsam
+- Yvra, Aufkäuferin für Urkristall-Splitter`,
+    comments: [
+      { id:601, creator:'SK', at:'vor 2 Tagen', body:'Yvra ist super — die ziehen wir direkt ins nächste Abenteuer.' },
+    ],
+    images: 0,
+    manualLinks: [],
+    tags: ['NPC','Weltenbau'],
+    votes: ['SK'],
+    activity: [
+      {type:'comment', actor:'SK', at:'vor 2 Tagen'},
+      {type:'created', actor:'RV', at:'vor 35 Tagen'},
+    ],
+  },
+  {
+    id: 7,
+    title: 'Session-Zero Checkliste verfassen',
+    status: 'draft',
+    creator: 'MM',
+    createdAt: '2026-04-10',
+    dueAt: '2026-04-25',
+    description:
+`Bevor eine neue Gruppe startet — sollten wir ein **1-seitiges Dokument** haben.
+
+- Tonalität
+- No-go-Themen
+- Erwartungshaltung Spieltempo
+- Wunschsitze am Tisch`,
+    comments: [],
+    images: 0,
+    manualLinks: [],
+    tags: ['Meta'],
+    votes: [],
+    activity: [
+      {type:'created', actor:'MM', at:'vor 16 Tagen'},
+    ],
+  },
+  {
+    id: 8,
+    title: 'Wiki-Navigation überarbeiten',
+    status: 'done',
+    creator: 'AL',
+    createdAt: '2026-02-02',
+    dueAt: '2026-02-20',
+    description:
+`**Fertig** — die Seitenleiste unterstützt jetzt geschachtelte Kategorien.
+
+Weitere Schritte sind separate Ideen.`,
+    comments: [
+      { id:801, creator:'SK', at:'vor 5 Wochen', body:'Danke — macht endlich Sinn.' },
+    ],
+    images: 0,
+    manualLinks: [],
+    tags: ['Wiki','Meta'],
+    votes: ['MM','AL','RV','SK'],
+    activity: [
+      {type:'status', actor:'AL', from:'doing', to:'done', at:'vor 5 Wochen'},
+      {type:'created', actor:'AL', at:'vor 3 Monaten'},
+    ],
+  },
+];
+
+const state = {
+  variant: TWEAKS.variant,
+  compact: TWEAKS.compactCards,
+  theme: TWEAKS.theme,
+  auth: { loggedIn: TWEAKS.loggedIn, user: { code:'SK', name:'Sven K.', color:'#3a7abf', isAdmin:true } },
+  detailId: null,
+  dragId: null,
+  feedFilter: 'all',
+  tagFilter: new Set(),
+  sortByVotes: false,
+  commentsExpanded: {},
+  tweaksOpen: false,
+};
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  UTILITIES — markdown + wiki autolink + escape
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function slugOf(t){
+  return t.toLowerCase().replace(/[^a-z0-9äöüß]+/g,'-').replace(/^-|-$/g,'');
+}
+
+// Light markdown renderer — supports #, ##, ###, **bold**, *italic*, `code`,
+// - / 1. lists, > quotes, --- hr, [text](Target) links.
+// Then autolinks known wiki titles after rendering.
+function md(src){
+  if(!src) return '';
+  let s = escHtml(src);
+
+  // code spans
+  s = s.replace(/`([^`]+)`/g, (_,c)=>`<code>${c}</code>`);
+
+  // split into blocks
+  const blocks = s.split(/\n\n+/);
+  const out = [];
+  for(let block of blocks){
+    const lines = block.split('\n');
+    // hr
+    if(/^\s*---\s*$/.test(block)){ out.push('<hr>'); continue; }
+    // headings
+    if(/^###\s+/.test(lines[0])){ out.push(`<h3>${lines[0].replace(/^###\s+/,'')}</h3>`+renderRest(lines.slice(1))); continue; }
+    if(/^##\s+/.test(lines[0])){  out.push(`<h2>${lines[0].replace(/^##\s+/,'')}</h2>`+renderRest(lines.slice(1))); continue; }
+    if(/^#\s+/.test(lines[0])){   out.push(`<h1>${lines[0].replace(/^#\s+/,'')}</h1>`+renderRest(lines.slice(1))); continue; }
+    // blockquote (every line starts with >)
+    if(lines.every(l=>/^\s*&gt;\s?/.test(l))){
+      out.push('<blockquote>'+lines.map(l=>l.replace(/^\s*&gt;\s?/,'')).join(' ')+'</blockquote>');
+      continue;
+    }
+    // unordered list
+    if(lines.every(l=>/^\s*-\s+/.test(l))){
+      out.push('<ul>'+lines.map(l=>'<li>'+inline(l.replace(/^\s*-\s+/,''))+'</li>').join('')+'</ul>');
+      continue;
+    }
+    // ordered list
+    if(lines.every(l=>/^\s*\d+\.\s+/.test(l))){
+      out.push('<ol>'+lines.map(l=>'<li>'+inline(l.replace(/^\s*\d+\.\s+/,''))+'</li>').join('')+'</ol>');
+      continue;
+    }
+    // paragraph
+    out.push('<p>'+inline(lines.join(' '))+'</p>');
+  }
+  return out.join('');
+}
+function renderRest(lines){
+  return lines.length ? md(lines.join('\n')) : '';
+}
+function inline(s){
+  // bold + italic
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // manual links [text](Target)
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_,text,target)=>{
+    // if target is an http url, external
+    if(/^https?:/i.test(target)) return `<a class="external" href="${target}" target="_blank" rel="noopener">${text}</a>`;
+    // treat as wiki
+    return `<a class="wiki" data-wiki="${escHtml(target)}" href="#wiki/${slugOf(target)}">${text}</a>`;
+  });
+  // autolink wiki titles not already linked
+  s = autolinkWiki(s);
+  return s;
+}
+
+// Autolink known wiki titles in a chunk of already-inline-processed html.
+// Avoids linking inside existing tags by splitting on <...>.
+function autolinkWiki(html){
+  // sort titles by length DESC so longer titles win
+  const titles = WIKI.map(w=>w.title).slice().sort((a,b)=>b.length-a.length);
+  const parts = html.split(/(<[^>]+>)/);
+  for(let i=0;i<parts.length;i++){
+    if(parts[i].startsWith('<')) continue;
+    // skip text that's inside any currently-open tag? naive: we linked manual [text](target) above -- those are already <a>.
+    let t = parts[i];
+    for(const title of titles){
+      const re = new RegExp('\\b('+title.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')+')\\b','g');
+      // don't re-link inside <a>... by splitting at existing anchor tags — handled by the tag-aware split above.
+      t = t.replace(re, m=>`<a class="wiki auto" data-wiki="${escHtml(title)}" href="#wiki/${slugOf(title)}">${m}</a>`);
+    }
+    parts[i] = t;
+  }
+  return parts.join('');
+}
+
+// Extract wiki references (auto + manual) from an idea
+function wikiRefsFor(idea){
+  const refs = new Map(); // title -> { auto: bool }
+  // manual (from description markdown links + manualLinks array)
+  for(const t of idea.manualLinks || []){
+    if(WIKI.find(w=>w.title===t)) refs.set(t, { auto:false });
+  }
+  // scan md links in description — manual
+  const reMd = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let m;
+  while((m = reMd.exec(idea.description||''))){
+    const target = m[2];
+    if(/^https?:/i.test(target)) continue;
+    const hit = WIKI.find(w=>w.title.toLowerCase()===target.toLowerCase());
+    if(hit) refs.set(hit.title, { auto:false });
+  }
+  // auto — scan title + description for plain-text wiki title matches
+  const haystack = (idea.title + ' ' + (idea.description||'')).toLowerCase();
+  for(const w of WIKI){
+    if(haystack.includes(w.title.toLowerCase())){
+      if(!refs.has(w.title)) refs.set(w.title, { auto:true });
+    }
+  }
+  return [...refs.entries()].map(([title, v])=>({ title, auto: v.auto }));
+}
+
+function plain(mdSrc){
+  // crude strip for card previews
+  return (mdSrc||'').replace(/[*_#>`]/g,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/\n+/g,' ').trim();
+}
+
+function avHtml(code, size){
+  const c = CREATORS[code];
+  if(!c) return '';
+  const px = size || 20;
+  return `<div class="icard-av" style="width:${px}px;height:${px}px;font-size:${Math.max(8,px*0.38)}px;background:${c.color}">${code}</div>`;
+}
+
+function dateHuman(iso){
+  if(!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleDateString('de-DE', { day:'2-digit', month:'short', year:'numeric' });
+}
+function isOverdue(idea){
+  if(!idea.dueAt || idea.status==='done') return false;
+  return new Date(idea.dueAt) < new Date('2026-04-18');
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  CARD RENDER
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+function cardHtml(idea){
+  const desc = plain(idea.description);
+  const cmt = idea.comments?.length || 0;
+  const refs = wikiRefsFor(idea);
+  const wikiCount = refs.length;
+  const tags = idea.tags || [];
+  const votes = idea.votes || [];
+  const myVote = state.auth.loggedIn && votes.includes(state.auth.user.code);
+  return `
+    <div class="icard ${state.compact?'compact':''}" draggable="${state.auth.loggedIn ? 'true' : 'false'}" data-id="${idea.id}">
+      <div class="icard-top">
+        <div class="icard-ttl">${escHtml(idea.title)}</div>
+        <span class="icard-status ${idea.status}" title="${idea.status}"></span>
+      </div>
+      ${tags.length ? `<div class="icard-tags">${tags.map(t=>`<span class="icard-tag">${escHtml(t)}</span>`).join('')}</div>` : ''}
+      <div class="icard-desc">${escHtml(desc)}</div>
+      <div class="icard-meta">
+        ${avHtml(idea.creator,18)}
+        <span>${CREATORS[idea.creator]?.name || idea.creator}</span>
+        <span class="sep">·</span>
+        ${cmt ? `<span class="icard-cmt">💬 ${cmt}</span>` : ''}
+        ${idea.images ? `<span class="icard-img">🖼 ${idea.images}</span>` : ''}
+        ${wikiCount ? `<span class="icard-wiki">◈ ${wikiCount}</span>` : ''}
+        <span class="vote-wrap"><button class="vote-btn ${myVote?'voted':''}" data-vote="${idea.id}">◆ ${votes.length}</button></span>
+      </div>
+    </div>`;
+}
+
+function feedRowHtml(idea){
+  const desc = plain(idea.description);
+  const cmt = idea.comments?.length || 0;
+  const refs = wikiRefsFor(idea);
+  const status = idea.status;
+  const icon = status==='done'
+    ? '<svg viewBox="0 0 14 14" fill="none"><path d="M3 7l3 3 5-6" stroke="#6aaa84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : status==='doing'
+      ? '<svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4" stroke="#6aaad8" stroke-width="2"/><path d="M7 4v3h2" stroke="#6aaad8" stroke-width="2" stroke-linecap="round"/></svg>'
+      : '<svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4" stroke="#b89a54" stroke-width="2" stroke-dasharray="2 2"/></svg>';
+  const lbl = status==='done' ? 'Vollendet' : status==='doing' ? 'In Arbeit' : 'Entwurf';
+  return `
+    <div class="feed-row" data-id="${idea.id}">
+      <div class="feed-status">
+        <div class="feed-status-dot ${status}">${icon}</div>
+        <div class="feed-status-lbl">${lbl}</div>
+      </div>
+      <div class="feed-body-r">
+        <div class="ft">${escHtml(idea.title)}</div>
+        <div class="fd">${escHtml(desc)}</div>
+        <div class="feed-meta">
+          ${avHtml(idea.creator,18)}
+          <span>${CREATORS[idea.creator]?.name || idea.creator}</span>
+          ${cmt ? `<span>💬 ${cmt}</span>` : ''}
+          ${idea.images ? `<span>🖼 ${idea.images}</span>` : ''}
+          ${refs.length ? `<span style="color:var(--blue2)">◈ ${refs.length}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  RENDER LAYOUTS
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+function renderAll(){
+  renderKanban();
+  renderFeed();
+  renderRope();
+  renderAuth();
+  renderVariantActive();
+  renderTweaksUi();
+  document.getElementById('loggedout-note').style.display = state.auth.loggedIn ? 'none' : 'block';
+}
+
+function renderKanban(){
+  const by = { draft:[], doing:[], done:[] };
+  for(const i of IDEAS) by[i.status].push(i);
+  for(const s of ['draft','doing','done']){
+    const body = document.querySelector(`#v-kanban .klane-body[data-status="${s}"]`);
+    body.innerHTML = by[s].map(cardHtml).join('') || `<div style="padding:20px 8px;text-align:center;color:var(--t3);font-style:italic;font-family:'Crimson Pro',serif;font-size:.9rem">— leer —</div>`;
+    document.querySelector(`#v-kanban [data-count="${s}"]`).textContent = by[s].length;
+  }
+  document.querySelector('#v-kanban').classList.toggle('compact', state.compact);
+  wireCards('#v-kanban');
+}
+
+function renderFeed(){
+  const filter = state.feedFilter;
+  const list = IDEAS.filter(i => filter==='all' || i.status===filter);
+  document.getElementById('feed-list').innerHTML = list.map(feedRowHtml).join('');
+
+  const counts = { all:IDEAS.length, draft:0, doing:0, done:0 };
+  for(const i of IDEAS) counts[i.status]++;
+  document.getElementById('feed-filter').innerHTML = [
+    ['all','Alle',null],['draft','Entwurf','draft'],['doing','In Arbeit','doing'],['done','Vollendet','done']
+  ].map(([k,lbl,cls])=>`<button class="feed-fb ${state.feedFilter===k?'on':''}" data-fk="${k}">${cls?`<span class="fb-dot" style="background:var(--${cls})"></span>`:''}<span>${lbl}</span><span class="fb-count">${counts[k]}</span></button>`).join('');
+
+  document.querySelectorAll('#feed-filter .feed-fb').forEach(b=>{
+    b.addEventListener('click',()=>{ state.feedFilter = b.dataset.fk; renderFeed(); });
+  });
+  document.querySelectorAll('#feed-list .feed-row').forEach(r=>{
+    r.addEventListener('click',()=>openDetail(+r.dataset.id));
+  });
+
+  document.getElementById('feed-tog').classList.toggle('on', state.compact);
+}
+
+function renderRope(){
+  // collect all tags from ideas
+  const allTags = [...new Set(IDEAS.flatMap(i=>i.tags||[]))].sort();
+
+  // filter + sort
+  let list = IDEAS.slice();
+  if(state.tagFilter.size > 0){
+    list = list.filter(i=>(i.tags||[]).some(t=>state.tagFilter.has(t)));
+  }
+  if(state.sortByVotes){
+    list = [...list].sort((a,b)=>(b.votes||[]).length-(a.votes||[]).length);
+  }
+
+  // render filter bar
+  const wrap = document.getElementById('tag-filter-bar-wrap');
+  if(wrap){
+    wrap.innerHTML = `<div class="tag-filter-bar">
+      <span class="tfb-lbl">Tags</span>
+      <button class="tfb ${state.tagFilter.size===0?'on':''}" data-tag="__all">Alle</button>
+      ${allTags.map(t=>`<button class="tfb ${state.tagFilter.has(t)?'on':''}" data-tag="${escHtml(t)}">${escHtml(t)}</button>`).join('')}
+      <button class="sort-btn ${state.sortByVotes?'on':''}" id="sort-votes-btn">◆ Nach Beliebtheit</button>
+    </div>`;
+    wrap.querySelectorAll('.tfb').forEach(b=>{
+      b.addEventListener('click',()=>{
+        if(b.dataset.tag==='__all'){ state.tagFilter.clear(); }
+        else {
+          state.tagFilter.has(b.dataset.tag) ? state.tagFilter.delete(b.dataset.tag) : state.tagFilter.add(b.dataset.tag);
+        }
+        renderRope();
+      });
+    });
+    const sb = document.getElementById('sort-votes-btn');
+    if(sb) sb.addEventListener('click',()=>{ state.sortByVotes=!state.sortByVotes; renderRope(); });
+  }
+
+  const by = { draft:[], doing:[], done:[] };
+  for(const i of list) by[i.status]=(by[i.status]||[]).concat(i);
+
+  for(const s of ['draft','doing','done']){
+    const col = document.querySelector(`#v-rope .rope-cards[data-status="${s}"]`);
+    col.innerHTML = (by[s]||[]).map(cardHtml).join('') || `<div style="padding:18px 8px;text-align:center;color:var(--t3);font-style:italic;font-family:'Crimson Pro',serif;font-size:.88rem">— kein Faden —</div>`;
+    const cnt = document.querySelector(`#v-rope [data-count="${s}"]`);
+    if(s==='draft'){
+      cnt.querySelector('[data-cnt]').textContent = (by[s]||[]).length + ' Fäden';
+    } else {
+      cnt.textContent = (by[s]||[]).length + ' Fäden';
+    }
+  }
+  document.querySelector('#v-rope').classList.toggle('compact', state.compact);
+  wireCards('#v-rope');
+  // wire vote buttons
+  document.querySelectorAll('#v-rope .vote-btn[data-vote]').forEach(b=>{
+    b.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(!state.auth.loggedIn) return;
+      toggleVote(+b.dataset.vote);
+    });
+  });
+  const ropeAdd = document.getElementById('rope-add-btn');
+  if(ropeAdd) ropeAdd.onclick = openNewModal;
+}
+
+function renderAuth(){
+  const slot = document.getElementById('auth-slot');
+  if(state.auth.loggedIn){
+    const u = state.auth.user;
+    slot.innerHTML = `
+      <div class="user-pill" title="${u.name}">
+        <div class="user-av" style="background:${u.color}">${u.code}</div>
+        <span class="user-name">${u.code}</span>
+      </div>`;
+  } else {
+    slot.innerHTML = `<button class="btn btn-ghost" onclick="alert('Login in Prototyp gemockt — nutze den Tweaks-Schalter ›Angemeldet‹ um Zustand umzuschalten.')">Anmelden</button>`;
+  }
+  // hide logged-out specific add affordances
+  document.querySelectorAll('.user-action-only').forEach(el=>{
+    el.style.display = state.auth.loggedIn ? '' : 'none';
+  });
+}
+
+function renderVariantActive(){
+  document.querySelectorAll('.v-page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('v-'+state.variant).classList.add('active');
+  document.querySelectorAll('.var-btn').forEach(b=>b.classList.toggle('active', b.dataset.variant===state.variant));
+}
+
+function renderTweaksUi(){
+  document.getElementById('tw-compact').classList.toggle('on', state.compact);
+  document.getElementById('tw-auth').classList.toggle('on', state.auth.loggedIn);
+  document.getElementById('tw-layout').textContent = state.variant[0].toUpperCase()+state.variant.slice(1);
+  document.getElementById('tw-theme').textContent = state.theme === 'dark' ? 'Dunkel' : 'Hell';
+  document.getElementById('theme-btn').textContent = state.theme === 'dark' ? '🌙' : '☀️';
+  document.documentElement.dataset.theme = state.theme;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  CARD WIRING — click to open + drag-between-lanes
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+function wireCards(root){
+  document.querySelectorAll(`${root} .icard`).forEach(c=>{
+    c.addEventListener('click', (e)=>{
+      if(c.classList.contains('dragging')) return;
+      openDetail(+c.dataset.id);
+    });
+    c.addEventListener('dragstart', e=>{
+      if(!state.auth.loggedIn){ e.preventDefault(); return; }
+      state.dragId = +c.dataset.id;
+      c.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', c.dataset.id); } catch(_){}
+    });
+    c.addEventListener('dragend', ()=>{
+      c.classList.remove('dragging');
+      document.querySelectorAll('.klane, .rope-col').forEach(l=>l.classList.remove('drop-over'));
+    });
+  });
+  // lanes
+  const lanes = root === '#v-kanban'
+    ? document.querySelectorAll('#v-kanban .klane')
+    : document.querySelectorAll('#v-rope .rope-col');
+  lanes.forEach(l=>{
+    l.addEventListener('dragover', e=>{
+      if(state.dragId==null) return;
+      e.preventDefault();
+      l.classList.add('drop-over');
+    });
+    l.addEventListener('dragleave', ()=>l.classList.remove('drop-over'));
+    l.addEventListener('drop', e=>{
+      e.preventDefault();
+      l.classList.remove('drop-over');
+      const id = state.dragId;
+      state.dragId = null;
+      if(id==null) return;
+      const newStatus = l.dataset.status;
+      const idea = IDEAS.find(i=>i.id===id);
+      if(idea && idea.status !== newStatus){
+        const prev = idea.status;
+        idea.status = newStatus;
+        if(!idea.activity) idea.activity=[];
+        idea.activity.unshift({type:'status', actor:state.auth.user.code, from:prev, to:newStatus, at:'gerade eben'});
+        if(newStatus==='done'){
+          const slug = slugOf(idea.title);
+          if(!WIKI.find(w=>w.slug===slug)) WIKI.push({title:idea.title, slug});
+          showWikiToast(idea.title);
+        }
+        renderAll();
+        if(state.detailId===id) openDetail(id);
+      }
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  DETAIL PANEL
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+function activityLogHtml(idea){
+  const acts = idea.activity || [];
+  if(!acts.length) return `<div style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;padding:4px 0">Keine Aktivität aufgezeichnet.</div>`;
+  const statusLbl = { draft:'Entwurf', doing:'In Arbeit', done:'Vollendet' };
+  return `<div class="act-log">${acts.map(a=>{
+    const cr = CREATORS[a.actor] || { name:a.actor, color:'#888' };
+    const avEl = `<div class="act-ico ${a.type==='status'&&a.to==='done'?'done-ev':a.type}" style="${a.type==='comment'||a.type==='created'?'':'background:none'}">
+      ${a.type==='comment'?`<div class="cmt-av" style="background:${cr.color};width:22px;height:22px;font-size:.52rem">${a.actor}</div>`
+        :a.type==='created'?'✦'
+        :a.to==='done'?'✓':'⇢'}</div>`;
+    let txt = '';
+    if(a.type==='comment')      txt = `<strong>${cr.name}</strong> hat kommentiert`;
+    else if(a.type==='status')  txt = `<strong>${cr.name}</strong> hat Status geändert: ${statusLbl[a.from]||a.from} → ${statusLbl[a.to]||a.to}`;
+    else if(a.type==='created') txt = `<strong>${cr.name}</strong> hat die Idee angelegt`;
+    return `<div class="act-entry ${a.type==='status'&&a.to==='done'?'done-ev':a.type}">
+      ${avEl}
+      <div class="act-txt">${txt}<span class="act-when">${a.at}</span></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function openDetail(id){
+  const idea = IDEAS.find(i=>i.id===id);
+  if(!idea) return;
+  state.detailId = id;
+  document.querySelectorAll('.icard, .feed-row').forEach(c=>c.classList.toggle('active', +c.dataset.id===id));
+
+  const refs = wikiRefsFor(idea);
+  const due = idea.dueAt ? dateHuman(idea.dueAt) : null;
+  const overdue = isOverdue(idea);
+  const canEdit = state.auth.loggedIn && (state.auth.user.isAdmin || state.auth.user.code === idea.creator);
+
+  const statusLbl = { draft:'Entwurf', doing:'In Arbeit', done:'Vollendet' }[idea.status];
+
+  // comments — newest first
+  const sorted = [...idea.comments].reverse();
+  const visibleCount = state.commentsExpanded[id] ? sorted.length : Math.min(2, sorted.length);
+  const hiddenCount = sorted.length - visibleCount;
+
+  const commentsHtml = sorted.slice(0, visibleCount).map(c=>`
+    <div class="cmt">
+      <div class="cmt-av" style="background:${CREATORS[c.creator]?.color||'#888'}">${c.creator}</div>
+      <div>
+        <div class="cmt-hdr">
+          <span class="cmt-name">${CREATORS[c.creator]?.name || c.creator}</span>
+          <span class="cmt-when">${c.at}</span>
+        </div>
+        <div class="cmt-body md-body">${md(c.body)}</div>
+        ${c.images && c.images.length ? `<div class="cmt-imgs">${c.images.map((n,idx)=>`<div class="cmt-img">${stripePlaceholder(idx,c.body).match(/<svg[\s\S]*?<\/svg>/)[0]}</div>`).join('')}</div>` : ''}
+      </div>
+    </div>`).join('') + (hiddenCount>0
+      ? `<div class="cmt-collapsed" id="cmt-expand">▾ ${hiddenCount} ältere Kommentare anzeigen</div>`
+      : (sorted.length>2 && state.commentsExpanded[id]
+        ? `<div class="cmt-collapsed" id="cmt-collapse">▴ Ältere ausblenden</div>`
+        : ''));
+
+  const composeHtml = state.auth.loggedIn
+    ? `<div class="cmt-compose">
+         <textarea placeholder="Kommentar verfassen… **Markdown** wird unterstützt. Wiki-Titel werden automatisch verlinkt."></textarea>
+         <div class="cmt-attach-row" id="cmt-attach-row">
+           <label class="cmt-attach-btn" for="cmt-file-${id}">📎 Bild anhängen</label>
+           <input type="file" id="cmt-file-${id}" accept="image/*" multiple style="display:none">
+           <span class="cmt-attach-chip"><span class="cmt-attach-thumb">${stripePlaceholder(0,'').match(/<svg[\s\S]*?<\/svg>/)[0]}</span>skizze-drache.png<button class="cmt-attach-x" title="Entfernen">✕</button></span>
+         </div>
+         <div class="cmt-compose-hint">
+           <span>Tipp: <kbd>**fett**</kbd> <kbd>*kursiv*</kbd> <kbd>[text](Seite)</kbd></span>
+           <button class="btn btn-sm btn-primary">Senden</button>
+         </div>
+       </div>`
+    : `<div class="cmt-loggedout">Melde dich an um zu kommentieren.</div>`;
+
+  const galleryHtml = idea.images > 0
+    ? `<div class="dp-gallery">${Array.from({length:idea.images}).map((_,i)=>stripePlaceholder(i,idea.title)).join('')}${canEdit?'<div class="dp-img-add">+ Bild</div>':''}</div>`
+    : (canEdit
+        ? `<div class="dp-gallery"><div class="dp-img-add">+ Bild anhängen</div></div>`
+        : `<div style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;padding:4px 0">Keine Bilder angehängt.</div>`);
+
+  const wikiHtml = refs.length
+    ? `<div class="dp-wiki-list">${refs.map(r=>`
+        <a class="wiki-chip" href="#wiki/${slugOf(r.title)}">
+          <div class="wiki-chip-ico">◈</div>
+          <div class="wiki-chip-ttl">${escHtml(r.title)}</div>
+          <span class="wiki-chip-auto ${r.auto?'':'manual'}">${r.auto?'auto':'manuell'}</span>
+        </a>`).join('')}</div>`
+    : `<div style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;padding:4px 0">Keine Verknüpfungen. Titel oder <code>[Text](Seitentitel)</code> in Beschreibung verwenden.</div>`;
+
+  // progress steps
+  const steps = [['draft','Entwurf'],['doing','In Arbeit'],['done','Vollendet']];
+  const curIdx = steps.findIndex(s=>s[0]===idea.status);
+  const progressHtml = `
+    <div class="dp-progress">
+      <div class="dp-progress-bar">
+        ${steps.map((s,i)=>`<div class="dp-progress-seg ${i<=curIdx?'on '+s[0]:''}"></div>`).join('')}
+      </div>
+      <div class="dp-progress-steps">
+        ${steps.map((s,i)=>`<button class="dp-step-btn ${i===curIdx?'current '+s[0]:''}" data-move="${s[0]}" ${!canEdit||i===curIdx?'disabled style="opacity:.5;cursor:not-allowed"':''}>${s[1]}</button>`).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('dp-inner').innerHTML = `
+    ${overdue ? `<div style="margin-bottom:12px;font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--overdue);letter-spacing:.05em">● Frist überschritten</div>` : ''}
+    <div class="dp-title">${escHtml(idea.title)}</div>
+    <div class="dp-sub">
+      <span class="dp-sub-item">
+        <span class="dp-av" style="background:${CREATORS[idea.creator]?.color||'#888'}">${idea.creator}</span>
+        ${CREATORS[idea.creator]?.name || idea.creator}
+      </span>
+      <span class="dp-sub-item">angelegt ${dateHuman(idea.createdAt)}</span>
+      ${due ? `<span class="dp-sub-item ${overdue?'overdue':''}">Frist ${due}</span>` : `<span class="dp-sub-item" style="opacity:.6">ohne Frist</span>`}
+    </div>
+
+    ${progressHtml}
+
+    <div class="dp-section">
+      <h4>Beschreibung</h4>
+      <div class="md-body">${md(idea.description)}</div>
+    </div>
+
+    <div class="dp-section">
+      <h4>Bilder <span class="count">${idea.images||0}</span></h4>
+      ${galleryHtml}
+    </div>
+
+    <div class="dp-section">
+      <h4>Kommentare <span class="count">${idea.comments.length}</span></h4>
+      ${commentsHtml || `<div style="font-family:'Crimson Pro',serif;font-style:italic;color:var(--t3);font-size:.9rem;padding:4px 0">Noch keine Kommentare.</div>`}
+      ${composeHtml}
+    </div>
+
+    <div class="dp-section">
+      <h4>Aktivität <span class="count">${(idea.activity||[]).length}</span></h4>
+      ${activityLogHtml(idea)}
+    </div>
+
+    ${canEdit ? `<div class="dp-actions">
+      <button class="btn">Bearbeiten</button>
+      <button class="btn btn-danger">Löschen</button>
+    </div>` : ''}
+  `;
+
+  // wire status move
+  document.querySelectorAll('.dp-step-btn[data-move]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      if(b.classList.contains('current') || !canEdit) return;
+      const prevStatus = idea.status;
+      const newStatus = b.dataset.move;
+      idea.status = newStatus;
+      if(!idea.activity) idea.activity=[];
+      idea.activity.unshift({type:'status', actor:state.auth.user.code, from:prevStatus, to:newStatus, at:'gerade eben'});
+      if(newStatus==='done'){
+        // add wiki stub to WIKI index
+        const slug = slugOf(idea.title);
+        if(!WIKI.find(w=>w.slug===slug)) WIKI.push({title:idea.title, slug});
+        showWikiToast(idea.title);
+      }
+      renderAll();
+      openDetail(idea.id);
+    });
+  });
+  const exp = document.getElementById('cmt-expand');
+  if(exp) exp.addEventListener('click', ()=>{ state.commentsExpanded[id]=true; openDetail(id); });
+  const col = document.getElementById('cmt-collapse');
+  if(col) col.addEventListener('click', ()=>{ state.commentsExpanded[id]=false; openDetail(id); });
+
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function closeDetail(){
+  state.detailId = null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.querySelectorAll('.icard, .feed-row').forEach(c=>c.classList.remove('active'));
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  VOTE
+ * ════════════════════════════════════════════════════════════════════════════ */
+function toggleVote(id){
+  const idea = IDEAS.find(i=>i.id===id);
+  if(!idea) return;
+  if(!idea.votes) idea.votes=[];
+  const code = state.auth.user.code;
+  const idx = idea.votes.indexOf(code);
+  if(idx>=0) idea.votes.splice(idx,1);
+  else idea.votes.push(code);
+  renderRope();
+  if(state.detailId===id) openDetail(id);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  WIKI STUB TOAST
+ * ════════════════════════════════════════════════════════════════════════════ */
+let _wikiToastTimer = null;
+function showWikiToast(title){
+  const t = document.getElementById('wiki-toast');
+  const tl = document.getElementById('wiki-toast-title');
+  const lnk = document.getElementById('wiki-toast-lnk');
+  if(!t) return;
+  tl.textContent = title;
+  lnk.href = '#wiki/'+slugOf(title);
+  t.classList.add('show');
+  clearTimeout(_wikiToastTimer);
+  _wikiToastTimer = setTimeout(()=>t.classList.remove('show'), 5000);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const tx = document.getElementById('wiki-toast-x');
+  if(tx) tx.addEventListener('click',()=>document.getElementById('wiki-toast').classList.remove('show'));
+}, {once:true});
+
+// striped placeholder image (3 variations by index)
+function stripePlaceholder(i, title){
+  const tones = [['#1a3656','#2a4a6a'], ['#2a3a2a','#3a5a3a'], ['#3a2a1a','#5a3a2a']];
+  const [bg,fg] = tones[i % tones.length];
+  const tag = ['Skizze','Notiz','Karte'][i%3] + ' ' + (i+1);
+  return `<div class="dp-img"><svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice">
+    <defs><pattern id="sp${i}" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(40)">
+      <rect width="8" height="8" fill="${bg}"/><line x1="0" y1="0" x2="0" y2="8" stroke="${fg}" stroke-width="3" opacity=".5"/>
+    </pattern></defs>
+    <rect width="160" height="120" fill="url(#sp${i})"/>
+    <rect width="160" height="120" fill="none" stroke="rgba(200,168,75,.25)" stroke-width="1"/>
+  </svg><span class="lbl">${tag}</span></div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  MODAL — new idea
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+function openNewModal(){
+  document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('ni-title').value='';
+  document.getElementById('ni-desc').value='';
+  setTimeout(()=>document.getElementById('ni-title').focus(), 60);
+}
+function closeNewModal(){ document.getElementById('modal-bg').classList.remove('open'); }
+function saveNewIdea(){
+  const t = document.getElementById('ni-title').value.trim();
+  const d = document.getElementById('ni-desc').value.trim();
+  if(!t){ alert('Bitte einen Titel eintragen.'); return; }
+  const id = Math.max(...IDEAS.map(i=>i.id))+1;
+  IDEAS.unshift({
+    id, title:t, description:d, status:'draft',
+    creator: state.auth.user.code,
+    createdAt: '2026-04-18', dueAt:null,
+    comments:[], images:0, manualLinks:[]
+  });
+  closeNewModal();
+  renderAll();
+  openDetail(id);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  WIRE — top-level
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+document.querySelectorAll('.var-btn').forEach(b=>{
+  b.addEventListener('click',()=>{ state.variant = b.dataset.variant; renderAll(); persist({ variant: state.variant }); });
+});
+document.getElementById('theme-btn').addEventListener('click',()=>{
+  state.theme = state.theme==='dark' ? 'light' : 'dark';
+  renderTweaksUi();
+  persist({ theme: state.theme });
+});
+document.getElementById('dp-close').addEventListener('click', closeDetail);
+document.getElementById('m-close').addEventListener('click', closeNewModal);
+document.getElementById('m-cancel').addEventListener('click', closeNewModal);
+document.getElementById('m-save').addEventListener('click', saveNewIdea);
+document.getElementById('modal-bg').addEventListener('click', e=>{
+  if(e.target.id==='modal-bg') closeNewModal();
+});
+document.getElementById('feed-compact-toggle').addEventListener('click',()=>{
+  state.compact = !state.compact; renderAll(); persist({ compactCards: state.compact });
+});
+// tweaks toggles
+document.getElementById('tw-compact').addEventListener('click',()=>{ state.compact=!state.compact; renderAll(); persist({ compactCards: state.compact }); });
+document.getElementById('tw-auth').addEventListener('click',()=>{ state.auth.loggedIn=!state.auth.loggedIn; renderAll(); persist({ loggedIn: state.auth.loggedIn }); });
+document.getElementById('tweaks-x').addEventListener('click', ()=>{ state.tweaksOpen=false; document.getElementById('tweaks').classList.remove('open'); });
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    if(state.detailId!=null) closeDetail();
+    else if(document.getElementById('modal-bg').classList.contains('open')) closeNewModal();
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+ *  TWEAKS protocol
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+window.addEventListener('message', e=>{
+  const d = e.data || {};
+  if(d.type === '__activate_edit_mode'){
+    state.tweaksOpen = true;
+    document.getElementById('tweaks').classList.add('open');
+  } else if(d.type === '__deactivate_edit_mode'){
+    state.tweaksOpen = false;
+    document.getElementById('tweaks').classList.remove('open');
+  }
+});
+try { window.parent.postMessage({type:'__edit_mode_available'}, '*'); } catch(_){}
+
+function persist(edits){
+  try { window.parent.postMessage({type:'__edit_mode_set_keys', edits}, '*'); } catch(_){}
+}
+
+/* boot */
+renderAll();
+</script>
+</body>
+</html>

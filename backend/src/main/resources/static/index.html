@@ -29,6 +29,7 @@
   </div>
   <div class="nav-links" id="nav-links">
     <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
+    <button class="nav-link user-action-only" id="nav-ideas" onclick="showPage('ideas')" style="display:none">Ideenkammer</button>
     <!-- world buttons injected by renderTopNavWorlds() -->
   </div>
   <div class="nav-right">
@@ -603,11 +604,101 @@
   </div>
 </div>
 
+<!-- ══ IDEAS PAGE ══ -->
+<div class="page" id="page-ideas">
+  <div id="ideas-tag-filter-bar" class="ideas-tag-filter-bar"></div>
+  <div class="ideas-rope-wrap">
+    <div class="ideas-rope-rail">
+
+      <!-- Entwurf column -->
+      <div class="ideas-rope-col" id="ideas-col-draft" data-status="draft">
+        <div class="ideas-rope-knot draft">
+          <div class="ideas-rope-knot-inner">I</div>
+        </div>
+        <div class="ideas-col-lbl">Entwurf</div>
+        <div class="ideas-col-cnt">
+          <span id="ideas-cnt-draft">0</span>
+          <button class="ideas-rope-add user-action-only" id="ideas-add-btn" style="display:none" title="Neue Idee" onclick="openIdeaModal(null)">+</button>
+        </div>
+        <div class="ideas-cards" id="ideas-cards-draft" data-status="draft"></div>
+      </div>
+
+      <!-- In Arbeit column -->
+      <div class="ideas-rope-col" id="ideas-col-doing" data-status="doing">
+        <div class="ideas-rope-knot doing">
+          <div class="ideas-rope-knot-inner">II</div>
+        </div>
+        <div class="ideas-col-lbl">In Arbeit</div>
+        <div class="ideas-col-cnt"><span id="ideas-cnt-doing">0</span></div>
+        <div class="ideas-cards" id="ideas-cards-doing" data-status="doing"></div>
+      </div>
+
+      <!-- Vollendet column -->
+      <div class="ideas-rope-col" id="ideas-col-done" data-status="done">
+        <div class="ideas-rope-knot done">
+          <div class="ideas-rope-knot-inner">III</div>
+        </div>
+        <div class="ideas-col-lbl">Vollendet</div>
+        <div class="ideas-col-cnt"><span id="ideas-cnt-done">0</span></div>
+        <div class="ideas-cards" id="ideas-cards-done" data-status="done"></div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- #page-ideas -->
+
+<!-- ══ IDEAS DETAIL PANEL ══ -->
+<div class="ideas-detail-panel" id="ideas-detail-panel">
+  <button class="idp-close" onclick="closeIdeaDetail()">✕</button>
+  <div class="idp-inner" id="idp-inner"></div>
+</div>
+
+<!-- ══ IDEAS MODAL (create / edit) ══ -->
+<div class="ideas-modal-bg" id="ideas-modal-bg" onclick="if(event.target===this)closeIdeaModal()">
+  <div class="ideas-modal">
+    <div class="m-title" id="ideas-modal-title">Neue Idee</div>
+    <button class="m-close" onclick="closeIdeaModal()">✕</button>
+    <div class="f-grid">
+      <div class="f-grp">
+        <label class="f-lbl">Titel *</label>
+        <input class="f-inp" id="idea-f-title" type="text" placeholder="z.B. Unterarten von Ozeandrachen ausarbeiten">
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Beschreibung (Markdown, optional)</label>
+        <textarea class="f-inp" id="idea-f-desc" rows="4" placeholder="Details, Ideen, Hintergrund…" style="resize:vertical;min-height:80px"></textarea>
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Frist (optional)</label>
+        <input class="f-inp" id="idea-f-due" type="date">
+      </div>
+      <div class="f-grp">
+        <label class="f-lbl">Tags (kommagetrennt)</label>
+        <input class="f-inp" id="idea-f-tags" type="text" placeholder="Drachen, Weltenbau, Encounter">
+        <div class="ideas-default-tags" id="ideas-default-tags"></div>
+      </div>
+      <div id="ideas-modal-err" style="display:none;color:#e07070;font-size:.85rem"></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn" onclick="closeIdeaModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveIdeaModal()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WIKI STUB TOAST ══ -->
+<div class="wiki-stub-toast" id="wiki-stub-toast">
+  <span class="wiki-stub-toast-icon">◈</span>
+  <span id="wiki-stub-toast-text">Wiki-Stub angelegt</span>
+  <a id="wiki-stub-toast-link" onclick="openWikiStubLink()" style="cursor:pointer">Seite öffnen</a>
+  <button class="wiki-stub-toast-close" onclick="closeWikiStubToast()">✕</button>
+</div>
+
 <script src="/js/core.js?v=27"></script>
 <script src="/js/timeline.js?v=27"></script>
 <script src="/js/items.js?v=27"></script>
 <script src="/js/users.js?v=27"></script>
 <script src="/js/wiki.js?v=27"></script>
 <script src="/js/map.js?v=27"></script>
+<script src="/js/ideas.js?v=27"></script>
 </body>
 </html>

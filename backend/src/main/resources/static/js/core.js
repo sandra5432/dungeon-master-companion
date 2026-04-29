@@ -43,6 +43,15 @@ const state = {
   wikiTitles: [],
   wikiAllEntries: [],
   wikiFullGraph: null,
+  ideas: {
+    list:          [],
+    tagFilter:     new Set(),
+    sortByVotes:   false,
+    compact:       false,
+    onlyMine:      false,
+    detailId:      null,
+    commentsExpanded: false,
+  },
   map: {
     pois:              [],
     poiTypes:          [],
@@ -256,8 +265,9 @@ async function navigateToUrl({ page, worldId, subId }, push) {
 }
 
 function showPage(p) {
-  if (p === 'config' && !state.auth.isAdmin) return;
-  if (p === 'users'  && !state.auth.isAdmin) return;
+  if (p === 'config' && !state.auth.isAdmin)  return;
+  if (p === 'users'  && !state.auth.isAdmin)  return;
+  if (p === 'ideas'  && !state.auth.loggedIn) return;
   state.ui.currentPage = p;
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
@@ -266,6 +276,9 @@ function showPage(p) {
 
   if (p === 'items') {
     const navEl = document.getElementById('nav-items');
+    if (navEl) navEl.classList.add('active');
+  } else if (p === 'ideas') {
+    const navEl = document.getElementById('nav-ideas');
     if (navEl) navEl.classList.add('active');
   } else if (state.ui.activeWorldId) {
     const navEl = document.getElementById('nav-world-' + state.ui.activeWorldId);
@@ -278,6 +291,7 @@ function showPage(p) {
   if (p === 'wiki')   initWikiPage();
   if (p === 'config') renderConfigWorlds();
   if (p === 'map')    initMapPage();
+  if (p === 'ideas')  initIdeasPage();
 
   renderSectionTabs();
 }
@@ -389,9 +403,11 @@ function renderConfigWorlds() {
 function renderTopNavWorlds() {
   const linksEl = document.getElementById('nav-links');
   if (!linksEl) return;
-  const marktplatz = document.getElementById('nav-items');
+  const marktplatz  = document.getElementById('nav-items');
+  const ideenkammer = document.getElementById('nav-ideas');
   linksEl.innerHTML = '';
-  if (marktplatz) linksEl.appendChild(marktplatz);
+  if (marktplatz)  linksEl.appendChild(marktplatz);
+  if (ideenkammer) linksEl.appendChild(ideenkammer);
   state.worlds.forEach(w => {
     const btn = document.createElement('button');
     btn.className = 'nav-link' + (w.id === state.ui.activeWorldId ? ' active' : '');

@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class MapPoiService {
@@ -106,6 +109,16 @@ public class MapPoiService {
         MapPoi poi = poiRepo.findById(poiId)
                 .orElseThrow(() -> new ResourceNotFoundException("POI not found: " + poiId));
         checker.requireEdit(poi.getWorld(), auth);
+
+        // Ownership: only the POI creator (matched by user ID) or an admin may move it.
+        // Guest-created POIs (createdBy = null) are movable by any guest (callerId = null).
+        if (!WorldPermissionChecker.isAdmin(auth)) {
+            Integer callerId  = WorldPermissionChecker.resolveUserId(auth);
+            Integer creatorId = poi.getCreatedBy() != null ? poi.getCreatedBy().getId() : null;
+            if (!Objects.equals(callerId, creatorId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your POI");
+            }
+        }
 
         if (req.getXPct()      != null) poi.setXPct(req.getXPct());
         if (req.getYPct()      != null) poi.setYPct(req.getYPct());

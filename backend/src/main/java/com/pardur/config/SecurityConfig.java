@@ -73,6 +73,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST,   "/api/wiki").permitAll()
                 .requestMatchers(HttpMethod.PUT,    "/api/wiki/{id:[0-9]+}").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/wiki/{id:[0-9]+}").permitAll()
+                // Ideenkammer — login required for all operations
+                .requestMatchers("/api/worlds/*/ideas/**").hasRole("USER")
+                .requestMatchers(HttpMethod.GET,    "/api/worlds/*/ideas").hasRole("USER")
+                .requestMatchers(HttpMethod.POST,   "/api/worlds/*/ideas").hasRole("USER")
                 // Timeline events — world-level permissions enforced in service
                 .requestMatchers("/api/worlds/*/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST,   "/api/worlds/*/events").permitAll()

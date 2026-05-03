@@ -146,10 +146,24 @@ function buildUrl(worldId, section, subId) {
 }
 
 /**
- * Parses window.location.pathname into a routing descriptor.
+ * Parses window.location.pathname into a routing descriptor used by navigateToUrl().
+ *
+ * Supported patterns:
+ *   /ideas              → { page: 'ideas',    worldId: null, subId: null }
+ *   /ideas/{id}         → { page: 'ideas',    worldId: null, subId: id }
+ *   /world/{w}/timeline/{id} → { page: 'timeline', worldId: w, subId: id }
+ *   /world/{w}/wiki/{id}     → { page: 'wiki',     worldId: w, subId: id }
+ *   /world/{w}/map           → { page: 'map',      worldId: w, subId: null }
+ *   anything else            → { page: 'items',    worldId: null, subId: null }
+ *
  * @returns {{ page: string, worldId: number|null, subId: number|null }}
  */
 function parseUrl() {
+  // Ideas deep links: /ideas or /ideas/{id}
+  const mi = window.location.pathname.match(/^\/ideas(?:\/(\d+))?/);
+  if (mi) return { page: 'ideas', worldId: null, subId: mi[1] ? parseInt(mi[1], 10) : null };
+
+  // World-scoped pages: timeline, wiki, map
   const m = window.location.pathname.match(/^\/world\/(\d+)\/(timeline|wiki|map)(?:\/(\d+))?/);
   if (m) {
     return {
@@ -158,6 +172,8 @@ function parseUrl() {
       subId:   m[3] ? parseInt(m[3], 10) : null,
     };
   }
+
+  // Default: Marktplatz (items)
   return { page: 'items', worldId: null, subId: null };
 }
 
@@ -286,6 +302,7 @@ function showPage(p) {
   }
 
   if (p !== 'timeline') closeDetail();
+  if (p !== 'ideas') closeIdeaDetail();
   if (p === 'items')  renderItems();
   if (p === 'users')  renderUsers();
   if (p === 'wiki')   initWikiPage();
@@ -499,6 +516,7 @@ async function selectWorld(worldId) {
   const pageEl = document.getElementById('page-' + section);
   if (pageEl) pageEl.classList.add('active');
   state.ui.currentPage = section;
+  closeIdeaDetail();
   renderTopNavWorlds();
   renderSectionTabs();
   applyAuthUI();

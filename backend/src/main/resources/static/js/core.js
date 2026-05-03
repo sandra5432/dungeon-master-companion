@@ -203,6 +203,25 @@ async function navigateToUrl({ page, worldId, subId }, push) {
     return;
   }
 
+  // Ideas page is world-agnostic — handle before the world-resolution logic below.
+  if (page === 'ideas') {
+    // Only logged-in users may access the Ideenkammer.
+    if (!state.auth.loggedIn) {
+      if (push) pushUrl('/');
+      showPage('items');
+      console.debug('[navigateToUrl] ← ideas, not logged in, fallback to items');
+      return;
+    }
+    // push=false on startup and popstate — the URL is already correct in those cases.
+    if (push) pushUrl(subId ? `/ideas/${subId}` : '/ideas');
+    showPage('ideas');         // sets up the DOM: page visibility, nav active state
+    await initIdeasPage();     // loads ideas list; must finish before opening a detail panel
+    if (subId) await openIdeaDetail(subId, false); // false = URL was already set above
+    renderTopNavWorlds();
+    console.debug('[navigateToUrl] ← ideas');
+    return;
+  }
+
   const world = worldId ? state.worlds.find(w => w.id === worldId) : null;
 
   // Guests can only navigate to worlds the server already returned (guestCanRead filter).

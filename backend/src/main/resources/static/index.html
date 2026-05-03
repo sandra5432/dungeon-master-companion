@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astral Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=25">
+<link rel="stylesheet" href="/css/app.css?v=27">
 <script src="/js/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -29,7 +29,7 @@
   </div>
   <div class="nav-links" id="nav-links">
     <button class="nav-link" id="nav-items" onclick="showPage('items')">Marktplatz</button>
-    <button class="nav-link user-action-only" id="nav-ideas" onclick="showPage('ideas')" style="display:none">Ideenkammer</button>
+    <button class="nav-link user-action-only" id="nav-ideas" onclick="selectIdeas()" style="display:none">Ideenkammer</button>
     <!-- world buttons injected by renderTopNavWorlds() -->
   </div>
   <div class="nav-right">
@@ -676,6 +676,13 @@
         <input class="f-inp" id="idea-f-tags" type="text" placeholder="Drachen, Weltenbau, Encounter">
         <div class="ideas-default-tags" id="ideas-default-tags"></div>
       </div>
+      <div id="ideas-modal-img-section" class="f-grp">
+        <label class="f-lbl">Bilder (optional, max. 5 MB je Datei)</label>
+        <label class="ideas-modal-img-add-btn" for="idea-f-images">📎 Bilder hinzufügen</label>
+        <input type="file" id="idea-f-images" accept="image/webp" multiple style="display:none"
+               onchange="ideasAddPendingImages()">
+        <div id="ideas-modal-img-previews" class="ideas-modal-img-previews"></div>
+      </div>
       <div id="ideas-modal-err" style="display:none;color:#e07070;font-size:.85rem"></div>
     </div>
     <div class="m-actions">
@@ -699,6 +706,6 @@
 <script src="/js/users.js?v=27"></script>
 <script src="/js/wiki.js?v=27"></script>
 <script src="/js/map.js?v=27"></script>
-<script src="/js/ideas.js?v=27"></script>
+<script src="/js/ideas.js?v=29"></script>
 </body>
 </html>

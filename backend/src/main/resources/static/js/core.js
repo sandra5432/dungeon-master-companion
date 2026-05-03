@@ -308,7 +308,8 @@ function showPage(p) {
   if (p === 'wiki')   initWikiPage();
   if (p === 'config') renderConfigWorlds();
   if (p === 'map')    initMapPage();
-  if (p === 'ideas')  initIdeasPage();
+  // initIdeasPage is NOT called here — callers of showPage('ideas') invoke it themselves
+  // so they can await it before opening a detail panel (needed for deep link support).
 
   renderSectionTabs();
 }
@@ -489,6 +490,18 @@ function selectSection(section) {
   if (!isSectionEnabled(world, section)) return;
   pushUrl(buildUrl(state.ui.activeWorldId, section));
   showPage(section);
+}
+
+/**
+ * Navigates to the Ideenkammer and updates the browser URL to /ideas.
+ * Analogous to selectSection() for timeline/wiki/map tabs.
+ * Called from the nav button; data loading is handled by initIdeasPage() (fire-and-forget).
+ * navigateToUrl() uses a separate awaited path for deep links — see that function for details.
+ */
+function selectIdeas() {
+  pushUrl('/ideas');
+  showPage('ideas');
+  initIdeasPage(); // unawaited — the board renders when data arrives, same as before
 }
 
 // keep old name as alias (used in world create/delete handlers below)

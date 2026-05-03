@@ -138,7 +138,7 @@ test.describe('AL-D-004 — Nach Beliebtheit sortieren', () => {
     const i2 = await createTestIdea(apiCtx, WORLD_ID, { title: 'Sort-Idee-Viele-Votes', tags: [] });
     idea1Id = i1.id;
     idea2Id = i2.id;
-    await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas/${idea2Id}/votes`, { headers: ADMIN_HEADERS });
+    await apiCtx.post(`/api/ideas/${idea2Id}/votes`, { headers: ADMIN_HEADERS });
   });
 
   test.afterEach(async ({ request: apiCtx }) => {
@@ -242,7 +242,7 @@ test.describe('AL-D1-001 — Idee erstellen', () => {
   const ideaTitle = `E2E-Idee-Create-${Date.now()}`;
 
   test.afterEach(async ({ request: apiCtx }) => {
-    const res = await apiCtx.get(`/api/worlds/${WORLD_ID}/ideas`, { headers: ADMIN_HEADERS });
+    const res = await apiCtx.get('/api/ideas', { headers: ADMIN_HEADERS });
     const ideas = await res.json();
     const idea = ideas.find(i => i.title === ideaTitle);
     if (idea) await deleteTestIdea(apiCtx, WORLD_ID, idea.id);
@@ -324,7 +324,7 @@ test.describe('AL-D1-002 — Idee bearbeiten', () => {
     await expect(page.locator('#ideas-modal-bg')).not.toHaveClass(/open/, { timeout: 5000 });
     await expect(page.locator('.icard').filter({ hasText: updatedTitle })).toBeVisible({ timeout: 5000 });
     // revert for cleanup
-    await apiCtx.put(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}`,
+    await apiCtx.put(`/api/ideas/${testIdeaId}`,
       { headers: ADMIN_HEADERS, data: { title: originalTitle, tags: [] } });
   });
 
@@ -436,7 +436,7 @@ test.describe('AL-D1-005 — Status per Button ändern', () => {
   });
 
   test.afterEach(async ({ request: apiCtx }) => {
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'draft' } });
     await deleteTestIdea(apiCtx, WORLD_ID, testIdeaId);
   });
@@ -543,7 +543,7 @@ test.describe('AL-D1-007 — Frist-Überschreitungsanzeige', () => {
   });
 
   test('overdue indicator NOT shown after idea is set to Vollendet', async ({ page, request: apiCtx }) => {
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'done' } });
     await goToIdeasPage(page);
     await page.locator('.icard').filter({ hasText: 'Overdue-Idee' }).click();
@@ -609,9 +609,9 @@ test.describe('AL-D2-001 — Kommentare anzeigen', () => {
   test.beforeEach(async ({ request: apiCtx }) => {
     const idea = await createTestIdea(apiCtx, WORLD_ID, { title: 'Comment-Anzeige-Idee' });
     testIdeaId = idea.id;
-    await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/comments`,
+    await apiCtx.post(`/api/ideas/${testIdeaId}/comments`,
       { headers: ADMIN_HEADERS, data: { body: 'Erster Kommentar' } });
-    await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/comments`,
+    await apiCtx.post(`/api/ideas/${testIdeaId}/comments`,
       { headers: ADMIN_HEADERS, data: { body: 'Zweiter Kommentar' } });
   });
 
@@ -644,7 +644,7 @@ test.describe('AL-D2-002 — Ältere Kommentare laden', () => {
     const idea = await createTestIdea(apiCtx, WORLD_ID, { title: 'Comment-Expand-Idee' });
     testIdeaId = idea.id;
     for (let i = 1; i <= 4; i++) {
-      await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/comments`,
+      await apiCtx.post(`/api/ideas/${testIdeaId}/comments`,
         { headers: ADMIN_HEADERS, data: { body: `Kommentar ${i}` } });
     }
   });
@@ -757,32 +757,32 @@ test.describe('AL-D3-002 — Aktivitätseinträge automatisch erstellen', () => 
   });
 
   test('creating an idea produces a "created" activity entry via API', async ({ request: apiCtx }) => {
-    const res = await apiCtx.get(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/activity`,
+    const res = await apiCtx.get(`/api/ideas/${testIdeaId}/activity`,
       { headers: ADMIN_HEADERS });
     const activity = await res.json();
     expect(activity.some(a => a.type === 'created')).toBe(true);
   });
 
   test('changing status produces a "status" activity entry via API', async ({ request: apiCtx }) => {
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'doing' } });
-    const res = await apiCtx.get(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/activity`,
+    const res = await apiCtx.get(`/api/ideas/${testIdeaId}/activity`,
       { headers: ADMIN_HEADERS });
     const activity = await res.json();
     expect(activity.some(a => a.type === 'status')).toBe(true);
   });
 
   test('adding a comment produces a "comment" activity entry via API', async ({ request: apiCtx }) => {
-    await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/comments`,
+    await apiCtx.post(`/api/ideas/${testIdeaId}/comments`,
       { headers: ADMIN_HEADERS, data: { body: 'Test-Kommentar für Aktivität' } });
-    const res = await apiCtx.get(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/activity`,
+    const res = await apiCtx.get(`/api/ideas/${testIdeaId}/activity`,
       { headers: ADMIN_HEADERS });
     const activity = await res.json();
     expect(activity.some(a => a.type === 'comment')).toBe(true);
   });
 
   test('activity shows in detail panel after status change', async ({ page, request: apiCtx }) => {
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'doing' } });
     await goToIdeasPage(page);
     await page.locator('.icard').filter({ hasText: 'Auto-Activity-Idee' }).click();
@@ -799,7 +799,8 @@ test.describe('AL-D4-001 — Wiki-Stub bei Vollendet erstellen', () => {
   let testIdeaId;
 
   test.beforeEach(async ({ request: apiCtx }) => {
-    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: stubTitle });
+    // Tag with 'pardur' so the wiki-stub service finds the matching world
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: stubTitle, tags: ['pardur'] });
     testIdeaId = idea.id;
   });
 
@@ -814,14 +815,14 @@ test.describe('AL-D4-001 — Wiki-Stub bei Vollendet erstellen', () => {
   });
 
   test('setting status to done creates a wiki stub via API', async ({ request: apiCtx }) => {
-    const patchRes = await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    const patchRes = await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'done' } });
     const updated = await patchRes.json();
     expect(updated.wikiStubCreated).toBe(true);
   });
 
   test('wiki stub exists in wiki after status set to done', async ({ request: apiCtx }) => {
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'done' } });
     const wRes = await apiCtx.get(`/api/wiki?worldId=${WORLD_ID}`, { headers: ADMIN_HEADERS });
     if (wRes.ok()) {
@@ -831,11 +832,11 @@ test.describe('AL-D4-001 — Wiki-Stub bei Vollendet erstellen', () => {
   });
 
   test('setting done twice does not create duplicate wiki stub (wikiStubCreated=false on second)', async ({ request: apiCtx }) => {
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'done' } });
-    await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'draft' } });
-    const secondRes = await apiCtx.patch(`/api/worlds/${WORLD_ID}/ideas/${testIdeaId}/status`,
+    const secondRes = await apiCtx.patch(`/api/ideas/${testIdeaId}/status`,
       { headers: ADMIN_HEADERS, data: { status: 'done' } });
     const second = await secondRes.json();
     expect(second.wikiStubCreated).toBe(false);
@@ -850,7 +851,8 @@ test.describe('AL-D4-002 — Wiki-Stub-Toast anzeigen', () => {
   let testIdeaId;
 
   test.beforeEach(async ({ request: apiCtx }) => {
-    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: stubTitle });
+    // Tag with 'pardur' so the wiki-stub service finds the matching world
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: stubTitle, tags: ['pardur'] });
     testIdeaId = idea.id;
   });
 
@@ -1030,7 +1032,7 @@ test.describe('AL-D-008 — Nur-meine-Filter', () => {
   test.beforeEach(async ({ request: apiCtx }) => {
     const adminIdea = await createTestIdea(apiCtx, WORLD_ID, { title: 'NurMeine-Admin-Idee' });
     adminIdeaId = adminIdea.id;
-    const res = await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas`, {
+    const res = await apiCtx.post('/api/ideas', {
       headers: USER_HEADERS,
       data: { title: 'NurMeine-User-Idee', tags: [] },
     });
@@ -1124,7 +1126,7 @@ test.describe('AL-D-009 — Normaler Benutzer kann Ideen erstellen und filtern',
 
   test.afterEach(async ({ request: apiCtx }) => {
     if (taggedAdminIdeaId) await deleteTestIdea(apiCtx, WORLD_ID, taggedAdminIdeaId);
-    const res = await apiCtx.get(`/api/worlds/${WORLD_ID}/ideas`, { headers: ADMIN_HEADERS });
+    const res = await apiCtx.get('/api/ideas', { headers: ADMIN_HEADERS });
     if (res.ok()) {
       const ideas = await res.json();
       const userCreated = ideas.find(i => i.title === userIdeaTitle);
@@ -1161,7 +1163,7 @@ test.describe('AL-D-009 — Normaler Benutzer kann Ideen erstellen und filtern',
   });
 
   test('regular user can create idea via API (backend allows USER role)', async ({ request: apiCtx }) => {
-    const res = await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas`, {
+    const res = await apiCtx.post('/api/ideas', {
       headers: USER_HEADERS,
       data: { title: userIdeaTitle, tags: ['test'] },
     });
@@ -1204,7 +1206,7 @@ test.describe('AL-D-009 — Normaler Benutzer kann Ideen erstellen und filtern',
   });
 
   test('regular user own idea appears when "Nur meine" is active', async ({ page, request: apiCtx }) => {
-    const res = await apiCtx.post(`/api/worlds/${WORLD_ID}/ideas`, {
+    const res = await apiCtx.post('/api/ideas', {
       headers: USER_HEADERS,
       data: { title: userIdeaTitle, tags: [] },
     });
@@ -1217,6 +1219,343 @@ test.describe('AL-D-009 — Normaler Benutzer kann Ideen erstellen und filtern',
     await expect(page.locator('.icard').filter({ hasText: 'Admin-Seed-Idee' })).toBeHidden();
 
     await deleteTestIdea(apiCtx, WORLD_ID, userIdea.id);
+  });
+
+});
+
+// ── AL-D5-001 / AL-D5-002: Bilder hochladen und löschen ─────────────────────
+
+/** Minimal valid 1×1 pixel WebP (base64). */
+const MINIMAL_WEBP_B64 = 'UklGRiYAAABXRUJQVlA4IBoAAADwAQCdASoBAAEAAkA4JZQCdAEO/gHOAAA=';
+
+test.describe('AL-D5-001 / AL-D5-002 — Bilder hochladen und löschen', () => {
+  let testIdeaId;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: 'Bild-Upload-Idee' });
+    testIdeaId = idea.id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    await deleteTestIdea(apiCtx, WORLD_ID, testIdeaId);
+  });
+
+  test('detail panel shows Bilder section', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('owner sees + Bild anhängen button in detail panel', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#idp-image-upload-btn')).toBeVisible();
+  });
+
+  test('uploading an image adds it to the gallery', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('#idp-image-upload-input').setInputFiles({
+      name: 'test-bild.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
+  });
+
+  test('uploaded image shows 🖼 badge on idea card', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('#idp-image-upload-input').setInputFiles({
+      name: 'test-bild.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
+    // Card meta badge should reflect the new image count
+    const card = page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).first();
+    await expect(card.locator('.icard-img-count')).toBeVisible({ timeout: 3000 });
+    await expect(card.locator('.icard-img-count')).toContainText('1');
+  });
+
+  test('delete button removes image from gallery', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('#idp-image-upload-input').setInputFiles({
+      name: 'test-bild.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
+
+    await page.locator('#idp-images-gallery .idp-image-delete-btn').first().click();
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(0, { timeout: 5000 });
+  });
+
+  test('non-owner does not see upload button', async ({ page }) => {
+    await page.goto('/');
+    await loginAsUser(page);
+    await page.getByRole('button', { name: /Pardur/i }).first().click();
+    await page.locator('#nav-ideas').click();
+    await expect(page.locator('#page-ideas')).toHaveClass(/active/, { timeout: 5000 });
+
+    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#idp-image-upload-btn')).toBeHidden();
+  });
+
+  test('image upload is rejected for non-WebP files (API)', async ({ request: apiCtx }) => {
+    const res = await apiCtx.post(`/api/ideas/${testIdeaId}/images`, {
+      headers: { ...ADMIN_HEADERS },
+      multipart: {
+        file: {
+          name: 'bild.png',
+          mimeType: 'image/png',
+          buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+        },
+      },
+    });
+    expect(res.status()).toBe(400);
+  });
+
+});
+
+// ── AL-D5-003: Bilder beim Erstellen hochladen ────────────────────────────────
+
+test.describe('AL-D5-003 — Bilder beim Erstellen hochladen', () => {
+  let createdIdeaTitle;
+
+  test.beforeEach(() => {
+    createdIdeaTitle = `Erstell-Bild-Idee-${Date.now()}`;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    // Clean up via API: find and delete any idea we may have created
+    const res = await apiCtx.get('/api/ideas', {
+      headers: { ...ADMIN_HEADERS },
+    });
+    if (res.ok()) {
+      const ideas = await res.json();
+      const idea = ideas.find(i => i.title === createdIdeaTitle);
+      if (idea) {
+        await apiCtx.delete(`/api/ideas/${idea.id}`, {
+          headers: { ...ADMIN_HEADERS },
+        });
+      }
+    }
+  });
+
+  test('create modal shows image picker section', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('#ideas-add-btn').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#ideas-modal-img-section')).toBeVisible();
+  });
+
+  test('selecting a file shows preview thumbnail in create modal', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('#ideas-add-btn').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
+
+    await page.locator('#idea-f-images').setInputFiles({
+      name: 'preview-test.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+
+    await expect(page.locator('#ideas-modal-img-previews .ideas-modal-img-thumb')).toHaveCount(1, { timeout: 3000 });
+  });
+
+  test('removing a preview thumbnail clears it from the list', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('#ideas-add-btn').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
+
+    await page.locator('#idea-f-images').setInputFiles({
+      name: 'remove-test.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#ideas-modal-img-previews .ideas-modal-img-thumb')).toHaveCount(1, { timeout: 3000 });
+
+    await page.locator('#ideas-modal-img-previews .ideas-modal-img-remove').first().click();
+    await expect(page.locator('#ideas-modal-img-previews .ideas-modal-img-thumb')).toHaveCount(0, { timeout: 3000 });
+  });
+
+  test('image picker section is NOT shown in edit modal', async ({ page, request: apiCtx }) => {
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: 'Edit-Modal-Kein-Bild' });
+    try {
+      await goToIdeasPage(page);
+      await page.locator('.icard').filter({ hasText: 'Edit-Modal-Kein-Bild' }).click();
+      await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
+      await page.locator('#idp-inner button:has-text("Bearbeiten")').click();
+      await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('#ideas-modal-img-section')).toBeHidden();
+    } finally {
+      await deleteTestIdea(apiCtx, WORLD_ID, idea.id);
+    }
+  });
+
+  test('creating an idea with an image shows it in the detail panel', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('#ideas-add-btn').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
+
+    await page.locator('#idea-f-title').fill(createdIdeaTitle);
+
+    await page.locator('#idea-f-images').setInputFiles({
+      name: 'creation-bild.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#ideas-modal-img-previews .ideas-modal-img-thumb')).toHaveCount(1, { timeout: 3000 });
+
+    await page.locator('#ideas-modal-bg .btn-primary').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeHidden({ timeout: 5000 });
+
+    // Open the newly created card
+    await page.locator('.icard').filter({ hasText: createdIdeaTitle }).click();
+    await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 8000 });
+  });
+
+  test('thumbnail appears immediately on card after creating idea with image (no reload)', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('#ideas-add-btn').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
+
+    await page.locator('#idea-f-title').fill(createdIdeaTitle);
+    await page.locator('#idea-f-images').setInputFiles({
+      name: 'thumb-test.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#ideas-modal-img-previews .ideas-modal-img-thumb')).toHaveCount(1, { timeout: 3000 });
+
+    await page.locator('#ideas-modal-bg .btn-primary').click();
+    await expect(page.locator('#ideas-modal-bg')).toBeHidden({ timeout: 5000 });
+
+    // The card must show the thumbnail without any page reload
+    const card = page.locator('.icard').filter({ hasText: createdIdeaTitle });
+    await expect(card.locator('.icard-thumb')).toBeVisible({ timeout: 8000 });
+  });
+
+});
+
+// ── Detail panel closes when leaving the idea area ────────────────────────────
+
+test.describe('AL-D — Detail panel closes on navigation away from ideas', () => {
+  let testIdeaId;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: 'Panel-Nav-Idee' });
+    testIdeaId = idea.id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    await deleteTestIdea(apiCtx, WORLD_ID, testIdeaId);
+  });
+
+  test('detail panel closes when switching to a world', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Panel-Nav-Idee' }).click();
+    await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
+
+    await page.getByRole('button', { name: /Pardur/i }).first().click();
+    await expect(page.locator('#ideas-detail-panel')).not.toHaveClass(/open/, { timeout: 3000 });
+  });
+
+  test('detail panel closes when navigating to Marktplatz', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Panel-Nav-Idee' }).click();
+    await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
+
+    await page.locator('#nav-items').click();
+    await expect(page.locator('#ideas-detail-panel')).not.toHaveClass(/open/, { timeout: 3000 });
+  });
+
+  test('detail panel closes on logout', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator('.icard').filter({ hasText: 'Panel-Nav-Idee' }).click();
+    await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
+
+    await page.locator('#btn-logout').click();
+    await expect(page.locator('#ideas-detail-panel')).not.toHaveClass(/open/, { timeout: 3000 });
+  });
+
+});
+
+// ── AL-D-010: Deep Links ──────────────────────────────────────────────────────
+
+test.describe('AL-D-010 — Deep Links', () => {
+  let testIdeaId;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: 'DeepLink-Test-Idee' });
+    testIdeaId = idea.id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    if (testIdeaId) await deleteTestIdea(apiCtx, WORLD_ID, testIdeaId);
+  });
+
+  test('navigating to /ideas directly shows the board for logged-in user', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await page.goto('/ideas');
+    await expect(page.locator('#page-ideas')).toHaveClass(/active/, { timeout: 5000 });
+    await expect(page.locator('#ideas-cards-draft')).toBeVisible();
+  });
+
+  test('navigating to /ideas/{id} opens board with detail panel', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await page.goto(`/ideas/${testIdeaId}`);
+    await expect(page.locator('#page-ideas')).toHaveClass(/active/, { timeout: 5000 });
+    await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 5000 });
+  });
+
+  test('clicking a card updates the URL to /ideas/{id}', async ({ page }) => {
+    await goToIdeasPage(page);
+    const card = page.locator('#ideas-cards-draft .icard').filter({ hasText: 'DeepLink-Test-Idee' });
+    await expect(card).toBeVisible({ timeout: 5000 });
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/ideas/${testIdeaId}`), { timeout: 3000 });
+  });
+
+  test('closing the detail panel resets URL to /ideas', async ({ page }) => {
+    await goToIdeasPage(page);
+    const card = page.locator('#ideas-cards-draft .icard').filter({ hasText: 'DeepLink-Test-Idee' });
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/ideas/${testIdeaId}`), { timeout: 3000 });
+    await page.locator('.idp-close').click();
+    await expect(page).toHaveURL('/ideas', { timeout: 3000 });
+  });
+
+  test('browser back from /ideas/{id} closes detail and returns to /ideas', async ({ page }) => {
+    await goToIdeasPage(page);
+    const card = page.locator('#ideas-cards-draft .icard').filter({ hasText: 'DeepLink-Test-Idee' });
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/ideas/${testIdeaId}`), { timeout: 3000 });
+    await page.goBack();
+    await expect(page).toHaveURL('/ideas', { timeout: 3000 });
+    await expect(page.locator('#ideas-detail-panel')).not.toHaveClass(/open/, { timeout: 3000 });
+  });
+
+  test('guest navigating to /ideas sees the items page, not ideas', async ({ page }) => {
+    await page.goto('/ideas');
+    await expect(page.locator('#page-ideas')).not.toHaveClass(/active/);
+    await expect(page.locator('#page-items')).toHaveClass(/active/, { timeout: 3000 });
   });
 
 });

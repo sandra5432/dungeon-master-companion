@@ -214,8 +214,9 @@ async function navigateToUrl({ page, worldId, subId }, push) {
     }
     // push=false on startup and popstate — the URL is already correct in those cases.
     if (push) pushUrl(subId ? `/ideas/${subId}` : '/ideas');
-    showPage('ideas');         // sets up the DOM: page visibility, nav active state
-    await initIdeasPage();     // loads ideas list; must finish before opening a detail panel
+    showPage('ideas');            // sets up the DOM: page visibility, nav active state
+    closeIdeaDetail(false);       // reset panel state without pushing URL (already set above)
+    await initIdeasPage();        // loads ideas list; must finish before opening a detail panel
     if (subId) await openIdeaDetail(subId, false); // false = URL was already set above
     renderTopNavWorlds();
     console.debug('[navigateToUrl] ← ideas');

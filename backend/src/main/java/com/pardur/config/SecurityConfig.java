@@ -44,7 +44,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 // Static assets and auth endpoints — always public
-                .requestMatchers("/", "/index.html", "/js/**", "/css/**", "/favicon.ico", "/world/**").permitAll()
+                .requestMatchers("/", "/index.html", "/js/**", "/css/**", "/favicon.ico", "/world/**", "/ideas", "/ideas/**").permitAll()
                 .requestMatchers("/api/login", "/api/logout", "/api/auth/status", "/api/auth/change-password").permitAll()
                 // Items (Marktplatz) — always public reads
                 .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
@@ -74,9 +74,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,    "/api/wiki/{id:[0-9]+}").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/api/wiki/{id:[0-9]+}").permitAll()
                 // Ideenkammer — login required for all operations
-                .requestMatchers("/api/worlds/*/ideas/**").hasRole("USER")
-                .requestMatchers(HttpMethod.GET,    "/api/worlds/*/ideas").hasRole("USER")
-                .requestMatchers(HttpMethod.POST,   "/api/worlds/*/ideas").hasRole("USER")
+                .requestMatchers("/api/ideas/**").hasRole("USER")
                 // Timeline events — world-level permissions enforced in service
                 .requestMatchers("/api/worlds/*/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST,   "/api/worlds/*/events").permitAll()

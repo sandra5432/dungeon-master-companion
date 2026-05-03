@@ -316,17 +316,18 @@ async function openIdeaDetail(id, push = true) {
 
 /**
  * Closes the detail panel and clears the selected idea from state.
- * Restores the URL to /ideas when called while on the ideas page,
- * so the address bar no longer points at a specific idea.
- * Does NOT push a URL when called from selectWorld() during a world switch,
- * because the world navigation sets its own URL immediately after.
+ *
+ * @param {boolean} push  Whether to restore the browser URL to /ideas.
+ *                        Pass false when called from navigateToUrl (URL is already correct)
+ *                        or from selectWorld() (world URL is set immediately after).
+ *                        Defaults to true for normal user-initiated close actions.
  */
-function closeIdeaDetail() {
+function closeIdeaDetail(push = true) {
   console.debug('[closeIdeaDetail] →');
-  // Only push /ideas when we are actually on the ideas page.
-  // closeIdeaDetail() is also called from selectWorld() during world switches,
-  // where pushing /ideas would overwrite the world URL being set.
-  if (state.ui.currentPage === 'ideas') pushUrl('/ideas');
+  // Only push /ideas when explicitly requested AND on the ideas page.
+  // selectWorld() calls this during world switches — the world URL is set right after,
+  // so we must not overwrite it here.
+  if (push && state.ui.currentPage === 'ideas') pushUrl('/ideas');
   state.ideas.detailId = null;
   document.getElementById('ideas-detail-panel').classList.remove('open');
   document.querySelectorAll('.icard').forEach(c => c.classList.remove('active'));

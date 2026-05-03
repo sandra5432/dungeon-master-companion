@@ -4,31 +4,22 @@
    DOM: #page-ideas, #ideas-detail-panel, #ideas-modal-bg, #wiki-stub-toast
 ══════════════════════════════════════ */
 
-const IDEAS_DEFAULT_TAGS = ['pardur', 'eldorheim', 'draigval'];
 
 let ideaEditId = null;          // null = new idea, number = editing existing
 let ideaDragId = null;          // id of card being dragged
 let wikiStubToastTimer = null;
 let wikiStubTitle      = null;
+let ideaPendingImages  = [];    // File[] staged for upload when creating a new idea
 
 /* ── Initialise ── */
 
 /**
- * Entry point called by showPage('ideas'). Loads ideas for the active world and renders the board.
+ * Entry point called by showPage('ideas'). Loads all ideas across all worlds and renders the board.
  */
 async function initIdeasPage() {
-  console.debug('[initIdeasPage] →', state.ui.activeWorldId);
-  if (!state.ui.activeWorldId) {
-    document.getElementById('ideas-tag-filter-bar').innerHTML =
-      '<span style="font-family:\'Inter\',system-ui,sans-serif;font-size:.8rem;color:var(--t3)">Wähle zuerst eine Welt aus.</span>';
-    ['draft','doing','done'].forEach(s => {
-      const el = document.getElementById('ideas-cards-' + s);
-      if (el) el.innerHTML = '';
-    });
-    return;
-  }
+  console.debug('[initIdeasPage] →');
   try {
-    state.ideas.list = await api('GET', `/worlds/${state.ui.activeWorldId}/ideas`);
+    state.ideas.list = await api('GET', '/ideas');
     renderIdeasBoard();
     console.debug('[initIdeasPage] ← loaded', state.ideas.list.length, 'ideas');
   } catch (e) {
@@ -60,7 +51,8 @@ function renderIdeasBoard() {
 
 /**
  * Renders the tag filter bar above the board.
- * Reads: state.ideas.list, state.ideas.tagFilter, state.ideas.sortByVotes, state.ideas.compact
+ * World names are always present in the tag list (even if no idea uses them yet).
+ * Reads: state.ideas.list, state.ideas.tagFilter, state.worlds, state.ideas.sortByVotes, state.ideas.compact
  * Writes: #ideas-tag-filter-bar
  */
 function renderIdeasTagFilterBar() {
@@ -68,8 +60,8 @@ function renderIdeasTagFilterBar() {
   const bar = document.getElementById('ideas-tag-filter-bar');
   if (!bar) return;
 
-  // Collect all tags
-  const tagSet = new Set();
+  // World names are always available as tags; idea tags are merged in on top
+  const tagSet = new Set((state.worlds || []).map(w => w.name.toLowerCase()));
   state.ideas.list.forEach(i => (i.tags || []).forEach(t => tagSet.add(t)));
   const tags = Array.from(tagSet).sort();
 
@@ -176,10 +168,11 @@ function renderIdeaCardHtml(idea) {
     : '';
 
   const voteClass = idea.votedByMe ? ' voted' : '';
+  const thumbUrl = idea.firstImageId
+    ? `/api/ideas/${idea.id}/images/${idea.firstImageId}/data`
+    : null;
 
-  return `
-    <div class="icard${isActive ? ' active' : ''}" data-id="${idea.id}"
-         draggable="${canDrag}" tabindex="0">
+  const bodyHtml = `
       <div class="icard-header">
         <span class="icard-title">${escHtml(idea.title)}</span>
         <span class="icard-dot ${idea.status}"></span>
@@ -190,10 +183,25 @@ function renderIdeaCardHtml(idea) {
         <div class="icard-avatar" style="background:${escHtml(color)}">${escHtml(initials)}</div>
         <span>${escHtml(idea.creatorUsername || '')}</span>
         ${idea.commentCount > 0 ? `<span class="icard-meta-sep">·</span><span>💬 ${idea.commentCount}</span>` : ''}
+        ${idea.imageCount > 0 ? `<span class="icard-meta-sep">·</span><span class="icard-img-count">🖼 ${idea.imageCount}</span>` : ''}
         <button class="icard-vote-btn${voteClass}" data-id="${idea.id}" title="Abstimmen">
           ◆ ${idea.voteCount}
         </button>
-      </div>
+      </div>`;
+
+  if (thumbUrl) {
+    return `
+    <div class="icard icard-has-thumb${isActive ? ' active' : ''}" data-id="${idea.id}"
+         draggable="${canDrag}" tabindex="0">
+      <img class="icard-thumb" src="${thumbUrl}" alt="" draggable="false">
+      <div class="icard-body">${bodyHtml}</div>
+    </div>`;
+  }
+
+  return `
+    <div class="icard${isActive ? ' active' : ''}" data-id="${idea.id}"
+         draggable="${canDrag}" tabindex="0">
+      ${bodyHtml}
     </div>`;
 }
 
@@ -251,8 +259,7 @@ async function handleIdeaDrop(newStatus) {
   const canChange = state.auth.isAdmin || idea.createdByUserId === state.auth.userId;
   if (!canChange) return;
   try {
-    const updated = await api('PATCH', `/worlds/${state.ui.activeWorldId}/ideas/${ideaDragId}/status`,
-      { status: newStatus });
+    const updated = await api('PATCH', `/ideas/${ideaDragId}/status`, { status: newStatus });
     updateIdeaInList(updated);
     renderIdeasBoard();
     if (updated.wikiStubCreated) showWikiStubToast(updated.title);
@@ -269,8 +276,19 @@ async function handleIdeaDrop(newStatus) {
  * Opens the detail panel and loads all content for the given idea.
  * @param {number} id  Idea ID
  */
-async function openIdeaDetail(id) {
+/**
+ * Opens the detail panel and loads all content for the given idea.
+ *
+ * @param {number}  id    Idea ID to open.
+ * @param {boolean} push  Whether to update the browser URL to /ideas/{id}.
+ *                        Pass false when called from navigateToUrl (URL is already set).
+ *                        Defaults to true for normal user-initiated clicks.
+ */
+async function openIdeaDetail(id, push = true) {
   console.debug('[openIdeaDetail] →', id);
+  // Update the URL so the open idea can be bookmarked or shared.
+  // Guard on currentPage so switching away from ideas does not clobber an unrelated URL.
+  if (push && state.ui.currentPage === 'ideas') pushUrl('/ideas/' + id);
   state.ideas.detailId = id;
   state.ideas.commentsExpanded = false;
   const panel = document.getElementById('ideas-detail-panel');
@@ -279,13 +297,14 @@ async function openIdeaDetail(id) {
   const idea = state.ideas.list.find(i => i.id === id);
   if (idea) renderIdeaDetail(idea);
 
-  // Load comments + activity in parallel
+  // Load comments, activity, and images in parallel
   try {
-    const [comments, activity] = await Promise.all([
-      api('GET', `/worlds/${state.ui.activeWorldId}/ideas/${id}/comments`),
-      api('GET', `/worlds/${state.ui.activeWorldId}/ideas/${id}/activity`),
+    const [comments, activity, images] = await Promise.all([
+      api('GET', `/ideas/${id}/comments`),
+      api('GET', `/ideas/${id}/activity`),
+      api('GET', `/ideas/${id}/images`),
     ]);
-    renderIdeaDetailFull(idea, comments, activity);
+    renderIdeaDetailFull(idea, comments, activity, images);
   } catch (e) {
     console.error('[openIdeaDetail] failed to load detail data', e);
   }
@@ -295,9 +314,19 @@ async function openIdeaDetail(id) {
   console.debug('[openIdeaDetail] ← done');
 }
 
-/** Closes the detail panel. */
+/**
+ * Closes the detail panel and clears the selected idea from state.
+ * Restores the URL to /ideas when called while on the ideas page,
+ * so the address bar no longer points at a specific idea.
+ * Does NOT push a URL when called from selectWorld() during a world switch,
+ * because the world navigation sets its own URL immediately after.
+ */
 function closeIdeaDetail() {
   console.debug('[closeIdeaDetail] →');
+  // Only push /ideas when we are actually on the ideas page.
+  // closeIdeaDetail() is also called from selectWorld() during world switches,
+  // where pushing /ideas would overwrite the world URL being set.
+  if (state.ui.currentPage === 'ideas') pushUrl('/ideas');
   state.ideas.detailId = null;
   document.getElementById('ideas-detail-panel').classList.remove('open');
   document.querySelectorAll('.icard').forEach(c => c.classList.remove('active'));
@@ -367,6 +396,17 @@ function renderIdeaDetail(idea) {
     ${descHtml}
 
     <hr class="idp-divider">
+    <div id="idp-images-section">
+      <div class="idp-section-lbl">Bilder</div>
+      <div id="idp-images-gallery" class="idp-images-gallery"></div>
+      ${canEdit ? `
+        <label id="idp-image-upload-btn" class="idp-img-add-btn" for="idp-image-upload-input">+ Bild anhängen</label>
+        <input type="file" id="idp-image-upload-input" accept="image/webp" style="display:none"
+               onchange="uploadIdeaImage(${idea.id})">
+      ` : ''}
+    </div>
+
+    <hr class="idp-divider">
     <div class="idp-section-lbl">Kommentare</div>
     <div id="idp-comments-area"><div style="color:var(--t3);font-size:.75rem">Wird geladen…</div></div>
 
@@ -384,16 +424,115 @@ function renderIdeaDetail(idea) {
 }
 
 /**
- * Renders the detail panel with comments and activity loaded.
+ * Renders the detail panel with comments, activity, and images loaded.
  * @param {Object} idea
  * @param {Array}  comments  IdeaCommentDto[]
  * @param {Array}  activity  IdeaActivityDto[]
+ * @param {Array}  images    IdeaImageDto[]
  */
-function renderIdeaDetailFull(idea, comments, activity) {
-  console.debug('[renderIdeaDetailFull] →', idea?.id, 'comments:', comments?.length, 'activity:', activity?.length);
+function renderIdeaDetailFull(idea, comments, activity, images) {
+  console.debug('[renderIdeaDetailFull] →', idea?.id, 'comments:', comments?.length, 'activity:', activity?.length, 'images:', images?.length);
+  const canEdit = state.auth.isAdmin || idea.createdByUserId === state.auth.userId;
+  renderIdeaImages(idea.id, images || [], canEdit);
   renderIdeaComments(idea.id, comments);
   renderIdeaActivity(activity);
   console.debug('[renderIdeaDetailFull] ← done');
+}
+
+/* ── Images ── */
+
+/**
+ * Renders the image gallery inside the detail panel.
+ * Reads: images array, canEdit flag
+ * Writes: #idp-images-gallery
+ * @param {number}  ideaId
+ * @param {Array}   images   IdeaImageDto[]
+ * @param {boolean} canEdit
+ */
+function renderIdeaImages(ideaId, images, canEdit) {
+  console.debug('[renderIdeaImages] →', ideaId, images?.length);
+  const gallery = document.getElementById('idp-images-gallery');
+  if (!gallery) return;
+
+  if (!images || images.length === 0) {
+    gallery.innerHTML = `<span style="color:var(--t3);font-size:.75rem;font-style:italic">Keine Bilder.</span>`;
+    console.debug('[renderIdeaImages] ← empty');
+    return;
+  }
+
+  gallery.innerHTML = images.map(img => `
+    <div class="idp-image-thumb" data-image-id="${img.id}">
+      <img src="/api/ideas/${ideaId}/images/${img.id}/data"
+           alt="${escHtml(img.originalFilename)}" loading="lazy">
+      ${canEdit ? `<button class="idp-image-delete-btn" title="Bild löschen" onclick="deleteIdeaImage(${ideaId}, ${img.id})">✕</button>` : ''}
+    </div>
+  `).join('');
+  console.debug('[renderIdeaImages] ← done');
+}
+
+/**
+ * Uploads the file selected in #idp-image-upload-input for the given idea.
+ * @param {number} ideaId
+ */
+async function uploadIdeaImage(ideaId) {
+  console.debug('[uploadIdeaImage] →', ideaId);
+  const input = document.getElementById('idp-image-upload-input');
+  if (!input || !input.files || input.files.length === 0) return;
+  const file = input.files[0];
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(`/api/ideas/${ideaId}/images`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin',
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || res.statusText);
+    }
+    // Reload images and update idea in list for the badge count
+    const [images, updatedIdea] = await Promise.all([
+      api('GET', `/ideas/${ideaId}/images`),
+      api('GET', `/ideas/${ideaId}`),
+    ]);
+    const canEdit = state.auth.isAdmin || updatedIdea.createdByUserId === state.auth.userId;
+    renderIdeaImages(ideaId, images, canEdit);
+    updateIdeaInList(updatedIdea);
+    renderIdeasColumns();
+    console.debug('[uploadIdeaImage] ← done');
+  } catch (e) {
+    console.error('[uploadIdeaImage] failed', e);
+    alert('Fehler beim Hochladen: ' + e.message);
+  } finally {
+    if (input) input.value = '';
+  }
+}
+
+/**
+ * Deletes a single image from an idea and refreshes the gallery.
+ * @param {number} ideaId
+ * @param {number} imageId
+ */
+async function deleteIdeaImage(ideaId, imageId) {
+  console.debug('[deleteIdeaImage] →', ideaId, imageId);
+  try {
+    await api('DELETE', `/ideas/${ideaId}/images/${imageId}`);
+    const [images, updatedIdea] = await Promise.all([
+      api('GET', `/ideas/${ideaId}/images`),
+      api('GET', `/ideas/${ideaId}`),
+    ]);
+    const canEdit = state.auth.isAdmin || updatedIdea.createdByUserId === state.auth.userId;
+    renderIdeaImages(ideaId, images, canEdit);
+    updateIdeaInList(updatedIdea);
+    renderIdeasColumns();
+    console.debug('[deleteIdeaImage] ← done');
+  } catch (e) {
+    console.error('[deleteIdeaImage] failed', e);
+    alert('Fehler beim Löschen: ' + e.message);
+  }
 }
 
 /**
@@ -451,7 +590,7 @@ async function ideasExpandComments(ideaId) {
   console.debug('[ideasExpandComments] →', ideaId);
   state.ideas.commentsExpanded = true;
   try {
-    const comments = await api('GET', `/worlds/${state.ui.activeWorldId}/ideas/${ideaId}/comments`);
+    const comments = await api('GET', `/ideas/${ideaId}/comments`);
     renderIdeaComments(ideaId, comments);
     console.debug('[ideasExpandComments] ← done');
   } catch (e) {
@@ -469,12 +608,12 @@ async function submitIdeaComment(ideaId) {
   const body = input ? input.value.trim() : '';
   if (!body) return;
   try {
-    await api('POST', `/worlds/${state.ui.activeWorldId}/ideas/${ideaId}/comments`, { body });
+    await api('POST', `/ideas/${ideaId}/comments`, { body });
     // Reload idea list (comment count changed) + comments
     const [updatedIdea, comments, activity] = await Promise.all([
-      api('GET', `/worlds/${state.ui.activeWorldId}/ideas/${ideaId}`),
-      api('GET', `/worlds/${state.ui.activeWorldId}/ideas/${ideaId}/comments`),
-      api('GET', `/worlds/${state.ui.activeWorldId}/ideas/${ideaId}/activity`),
+      api('GET', `/ideas/${ideaId}`),
+      api('GET', `/ideas/${ideaId}/comments`),
+      api('GET', `/ideas/${ideaId}/activity`),
     ]);
     updateIdeaInList(updatedIdea);
     renderIdeasColumns();
@@ -548,7 +687,7 @@ function renderIdeaActivity(activity) {
 async function changeIdeaStatus(id, status) {
   console.debug('[changeIdeaStatus] →', id, status);
   try {
-    const updated = await api('PATCH', `/worlds/${state.ui.activeWorldId}/ideas/${id}/status`, { status });
+    const updated = await api('PATCH', `/ideas/${id}/status`, { status });
     updateIdeaInList(updated);
     renderIdeasBoard();
     if (updated.wikiStubCreated) showWikiStubToast(updated.title);
@@ -568,7 +707,7 @@ async function changeIdeaStatus(id, status) {
 async function toggleIdeaVote(id) {
   console.debug('[toggleIdeaVote] →', id);
   try {
-    const updated = await api('POST', `/worlds/${state.ui.activeWorldId}/ideas/${id}/votes`);
+    const updated = await api('POST', `/ideas/${id}/votes`);
     updateIdeaInList(updated);
     renderIdeasBoard();
     console.debug('[toggleIdeaVote] ← done', 'votes:', updated.voteCount);
@@ -603,10 +742,21 @@ function openIdeaModal(ideaId) {
   fTags.value  = '';
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
 
-  // Populate default tag suggestions
+  // Reset pending images
+  ideaPendingImages = [];
+  const imgInput = document.getElementById('idea-f-images');
+  if (imgInput) imgInput.value = '';
+  renderIdeasModalImagePreviews();
+
+  // Show image picker only when creating (not editing)
+  const imgSection = document.getElementById('ideas-modal-img-section');
+  if (imgSection) imgSection.style.display = ideaId ? 'none' : '';
+
+  // Populate default tag suggestions from known worlds
   const defaultTagsEl = document.getElementById('ideas-default-tags');
   if (defaultTagsEl) {
-    defaultTagsEl.innerHTML = IDEAS_DEFAULT_TAGS.map(t =>
+    const worldTags = (state.worlds || []).map(w => w.name.toLowerCase());
+    defaultTagsEl.innerHTML = worldTags.map(t =>
       `<button type="button" class="ideas-default-tag" onclick="ideasAddDefaultTag('${escHtml(t)}')">${escHtml(t)}</button>`
     ).join('');
   }
@@ -634,6 +784,7 @@ function closeIdeaModal() {
   console.debug('[closeIdeaModal] →');
   document.getElementById('ideas-modal-bg').classList.remove('open');
   ideaEditId = null;
+  ideaPendingImages = [];
   console.debug('[closeIdeaModal] ← done');
 }
 
@@ -648,6 +799,51 @@ function ideasAddDefaultTag(tag) {
   if (!existing.includes(tag)) {
     input.value = [...existing, tag].join(', ');
   }
+}
+
+/**
+ * Called when the user picks files in the modal image input.
+ * Adds valid image files to ideaPendingImages and re-renders previews.
+ */
+function ideasAddPendingImages() {
+  console.debug('[ideasAddPendingImages] →');
+  const input = document.getElementById('idea-f-images');
+  if (!input || !input.files) return;
+  for (const file of input.files) {
+    if (file.type !== 'image/webp') { alert(`„${file.name}" ist kein WebP-Bild und wird übersprungen.`); continue; }
+    if (file.size > 5 * 1024 * 1024) { alert(`„${file.name}" ist größer als 5 MB und wird übersprungen.`); continue; }
+    ideaPendingImages.push(file);
+  }
+  input.value = '';
+  renderIdeasModalImagePreviews();
+  console.debug('[ideasAddPendingImages] ←', ideaPendingImages.length, 'pending');
+}
+
+/**
+ * Removes a file from the pending images list by index and re-renders previews.
+ * @param {number} index
+ */
+function ideasRemovePendingImage(index) {
+  ideaPendingImages.splice(index, 1);
+  renderIdeasModalImagePreviews();
+}
+
+/**
+ * Renders thumbnail previews of all staged images inside the modal.
+ * Writes: #ideas-modal-img-previews
+ */
+function renderIdeasModalImagePreviews() {
+  const container = document.getElementById('ideas-modal-img-previews');
+  if (!container) return;
+  if (ideaPendingImages.length === 0) { container.innerHTML = ''; return; }
+  container.innerHTML = ideaPendingImages.map((file, i) => {
+    const url = URL.createObjectURL(file);
+    return `
+      <div class="ideas-modal-img-thumb">
+        <img src="${url}" alt="${escHtml(file.name)}" onload="URL.revokeObjectURL(this.src)">
+        <button type="button" class="ideas-modal-img-remove" onclick="ideasRemovePendingImage(${i})" title="Entfernen">✕</button>
+      </div>`;
+  }).join('');
 }
 
 /** Saves the idea modal (create or update). */
@@ -677,15 +873,39 @@ async function saveIdeaModal() {
   try {
     let updated;
     if (ideaEditId) {
-      updated = await api('PUT', `/worlds/${state.ui.activeWorldId}/ideas/${ideaEditId}`, body);
+      updated = await api('PUT', `/ideas/${ideaEditId}`, body);
       updateIdeaInList(updated);
+      closeIdeaModal();
+      renderIdeasBoard();
     } else {
-      updated = await api('POST', `/worlds/${state.ui.activeWorldId}/ideas`, body);
+      updated = await api('POST', '/ideas', body);
       state.ideas.list.unshift(updated);
+
+      // Upload any staged images before opening the detail panel
+      const filesToUpload = ideaPendingImages.slice();
+      closeIdeaModal();
+      renderIdeasBoard();
+      for (const file of filesToUpload) {
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+          const res = await fetch(`/api/ideas/${updated.id}/images`, {
+            method: 'POST', body: fd, credentials: 'same-origin',
+          });
+          if (!res.ok) console.warn('[saveIdeaModal] image upload failed:', res.status);
+        } catch (imgErr) {
+          console.warn('[saveIdeaModal] image upload error:', imgErr);
+        }
+      }
+      if (filesToUpload.length > 0) {
+        try {
+          const refreshed = await api('GET', `/ideas/${updated.id}`);
+          updateIdeaInList(refreshed);
+          renderIdeasBoard();
+        } catch (_) {}
+      }
+      openIdeaDetail(updated.id);
     }
-    closeIdeaModal();
-    renderIdeasBoard();
-    if (!ideaEditId) openIdeaDetail(updated.id);
     console.debug('[saveIdeaModal] ← done', updated.id);
   } catch (e) {
     console.error('[saveIdeaModal] failed', e);
@@ -704,7 +924,7 @@ async function confirmDeleteIdea(id) {
   const idea = state.ideas.list.find(i => i.id === id);
   if (!confirm(`Idee „${idea?.title || id}" wirklich löschen?`)) return;
   try {
-    await api('DELETE', `/worlds/${state.ui.activeWorldId}/ideas/${id}`);
+    await api('DELETE', `/ideas/${id}`);
     state.ideas.list = state.ideas.list.filter(i => i.id !== id);
     closeIdeaDetail();
     renderIdeasBoard();

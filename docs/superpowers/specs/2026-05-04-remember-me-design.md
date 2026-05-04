@@ -83,20 +83,36 @@ Add checkbox below the password field:
 
 ## Configuration
 
-### `application-dev.yml`
+### `application.yml` (base config)
 
-Add under `spring:` or top-level:
+Add the property with a clearly-labelled dev fallback:
 
 ```yaml
-remember-me:
-  key: pardur-dev-remember-key-change-in-prod
+app:
+  remember-me-key: ${app.remember-me-key:pardur-dev-key-replace-in-prod}
 ```
 
-or as a Spring Security property picked up via `${REMEMBER_ME_KEY:pardur-dev-remember-key-change-in-prod}`.
+The fallback covers local dev without any extra configuration. In production the bat file overrides it.
 
-### `application-prod.yml`
+### `start-pardur.bat` (production)
 
-No hardcoded key — the value must be supplied via the `APP_REMEMBER_ME_KEY` environment variable at runtime. Spring automatically maps `APP_REMEMBER_ME_KEY` → `app.remember-me-key`.
+The bat file already passes all secrets as JVM `-D` flags. Add the key the same way:
+
+```bat
+:: --- Remember-me secret ---
+set REMEMBER_ME_KEY=<your-generated-key>
+```
+
+And pass it to the JVM alongside the existing flags:
+
+```bat
+java -Dspring.profiles.active=prod ^
+     ...
+     -Dapp.remember-me-key=%REMEMBER_ME_KEY% ^
+     -jar "%JAR%"
+```
+
+No changes needed to `application-prod.yml`.
 
 ---
 
@@ -113,17 +129,14 @@ Example (replace with your own generated value):
 Pardur!RmKey-2026_xK9vQ3mN8wLpZ7rY2tA5bJ0cH4dF6eG
 ```
 
-Generate one in KeePass: use the "Password Generator" with 48 characters, mixed case + digits + symbols (excluding whitespace). Paste the result into the `REMEMBER_ME_KEY` environment variable on the server.
+Generate one in KeePass: use the "Password Generator" with 48 characters, mixed case + digits + symbols (excluding whitespace).
 
-**File to update after generation:**  
-`backend/src/main/resources/application-dev.yml` — add:
-```yaml
-app:
-  remember-me-key: <your-generated-key>
-```
-Referenced in code as `${app.remember-me-key}`.
+**Where to put the key after generation:**
 
-For production, set the OS/Docker environment variable `APP_REMEMBER_ME_KEY` (Spring maps `APP_REMEMBER_ME_KEY` → `app.remember-me-key` automatically).
+| Environment | Where |
+|---|---|
+| **Production** | `start-pardur.bat` — `set REMEMBER_ME_KEY=<value>` |
+| **Local dev** | Not needed — the fallback in `application.yml` is used automatically |
 
 ---
 

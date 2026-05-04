@@ -1806,6 +1806,17 @@ nav {
   color: var(--t3);
   font-weight: 600;
 }
+.f-lbl-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--t2);
+  cursor: pointer;
+  font-weight: normal;
+  margin-top: 4px;
+}
+.f-lbl-inline input[type="checkbox"] { cursor: pointer; accent-color: var(--gold); }
 
 .f-inp {
   background: var(--inp);

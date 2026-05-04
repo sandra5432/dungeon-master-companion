@@ -18,6 +18,9 @@ set DB_NAME=item_management
 set DB_USER=root
 set DB_PASSWORD=02SL20
 
+:: --- Remember-me secret ---
+set REMEMBER_ME_KEY=pardur-dev-key-replace-in-prod
+
 :: --- App port ---
 set PORT=3000
 
@@ -81,6 +84,7 @@ java -Dspring.profiles.active=prod ^
      -DDB_NAME=%DB_NAME% ^
      -DDB_USER=%DB_USER% ^
      -DDB_PASSWORD=%DB_PASSWORD% ^
+     -Dapp.remember-me-key=%REMEMBER_ME_KEY% ^
      -jar "%JAR%"
 
 pause

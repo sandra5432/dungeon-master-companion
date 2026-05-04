@@ -35,3 +35,13 @@ item-management-list/.env
 
 # Git worktrees
 .worktrees/
+
+# Node modules (root)
+node_modules/
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+
+# Claude Code session data
+.claude/

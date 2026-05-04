@@ -407,3 +407,115 @@ INSERT INTO timeline_events (world_id, title, sequence_order, date_label, type, 
 
 INSERT INTO map_poi (world_id, poi_type_id, x_pct, y_pct, label, created_by, created_at, updated_at)
   VALUES (3, 1, 50.0, 50.0, 'Startort', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- ── Ideenkammer: Seed-Ideen ───────────────────────────────────────────────────
+-- Drei Ideen in allen drei Status, je mit Kommentaren und Activity-Log.
+-- admin = user_id=1, user = user_id=2.
+-- Subselects auf title, da die IDs erst zur Laufzeit vergeben werden.
+
+-- ── Idee 1: draft ─────────────────────────────────────────────────────────────
+
+INSERT INTO ideas (title, description, status, creator_user_id, created_at, updated_at)
+  VALUES ('Ruinen von Nerathis erkunden',
+          'Der Südflügel der Ruinen ist noch kaum erforscht. Eine systematische Begehung könnte neue Hinweise auf die Erbauer liefern.',
+          'draft', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 'pardur');
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 'nerathis');
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 'erkundung');
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 1, 'created', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 1,
+          'Ich habe eine grobe Skizze der bekannten Eingänge angefertigt. Fangen wir mit dem Südflügel an — dort sind die Stürme am seltensten.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 1, 'comment', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 2,
+          'Brauchen wir spezielle Ausrüstung? Die magischen Stürme im Inneren könnten unsere Gerätschaften beschädigen.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Ruinen von Nerathis erkunden'), 2, 'comment', NULL, NULL, CURRENT_TIMESTAMP);
+
+-- ── Idee 2: doing ─────────────────────────────────────────────────────────────
+
+INSERT INTO ideas (title, description, status, creator_user_id, created_at, updated_at)
+  VALUES ('Obelisken-Inschriften entziffern',
+          'Die Tafeln im Obelisken enthalten Texte in einer unbekannten Sprache. Eine Übersetzung könnte den Zweck der Erbauer enthüllen.',
+          'doing', 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 'pardur');
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 'obelisk');
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 'erbauer');
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 2, 'created', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 2, 'status', 'draft', 'doing', CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 2,
+          'Ich arbeite gerade an der dritten Tafel. Die Symbole wiederholen sich in einem regelmäßigen Muster — könnte eine Art Zählung oder Kalender sein.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 2, 'comment', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 1,
+          'Hast du die Verbindung zu den Runensteinen nördlich von Nerathis geprüft? Die könnten denselben Ursprung haben.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 1, 'comment', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 2,
+          'Ja, es gibt tatsächlich Überschneidungen! Brauche noch ein oder zwei Sitzungen, dann sollte ich mehr sagen können.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Obelisken-Inschriften entziffern'), 2, 'comment', NULL, NULL, CURRENT_TIMESTAMP);
+
+-- ── Idee 3: done ──────────────────────────────────────────────────────────────
+
+INSERT INTO ideas (title, description, status, creator_user_id, created_at, updated_at)
+  VALUES ('Tavari als Tauschmittel nutzen',
+          'Mit den Glimmquali Tavari als inoffizielle Handelswährung etablieren, um Zugang zu ihren Routen und ihrem Wissen zu erhalten.',
+          'done', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 'glimmquali');
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 'handel');
+INSERT INTO idea_tags (idea_id, tag_name) VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 'tavari');
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 1, 'created', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 1, 'status', 'draft', 'doing', CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 1, 'status', 'doing', 'done', CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 1,
+          'Die Glimmquali haben zugestimmt. Drei Tavari sind der vereinbarte Preis für einen Tag Pfadfinderführung durch die Sturmzonen.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 1, 'comment', NULL, NULL, CURRENT_TIMESTAMP);
+
+INSERT INTO idea_comments (idea_id, creator_user_id, body, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 2,
+          'Hat sich wirklich gelohnt! Durch ihren Führer haben wir die sichere Route gefunden und dabei noch eine unbekannte Ruinenkammer entdeckt.',
+          CURRENT_TIMESTAMP);
+
+INSERT INTO idea_activity (idea_id, actor_user_id, type, from_status, to_status, created_at)
+  VALUES ((SELECT id FROM ideas WHERE title = 'Tavari als Tauschmittel nutzen'), 2, 'comment', NULL, NULL, CURRENT_TIMESTAMP);

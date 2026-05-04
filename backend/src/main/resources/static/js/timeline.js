@@ -815,6 +815,7 @@ async function doLogout() {
   }
   const editorPanel = document.getElementById('wiki-editor-panel');
   if (editorPanel) editorPanel.style.display = 'none';
+  closeIdeaDetail();
   // Reload worlds — server returns only those the guest may read
   try {
     state.worlds = await api('GET', '/worlds') || [];

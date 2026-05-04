@@ -7,10 +7,11 @@ import com.pardur.dto.request.UpdateIdeaStatusRequest;
 import com.pardur.dto.response.IdeaActivityDto;
 import com.pardur.dto.response.IdeaCommentDto;
 import com.pardur.dto.response.IdeaDto;
-import com.pardur.dto.response.TagCountDto;
 import com.pardur.exception.ResourceNotFoundException;
 import com.pardur.model.*;
 import com.pardur.repository.*;
+import com.pardur.repository.IdeaImageRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.Optional;
 
 /**
  * Business logic for the Ideenkammer: creating, updating, voting, commenting, and activity logging for ideas.
+ * Ideas are world-agnostic; worlds appear only as tag suggestions.
  */
 @Service
 public class IdeaService {
@@ -32,6 +34,7 @@ public class IdeaService {
     private final IdeaCommentRepository commentRepository;
     private final IdeaActivityRepository activityRepository;
     private final IdeaVoteRepository voteRepository;
+    private final IdeaImageRepository imageRepository;
     private final WorldRepository worldRepository;
     private final UserRepository userRepository;
     private final WikiEntryRepository wikiEntryRepository;
@@ -40,6 +43,7 @@ public class IdeaService {
                        IdeaCommentRepository commentRepository,
                        IdeaActivityRepository activityRepository,
                        IdeaVoteRepository voteRepository,
+                       IdeaImageRepository imageRepository,
                        WorldRepository worldRepository,
                        UserRepository userRepository,
                        WikiEntryRepository wikiEntryRepository) {
@@ -47,23 +51,15 @@ public class IdeaService {
         this.commentRepository = commentRepository;
         this.activityRepository = activityRepository;
         this.voteRepository = voteRepository;
+        this.imageRepository = imageRepository;
         this.worldRepository = worldRepository;
         this.userRepository = userRepository;
         this.wikiEntryRepository = wikiEntryRepository;
     }
 
-    private World requireWorld(Integer worldId) {
-        return worldRepository.findById(worldId)
-                .orElseThrow(() -> new ResourceNotFoundException("World not found: " + worldId));
-    }
-
-    private Idea requireIdea(Integer worldId, Integer ideaId) {
-        Idea idea = ideaRepository.findById(ideaId)
+    private Idea requireIdea(Integer ideaId) {
+        return ideaRepository.findById(ideaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Idea not found: " + ideaId));
-        if (!idea.getWorld().getId().equals(worldId)) {
-            throw new ResourceNotFoundException("Idea " + ideaId + " does not belong to world " + worldId);
-        }
-        return idea;
     }
 
     private User requireLogin(Authentication auth) {
@@ -84,35 +80,50 @@ public class IdeaService {
         }
     }
 
+    /**
+     * Returns all ideas ordered by creation date descending.
+     *
+     * @param auth authenticated user
+     * @return list of all ideas as DTOs
+     */
     @Transactional(readOnly = true)
-    public List<IdeaDto> getIdeas(Integer worldId, Authentication auth) {
-        requireWorld(worldId);
+    public List<IdeaDto> getAllIdeas(Authentication auth) {
         if (!WorldPermissionChecker.isAuthenticated(auth)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Login required");
         }
         Integer myUserId = WorldPermissionChecker.resolveUserId(auth);
-        return ideaRepository.findAllByWorldId(worldId)
+        return ideaRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream().map(i -> toDto(i, myUserId)).toList();
     }
 
+    /**
+     * Returns a single idea by ID.
+     *
+     * @param ideaId idea to retrieve
+     * @param auth   authenticated user
+     * @return idea DTO
+     */
     @Transactional(readOnly = true)
-    public IdeaDto getIdea(Integer worldId, Integer ideaId, Authentication auth) {
-        requireWorld(worldId);
+    public IdeaDto getIdea(Integer ideaId, Authentication auth) {
         if (!WorldPermissionChecker.isAuthenticated(auth)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Login required");
         }
         Integer myUserId = WorldPermissionChecker.resolveUserId(auth);
-        Idea idea = requireIdea(worldId, ideaId);
-        return toDto(idea, myUserId);
+        return toDto(requireIdea(ideaId), myUserId);
     }
 
+    /**
+     * Creates a new idea with status {@code draft}.
+     *
+     * @param req  validated request body
+     * @param auth authenticated user (becomes the creator)
+     * @return the persisted idea as a DTO
+     */
     @Transactional
-    public IdeaDto createIdea(Integer worldId, CreateIdeaRequest req, Authentication auth) {
-        World world = requireWorld(worldId);
+    public IdeaDto createIdea(CreateIdeaRequest req, Authentication auth) {
         User creator = requireLogin(auth);
 
         Idea idea = new Idea();
-        idea.setWorld(world);
         idea.setCreatedBy(creator);
         idea.setTitle(req.getTitle().trim());
         idea.setDescription(req.getDescription());
@@ -133,11 +144,18 @@ public class IdeaService {
         return toDto(saved, creator.getId());
     }
 
+    /**
+     * Updates title, description, due date, and tags of an existing idea.
+     *
+     * @param ideaId ID of the idea to update
+     * @param req    validated request body
+     * @param auth   authenticated user (must be creator or admin)
+     * @return updated idea as a DTO
+     */
     @Transactional
-    public IdeaDto updateIdea(Integer worldId, Integer ideaId, UpdateIdeaRequest req, Authentication auth) {
-        requireWorld(worldId);
+    public IdeaDto updateIdea(Integer ideaId, UpdateIdeaRequest req, Authentication auth) {
         requireLogin(auth);
-        Idea idea = requireIdea(worldId, ideaId);
+        Idea idea = requireIdea(ideaId);
         requireOwnerOrAdmin(idea, auth);
 
         idea.setTitle(req.getTitle().trim());
@@ -154,11 +172,19 @@ public class IdeaService {
         return toDto(ideaRepository.save(idea), myUserId);
     }
 
+    /**
+     * Changes the status of an idea. If moved to {@code done}, a wiki stub is created in the
+     * first world whose name matches one of the idea's tags.
+     *
+     * @param ideaId ID of the idea to update
+     * @param req    validated status request
+     * @param auth   authenticated user (must be creator or admin)
+     * @return updated idea as a DTO, with {@code wikiStubCreated} flag set when applicable
+     */
     @Transactional
-    public IdeaDto updateStatus(Integer worldId, Integer ideaId, UpdateIdeaStatusRequest req, Authentication auth) {
-        requireWorld(worldId);
+    public IdeaDto updateStatus(Integer ideaId, UpdateIdeaStatusRequest req, Authentication auth) {
         User actor = requireLogin(auth);
-        Idea idea = requireIdea(worldId, ideaId);
+        Idea idea = requireIdea(ideaId);
         requireOwnerOrAdmin(idea, auth);
 
         IdeaStatus newStatus;
@@ -182,7 +208,7 @@ public class IdeaService {
 
         boolean stubCreated = false;
         if (newStatus == IdeaStatus.done) {
-            stubCreated = createWikiStubIfAbsent(idea.getWorld(), idea.getTitle(), actor);
+            stubCreated = createWikiStubIfAbsent(idea, actor);
         }
 
         IdeaDto dto = toDto(idea, actor.getId());
@@ -190,20 +216,31 @@ public class IdeaService {
         return dto;
     }
 
+    /**
+     * Deletes an idea and all its associated data.
+     *
+     * @param ideaId ID of the idea to delete
+     * @param auth   authenticated user (must be creator or admin)
+     */
     @Transactional
-    public void deleteIdea(Integer worldId, Integer ideaId, Authentication auth) {
-        requireWorld(worldId);
+    public void deleteIdea(Integer ideaId, Authentication auth) {
         requireLogin(auth);
-        Idea idea = requireIdea(worldId, ideaId);
+        Idea idea = requireIdea(ideaId);
         requireOwnerOrAdmin(idea, auth);
         ideaRepository.delete(idea);
     }
 
+    /**
+     * Toggles the current user's vote on an idea.
+     *
+     * @param ideaId ID of the idea to vote on
+     * @param auth   authenticated user
+     * @return updated idea DTO with new vote count
+     */
     @Transactional
-    public IdeaDto toggleVote(Integer worldId, Integer ideaId, Authentication auth) {
-        requireWorld(worldId);
+    public IdeaDto toggleVote(Integer ideaId, Authentication auth) {
         User user = requireLogin(auth);
-        Idea idea = requireIdea(worldId, ideaId);
+        Idea idea = requireIdea(ideaId);
 
         Optional<IdeaVote> existing = voteRepository.findByIdeaAndUser(ideaId, user.getId());
         if (existing.isPresent()) {
@@ -221,22 +258,35 @@ public class IdeaService {
         return toDto(refreshed, user.getId());
     }
 
+    /**
+     * Returns all comments for an idea, ordered newest first.
+     *
+     * @param ideaId ID of the idea
+     * @param auth   authenticated user
+     * @return list of comment DTOs
+     */
     @Transactional(readOnly = true)
-    public List<IdeaCommentDto> getComments(Integer worldId, Integer ideaId, Authentication auth) {
-        requireWorld(worldId);
+    public List<IdeaCommentDto> getComments(Integer ideaId, Authentication auth) {
         if (!WorldPermissionChecker.isAuthenticated(auth)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Login required");
         }
-        requireIdea(worldId, ideaId);
+        requireIdea(ideaId);
         return commentRepository.findAllByIdeaIdOrderByCreatedAtDesc(ideaId)
                 .stream().map(this::toCommentDto).toList();
     }
 
+    /**
+     * Adds a comment to an idea.
+     *
+     * @param ideaId ID of the idea to comment on
+     * @param req    validated request body containing the comment text
+     * @param auth   authenticated user
+     * @return the created comment as a DTO
+     */
     @Transactional
-    public IdeaCommentDto addComment(Integer worldId, Integer ideaId, CreateIdeaCommentRequest req, Authentication auth) {
-        requireWorld(worldId);
+    public IdeaCommentDto addComment(Integer ideaId, CreateIdeaCommentRequest req, Authentication auth) {
         User user = requireLogin(auth);
-        Idea idea = requireIdea(worldId, ideaId);
+        Idea idea = requireIdea(ideaId);
 
         IdeaComment comment = new IdeaComment();
         comment.setIdea(idea);
@@ -253,38 +303,45 @@ public class IdeaService {
         return toCommentDto(saved);
     }
 
+    /**
+     * Returns the activity log for an idea, ordered newest first.
+     *
+     * @param ideaId ID of the idea
+     * @param auth   authenticated user
+     * @return list of activity DTOs
+     */
     @Transactional(readOnly = true)
-    public List<IdeaActivityDto> getActivity(Integer worldId, Integer ideaId, Authentication auth) {
-        requireWorld(worldId);
+    public List<IdeaActivityDto> getActivity(Integer ideaId, Authentication auth) {
         if (!WorldPermissionChecker.isAuthenticated(auth)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Login required");
         }
-        requireIdea(worldId, ideaId);
+        requireIdea(ideaId);
         return activityRepository.findAllByIdeaIdOrderByCreatedAtDesc(ideaId)
                 .stream().map(this::toActivityDto).toList();
     }
 
-    @Transactional(readOnly = true)
-    public List<TagCountDto> getTagCounts(Integer worldId, Authentication auth) {
-        requireWorld(worldId);
-        if (!WorldPermissionChecker.isAuthenticated(auth)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Login required");
-        }
-        List<Object[]> rows = ideaRepository.findTagCountsByWorldId(worldId);
-        List<TagCountDto> result = new ArrayList<>();
-        for (Object[] row : rows) {
-            result.add(new TagCountDto((String) row[0], ((Number) row[1]).longValue()));
-        }
-        return result;
-    }
+    /**
+     * Creates a wiki stub for the idea's title in the first world whose name matches one of the
+     * idea's tags (case-insensitive). Does nothing if no matching world is found or if the stub
+     * already exists.
+     *
+     * @return true if a stub was created, false otherwise
+     */
+    private boolean createWikiStubIfAbsent(Idea idea, User actor) {
+        List<String> tags = idea.getTags();
+        World targetWorld = worldRepository.findAll().stream()
+                .filter(w -> tags.stream().anyMatch(t -> t.equalsIgnoreCase(w.getName())))
+                .findFirst()
+                .orElse(null);
 
-    /** Creates a wiki stub for the given title if no entry with that title already exists. Returns true if created. */
-    private boolean createWikiStubIfAbsent(World world, String title, User actor) {
-        boolean exists = wikiEntryRepository.findDuplicateTitle(world.getId(), title, 0).isPresent();
+        if (targetWorld == null) return false;
+
+        boolean exists = wikiEntryRepository.findDuplicateTitle(targetWorld.getId(), idea.getTitle(), 0).isPresent();
         if (exists) return false;
+
         WikiEntry stub = new WikiEntry();
-        stub.setWorld(world);
-        stub.setTitle(title);
+        stub.setWorld(targetWorld);
+        stub.setTitle(idea.getTitle());
         stub.setType(WikiEntryType.OTHER);
         stub.setBody("");
         stub.setCreatedBy(actor);
@@ -295,7 +352,6 @@ public class IdeaService {
     private IdeaDto toDto(Idea idea, Integer myUserId) {
         IdeaDto dto = new IdeaDto();
         dto.setId(idea.getId());
-        dto.setWorldId(idea.getWorld().getId());
         dto.setTitle(idea.getTitle());
         dto.setDescription(idea.getDescription());
         dto.setStatus(idea.getStatus().name());
@@ -308,6 +364,9 @@ public class IdeaService {
         dto.setVotedByMe(myUserId != null && idea.getVotes().stream()
                 .anyMatch(v -> v.getId().getUserId().equals(myUserId)));
         dto.setCommentCount(idea.getComments().size());
+        dto.setImageCount((int) imageRepository.countByIdeaId(idea.getId()));
+        imageRepository.findFirstByIdeaIdOrderByCreatedAtAsc(idea.getId())
+                .ifPresent(img -> dto.setFirstImageId(img.getId()));
         dto.setCreatedAt(idea.getCreatedAt());
         dto.setUpdatedAt(idea.getUpdatedAt());
         return dto;

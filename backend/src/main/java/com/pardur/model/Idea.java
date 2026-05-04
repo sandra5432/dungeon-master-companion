@@ -16,10 +16,6 @@ public class Idea {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "world_id", nullable = false)
-    private World world;
-
     @Column(nullable = false, length = 255)
     private String title;
 
@@ -62,8 +58,6 @@ public class Idea {
     private LocalDateTime updatedAt;
 
     public Integer getId() { return id; }
-    public World getWorld() { return world; }
-    public void setWorld(World world) { this.world = world; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }

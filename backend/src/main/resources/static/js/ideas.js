@@ -464,7 +464,8 @@ function renderIdeaImages(ideaId, images, canEdit) {
   gallery.innerHTML = images.map(img => `
     <div class="idp-image-thumb" data-image-id="${img.id}">
       <img src="/api/ideas/${ideaId}/images/${img.id}/data"
-           alt="${escHtml(img.originalFilename)}" loading="lazy">
+           alt="${escHtml(img.originalFilename)}" loading="lazy"
+           onclick="openImageLightbox('/api/ideas/${ideaId}/images/${img.id}/data', '${escHtml(img.originalFilename || '')}')">
       ${canEdit ? `<button class="idp-image-delete-btn" title="Bild löschen" onclick="deleteIdeaImage(${ideaId}, ${img.id})">✕</button>` : ''}
     </div>
   `).join('');

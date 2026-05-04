@@ -215,13 +215,12 @@ test.describe('AL-D-005 — Kompaktansicht umschalten', () => {
 
 test.describe('AL-D-006 — Standard-Tags', () => {
 
-  test('create modal shows pardur, eldorheim, draigval as default tag chips', async ({ page }) => {
+  test('create modal shows pardur and eldorheim as default tag chips', async ({ page }) => {
     await goToIdeasPage(page);
     await page.locator('#ideas-add-btn').click();
     await expect(page.locator('#ideas-modal-bg')).toHaveClass(/open/, { timeout: 3000 });
     await expect(page.locator('.ideas-default-tag').filter({ hasText: 'pardur' })).toBeVisible();
     await expect(page.locator('.ideas-default-tag').filter({ hasText: 'eldorheim' })).toBeVisible();
-    await expect(page.locator('.ideas-default-tag').filter({ hasText: 'draigval' })).toBeVisible();
     await page.locator('#ideas-modal-bg .m-close').click();
   });
 
@@ -1006,6 +1005,8 @@ test.describe('AL-D-003-ext — Tag-Filter detailliert', () => {
 
   test('column counter reflects filtered count', async ({ page }) => {
     await goToIdeasPage(page);
+    // Wait for the beforeEach ideas to appear before reading the counter
+    await expect(page.locator('.icard').filter({ hasText: 'Filter-Alpha' })).toBeVisible({ timeout: 5000 });
     const totalBefore = parseInt(await page.locator('#ideas-cnt-draft').textContent() || '0');
     await page.locator('#ideas-tag-filter-bar .ideas-tfb-btn').filter({ hasText: 'alpha' }).click();
     const totalAfter = parseInt(await page.locator('#ideas-cnt-draft').textContent() || '0');
@@ -1242,21 +1243,21 @@ test.describe('AL-D5-001 / AL-D5-002 — Bilder hochladen und löschen', () => {
 
   test('detail panel shows Bilder section', async ({ page }) => {
     await goToIdeasPage(page);
-    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
     await expect(page.locator('#ideas-detail-panel')).toHaveClass(/open/, { timeout: 3000 });
     await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
   });
 
   test('owner sees + Bild anhängen button in detail panel', async ({ page }) => {
     await goToIdeasPage(page);
-    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
     await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#idp-image-upload-btn')).toBeVisible();
   });
 
   test('uploading an image adds it to the gallery', async ({ page }) => {
     await goToIdeasPage(page);
-    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
     await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
 
     await page.locator('#idp-image-upload-input').setInputFiles({
@@ -1270,7 +1271,7 @@ test.describe('AL-D5-001 / AL-D5-002 — Bilder hochladen und löschen', () => {
 
   test('uploaded image shows 🖼 badge on idea card', async ({ page }) => {
     await goToIdeasPage(page);
-    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
     await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
 
     await page.locator('#idp-image-upload-input').setInputFiles({
@@ -1281,14 +1282,14 @@ test.describe('AL-D5-001 / AL-D5-002 — Bilder hochladen und löschen', () => {
 
     await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
     // Card meta badge should reflect the new image count
-    const card = page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).first();
+    const card = page.locator(`.icard[data-id="${testIdeaId}"]`);
     await expect(card.locator('.icard-img-count')).toBeVisible({ timeout: 3000 });
     await expect(card.locator('.icard-img-count')).toContainText('1');
   });
 
   test('delete button removes image from gallery', async ({ page }) => {
     await goToIdeasPage(page);
-    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
     await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
 
     await page.locator('#idp-image-upload-input').setInputFiles({
@@ -1309,14 +1310,14 @@ test.describe('AL-D5-001 / AL-D5-002 — Bilder hochladen und löschen', () => {
     await page.locator('#nav-ideas').click();
     await expect(page.locator('#page-ideas')).toHaveClass(/active/, { timeout: 5000 });
 
-    await page.locator('.icard').filter({ hasText: 'Bild-Upload-Idee' }).click();
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
     await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#idp-image-upload-btn')).toBeHidden();
   });
 
   test('image upload is rejected for non-WebP files (API)', async ({ request: apiCtx }) => {
     const res = await apiCtx.post(`/api/ideas/${testIdeaId}/images`, {
-      headers: { ...ADMIN_HEADERS },
+      headers: { 'Authorization': ADMIN_HEADERS['Authorization'] },
       multipart: {
         file: {
           name: 'bild.png',
@@ -1326,6 +1327,45 @@ test.describe('AL-D5-001 / AL-D5-002 — Bilder hochladen und löschen', () => {
       },
     });
     expect(res.status()).toBe(400);
+  });
+
+  test('clicking an image thumbnail opens the lightbox', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('#idp-image-upload-input').setInputFiles({
+      name: 'lightbox-test.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
+
+    await page.locator('#idp-images-gallery .idp-image-thumb img').first().click();
+
+    await expect(page.locator('#img-lightbox')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#lightbox-img')).toHaveAttribute(
+      'src', new RegExp(`/api/ideas/${testIdeaId}/images/\\d+/data`),
+    );
+  });
+
+  test('pressing Escape closes the lightbox', async ({ page }) => {
+    await goToIdeasPage(page);
+    await page.locator(`.icard[data-id="${testIdeaId}"]`).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('#idp-image-upload-input').setInputFiles({
+      name: 'lightbox-esc.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
+
+    await page.locator('#idp-images-gallery .idp-image-thumb img').first().click();
+    await expect(page.locator('#img-lightbox')).toBeVisible({ timeout: 3000 });
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#img-lightbox')).toBeHidden({ timeout: 2000 });
   });
 
 });
@@ -1429,12 +1469,32 @@ test.describe('AL-D5-003 — Bilder beim Erstellen hochladen', () => {
     await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 8000 });
   });
 
-  test('thumbnail appears immediately on card after creating idea with image (no reload)', async ({ page }) => {
+});
+
+// ── AL-D5-004: Mini-Bildvorschau auf der Ideenkarte ───────────────────────────
+
+test.describe('AL-D5-004 — Mini-Bildvorschau auf der Ideenkarte', () => {
+  let cardIdeaTitle;
+
+  test.beforeEach(() => {
+    cardIdeaTitle = `Karte-Thumb-Idee-${Date.now()}`;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    const res = await apiCtx.get('/api/ideas', { headers: { ...ADMIN_HEADERS } });
+    if (res.ok()) {
+      const ideas = await res.json();
+      const idea = ideas.find(i => i.title === cardIdeaTitle);
+      if (idea) await apiCtx.delete(`/api/ideas/${idea.id}`, { headers: { ...ADMIN_HEADERS } });
+    }
+  });
+
+  test('thumbnail appears on card immediately after creating idea with image', async ({ page }) => {
     await goToIdeasPage(page);
     await page.locator('#ideas-add-btn').click();
     await expect(page.locator('#ideas-modal-bg')).toBeVisible({ timeout: 3000 });
 
-    await page.locator('#idea-f-title').fill(createdIdeaTitle);
+    await page.locator('#idea-f-title').fill(cardIdeaTitle);
     await page.locator('#idea-f-images').setInputFiles({
       name: 'thumb-test.webp',
       mimeType: 'image/webp',
@@ -1445,9 +1505,25 @@ test.describe('AL-D5-003 — Bilder beim Erstellen hochladen', () => {
     await page.locator('#ideas-modal-bg .btn-primary').click();
     await expect(page.locator('#ideas-modal-bg')).toBeHidden({ timeout: 5000 });
 
-    // The card must show the thumbnail without any page reload
-    const card = page.locator('.icard').filter({ hasText: createdIdeaTitle });
+    const card = page.locator('.icard').filter({ hasText: cardIdeaTitle });
     await expect(card.locator('.icard-thumb')).toBeVisible({ timeout: 8000 });
+  });
+
+  test('thumbnail appears on card after uploading image via detail panel', async ({ page, request: apiCtx }) => {
+    const idea = await createTestIdea(apiCtx, WORLD_ID, { title: cardIdeaTitle });
+
+    await goToIdeasPage(page);
+    await page.locator(`.icard[data-id="${idea.id}"]`).click();
+    await expect(page.locator('#idp-images-section')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('#idp-image-upload-input').setInputFiles({
+      name: 'panel-thumb.webp',
+      mimeType: 'image/webp',
+      buffer: Buffer.from(MINIMAL_WEBP_B64, 'base64'),
+    });
+    await expect(page.locator('#idp-images-gallery .idp-image-thumb')).toHaveCount(1, { timeout: 5000 });
+
+    await expect(page.locator(`.icard[data-id="${idea.id}"] .icard-thumb`)).toBeVisible({ timeout: 5000 });
   });
 
 });

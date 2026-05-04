@@ -118,13 +118,14 @@ async function goToIdeasPageAsUser(page) {
 
 /**
  * Creates a test idea via API and returns the created idea object.
+ * worldId is accepted for signature compatibility but ignored (ideas are world-agnostic).
  * @param {import('@playwright/test').APIRequestContext} apiCtx
- * @param {number} worldId
+ * @param {number} _worldId  unused
  * @param {object} data  Partial CreateIdeaRequest
  * @returns {Promise<object>}
  */
-async function createTestIdea(apiCtx, worldId, data = {}) {
-  const res = await apiCtx.post(`/api/worlds/${worldId}/ideas`, {
+async function createTestIdea(apiCtx, _worldId, data = {}) {
+  const res = await apiCtx.post('/api/ideas', {
     headers: ADMIN_HEADERS,
     data: { title: 'Test-Idee', tags: [], ...data },
   });
@@ -134,12 +135,13 @@ async function createTestIdea(apiCtx, worldId, data = {}) {
 
 /**
  * Deletes a test idea via API (admin).
+ * worldId is accepted for signature compatibility but ignored (ideas are world-agnostic).
  * @param {import('@playwright/test').APIRequestContext} apiCtx
- * @param {number} worldId
+ * @param {number} _worldId  unused
  * @param {number} ideaId
  */
-async function deleteTestIdea(apiCtx, worldId, ideaId) {
-  await apiCtx.delete(`/api/worlds/${worldId}/ideas/${ideaId}`, { headers: ADMIN_HEADERS });
+async function deleteTestIdea(apiCtx, _worldId, ideaId) {
+  await apiCtx.delete(`/api/ideas/${ideaId}`, { headers: ADMIN_HEADERS });
 }
 
 module.exports = {

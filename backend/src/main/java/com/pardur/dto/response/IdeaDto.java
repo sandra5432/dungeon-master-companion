@@ -6,7 +6,6 @@ import java.util.List;
 
 public class IdeaDto {
     private Integer id;
-    private Integer worldId;
     private String title;
     private String description;
     private String status;
@@ -18,6 +17,8 @@ public class IdeaDto {
     private int voteCount;
     private boolean votedByMe;
     private int commentCount;
+    private int imageCount;
+    private Integer firstImageId;
     private boolean wikiStubCreated;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -26,8 +27,6 @@ public class IdeaDto {
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
-    public Integer getWorldId() { return worldId; }
-    public void setWorldId(Integer worldId) { this.worldId = worldId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -50,6 +49,10 @@ public class IdeaDto {
     public void setVotedByMe(boolean votedByMe) { this.votedByMe = votedByMe; }
     public int getCommentCount() { return commentCount; }
     public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
+    public int getImageCount() { return imageCount; }
+    public void setImageCount(int imageCount) { this.imageCount = imageCount; }
+    public Integer getFirstImageId() { return firstImageId; }
+    public void setFirstImageId(Integer firstImageId) { this.firstImageId = firstImageId; }
     public boolean isWikiStubCreated() { return wikiStubCreated; }
     public void setWikiStubCreated(boolean wikiStubCreated) { this.wikiStubCreated = wikiStubCreated; }
     public LocalDateTime getCreatedAt() { return createdAt; }

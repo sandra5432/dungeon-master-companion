@@ -432,6 +432,8 @@ function showLoginModal() {
   document.getElementById('fl-p').value = '';
   const errEl = document.getElementById('fl-err');
   if (errEl) errEl.style.display = 'none';
+  const rememberEl = document.getElementById('fl-remember');
+  if (rememberEl) rememberEl.checked = false;
   openModal();
 }
 
@@ -446,10 +448,10 @@ function hideLoginModal() {
  * @param {string} username
  * @param {string} password
  */
-async function doLogin(username, password) {
-  console.debug('[doLogin] →', username);
+async function doLogin(username, password, rememberMe = false) {
+  console.debug('[doLogin] →', username, 'rememberMe:', rememberMe);
   try {
-    const result = await api('POST', '/login', { username, password });
+    const result = await api('POST', '/login', { username, password, rememberMe });
     state.auth = {
       loggedIn: true,
       isAdmin: result.admin || false,

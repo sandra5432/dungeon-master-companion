@@ -767,8 +767,9 @@ async function _saveEntry() {
   if (editSource === 'login') {
     const username = document.getElementById('fl-u').value.trim();
     const password = document.getElementById('fl-p').value;
+    const rememberMe = document.getElementById('fl-remember')?.checked || false;
     if (!username || !password) { alert('Benutzername und Passwort sind Pflicht'); return; }
-    await doLogin(username, password);
+    await doLogin(username, password, rememberMe);
     return;
   }
 

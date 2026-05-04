@@ -7,6 +7,7 @@ import com.pardur.security.PardurUserDetails;
 import com.pardur.service.AuthService;
 import com.pardur.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -58,7 +59,16 @@ public class AuthController {
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 SecurityContextHolder.getContext());
         if (req.isRememberMe()) {
-            rememberMeServices.loginSuccess(httpRequest, httpResponse, auth);
+            // loginSuccess() checks request.getParameter("remember-me") internally.
+            // Our JSON login has no such parameter, so we wrap the request to inject it.
+            HttpServletRequest wrapped = new HttpServletRequestWrapper(httpRequest) {
+                @Override
+                public String getParameter(String name) {
+                    if ("remember-me".equals(name)) return "true";
+                    return super.getParameter(name);
+                }
+            };
+            rememberMeServices.loginSuccess(wrapped, httpResponse, auth);
         }
         return ResponseEntity.ok(authService.getAuthStatus(auth));
     }

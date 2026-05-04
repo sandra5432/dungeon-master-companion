@@ -116,3 +116,70 @@ test.describe('AL-G-003 — Dark/Light Mode umschalten', () => {
   });
 
 });
+
+// ── AL-G-004: Eingeloggt bleiben ──────────────────────────────────────────────
+
+test.describe('AL-G-004 — Eingeloggt bleiben', () => {
+
+  test('"Eingeloggt bleiben" checkbox is visible in login modal', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#btn-login').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#fl-remember')).toBeVisible();
+  });
+
+  test('"Eingeloggt bleiben" checkbox is unchecked by default', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#btn-login').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#fl-remember')).not.toBeChecked();
+  });
+
+  test('login without checkbox does not set remember-me cookie', async ({ page, context }) => {
+    await page.goto('/');
+    await page.locator('#btn-login').click();
+    await page.locator('#fl-u').fill('admin');
+    await page.locator('#fl-p').fill('4711');
+    // checkbox NOT checked
+    await page.locator('#m-save').click();
+    await expect(page.locator('#btn-logout')).toBeVisible({ timeout: 5000 });
+    const cookies = await context.cookies();
+    expect(cookies.find(c => c.name === 'remember-me')).toBeFalsy();
+  });
+
+  test('login with checkbox sets remember-me cookie with ~30-day expiry', async ({ page, context }) => {
+    await page.goto('/');
+    await page.locator('#btn-login').click();
+    await page.locator('#fl-u').fill('admin');
+    await page.locator('#fl-p').fill('4711');
+    await page.locator('#fl-remember').check();
+    await page.locator('#m-save').click();
+    await expect(page.locator('#btn-logout')).toBeVisible({ timeout: 5000 });
+    const cookies = await context.cookies();
+    const rm = cookies.find(c => c.name === 'remember-me');
+    expect(rm).toBeTruthy();
+    // expiry must be at least 28 days from now
+    expect(rm.expires).toBeGreaterThan(Date.now() / 1000 + 28 * 24 * 3600);
+  });
+
+  test('remember-me cookie re-authenticates after session is cleared', async ({ page, context }) => {
+    await page.goto('/');
+    await page.locator('#btn-login').click();
+    await page.locator('#fl-u').fill('admin');
+    await page.locator('#fl-p').fill('4711');
+    await page.locator('#fl-remember').check();
+    await page.locator('#m-save').click();
+    await expect(page.locator('#btn-logout')).toBeVisible({ timeout: 5000 });
+
+    // Keep only the remember-me cookie (discard JSESSIONID)
+    const cookies = await context.cookies();
+    const rm = cookies.find(c => c.name === 'remember-me');
+    await context.clearCookies();
+    if (rm) await context.addCookies([rm]);
+
+    await page.goto('/');
+    // Should be re-authenticated transparently
+    await expect(page.locator('#btn-logout')).toBeVisible({ timeout: 5000 });
+  });
+
+});

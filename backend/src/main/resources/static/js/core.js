@@ -416,6 +416,105 @@ function exportItems() {
   console.debug('[exportItems] ← download triggered');
 }
 
+/* ══════════════════════════════════════
+   AUTH — LOGIN / LOGOUT
+══════════════════════════════════════ */
+
+/**
+ * Opens the shared modal configured for login.
+ */
+function showLoginModal() {
+  editSource = 'login';
+  document.getElementById('m-title').textContent = 'Anmelden';
+  showForms(false, false, false, false, false, true);
+  setSaveBtn('Anmelden', false);
+  document.getElementById('fl-u').value = '';
+  document.getElementById('fl-p').value = '';
+  const errEl = document.getElementById('fl-err');
+  if (errEl) errEl.style.display = 'none';
+  openModal();
+}
+
+/** Closes the login modal. */
+function hideLoginModal() {
+  closeModal();
+}
+
+/**
+ * Authenticates against the API and updates auth state.
+ * On success, reloads to Marktplatz (or shows the password-change overlay for forced resets).
+ * @param {string} username
+ * @param {string} password
+ */
+async function doLogin(username, password) {
+  console.debug('[doLogin] →', username);
+  try {
+    const result = await api('POST', '/login', { username, password });
+    state.auth = {
+      loggedIn: true,
+      isAdmin: result.admin || false,
+      userId: result.userId || null,
+      username: result.username || null,
+      colorHex: result.colorHex || null,
+      mustChangePassword: result.mustChangePassword || false,
+    };
+    if (result.mustChangePassword) {
+      hideLoginModal();
+      applyAuthUI();
+      showPasswordChangeOverlay();
+      console.debug('[doLogin] ← must change password');
+      return;
+    }
+    console.debug('[doLogin] ← ok, redirecting');
+    location.href = '/';
+  } catch (e) {
+    const errEl = document.getElementById('fl-err');
+    if (errEl) { errEl.textContent = 'Anmeldung fehlgeschlagen: ' + e.message; errEl.style.display = 'block'; }
+    console.error('[doLogin] failed', e);
+    throw e;
+  }
+}
+
+/**
+ * Logs out the current user, clears all local state, and navigates to Marktplatz.
+ */
+async function doLogout() {
+  console.debug('[doLogout] →');
+  try {
+    await api('POST', '/logout');
+  } catch (e) {
+    // ignore logout errors
+  }
+  state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
+  state.events = [];
+  state.undated = [];
+  state.ui.activeWorldId = null;
+  state.ui.wikiActiveWorldId = null;
+  state.wikiTitles = [];
+  state.wikiAllEntries = [];
+  state.wikiFullGraph = null;
+  const articlePanel = document.getElementById('wiki-article-panel');
+  if (articlePanel) {
+    articlePanel.style.display = 'none';
+    const content = document.getElementById('wiki-article-content');
+    if (content) content.innerHTML = '';
+  }
+  const editorPanel = document.getElementById('wiki-editor-panel');
+  if (editorPanel) editorPanel.style.display = 'none';
+  closeIdeaDetail();
+  try {
+    state.worlds = await api('GET', '/worlds') || [];
+  } catch (e) {
+    state.worlds = [];
+  }
+  applyAuthUI();
+  renderTopNavWorlds();
+  pushUrl('/');
+  renderItems();
+  showPage('items');
+  console.debug('[doLogout] ← done');
+}
+
 function renderConfigWorlds() {
   const el = document.getElementById('config-worlds-body');
   if (!el) return;

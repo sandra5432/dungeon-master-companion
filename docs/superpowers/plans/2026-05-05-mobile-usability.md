@@ -14,6 +14,30 @@
 
 ---
 
+## Session Status — 2026-05-05
+
+**Resume SHA:** `1e59cbc2798871566c1e8221a69676a625b33595`
+
+| Task | Status | Commit |
+|---|---|---|
+| Task 1: Mobile nav HTML | ✅ Done | `160151e` |
+| Task 2: Mobile nav CSS | ✅ Done | `36bf913` + fix `1e59cbc` |
+| Task 3: Mobile nav JS | ⏳ Next — not started |  |
+| Task 4: Timeline layout CSS | ⏳ Pending |  |
+| Task 5: Timeline filter chips | 🚫 Deferred |  |
+| Task 6: Timeline detail sheet | ⏳ Pending |  |
+| Task 7: Timeline FAB | ⏳ Pending |  |
+| Task 8: Items layout CSS | ⏳ Pending |  |
+| Task 9: Items FAB | ⏳ Pending |  |
+| Task 10: Modals + forms CSS | ⏳ Pending |  |
+| Task 11: Global touch targets | ⏳ Pending |  |
+| Task 12: Desktop-preferred notices | ⏳ Pending |  |
+| Task 13: Wiki article list | 🚫 Deferred |  |
+
+**To resume:** Start a new session, open this plan, and use `superpowers:subagent-driven-development` starting from Task 3. The CSS media query block and all mobile HTML elements are already in place — Task 3 just wires the JS in `core.js`.
+
+---
+
 ## Files modified
 
 | File | Change |

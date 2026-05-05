@@ -710,5 +710,62 @@
 <script src="/js/wiki.js?v=27"></script>
 <script src="/js/map.js?v=27"></script>
 <script src="/js/ideas.js?v=29"></script>
+
+<!-- ═══════════════════════════════════════════════
+     MOBILE NAVIGATION (hidden on desktop via CSS)
+════════════════════════════════════════════════ -->
+
+<!-- Simplified top header for mobile -->
+<header id="mobile-header">
+  <span class="mob-header-title">⚔️ Pardur</span>
+  <button class="mob-header-btn" onclick="openDrawer()" aria-label="Menü öffnen">☰</button>
+</header>
+
+<!-- Bottom tab bar -->
+<nav id="mobile-bottom-nav" aria-label="Hauptnavigation">
+  <button class="mob-tab" data-page="timeline" onclick="showPage('timeline')">
+    <span class="mob-tab-icon">📜</span>
+    <span class="mob-tab-label">Timeline</span>
+  </button>
+  <button class="mob-tab" data-page="map" onclick="showPage('map')">
+    <span class="mob-tab-icon">🗺️</span>
+    <span class="mob-tab-label">Karte</span>
+  </button>
+  <button class="mob-tab" data-page="items" onclick="showPage('items')">
+    <span class="mob-tab-icon">⚔️</span>
+    <span class="mob-tab-label">Items</span>
+  </button>
+  <button class="mob-tab" data-page="ideas" onclick="showPage('ideas')">
+    <span class="mob-tab-icon">💡</span>
+    <span class="mob-tab-label">Ideen</span>
+  </button>
+  <button class="mob-tab" data-page="wiki" onclick="showPage('wiki')">
+    <span class="mob-tab-icon">📖</span>
+    <span class="mob-tab-label">Wiki</span>
+  </button>
+</nav>
+
+<!-- Drawer backdrop (shared for drawer + detail sheet) -->
+<div id="mob-sheet-backdrop"></div>
+
+<!-- Slide-in drawer -->
+<aside id="mobile-drawer" aria-label="Seitenmenü">
+  <div class="mob-drawer-header">
+    <span class="mob-drawer-title">⚔️ Pardur</span>
+    <button class="mob-drawer-close" onclick="closeDrawer()" aria-label="Menü schließen">✕</button>
+  </div>
+  <div class="mob-drawer-section">Seiten</div>
+  <button class="mob-drawer-item" onclick="showPage('timeline'); closeDrawer()">📜 Timeline</button>
+  <button class="mob-drawer-item" onclick="showPage('map'); closeDrawer()">🗺️ Karte</button>
+  <button class="mob-drawer-item" onclick="showPage('items'); closeDrawer()">⚔️ Items</button>
+  <button class="mob-drawer-item" onclick="showPage('ideas'); closeDrawer()">💡 Ideen</button>
+  <button class="mob-drawer-item" onclick="showPage('wiki'); closeDrawer()">📖 Wiki</button>
+  <div class="mob-drawer-section">Welten</div>
+  <div id="mob-drawer-worlds"></div>
+  <div class="mob-drawer-footer">
+    <button class="mob-drawer-item" id="mob-drawer-user-btn" onclick="doLogout()">👤 Abmelden</button>
+  </div>
+</aside>
+
 </body>
 </html>

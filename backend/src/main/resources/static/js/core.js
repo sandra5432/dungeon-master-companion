@@ -321,6 +321,11 @@ function showPage(p) {
     if (navEl) navEl.classList.add('active');
   }
 
+  // Sync mobile bottom tab bar
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+  const mobTab = document.querySelector(`#mobile-bottom-nav [data-page="${p}"]`);
+  if (mobTab) mobTab.classList.add('active');
+
   if (p !== 'timeline') closeDetail();
   if (p !== 'ideas') closeIdeaDetail();
   if (p === 'items')  renderItems();
@@ -517,6 +522,43 @@ async function doLogout() {
   console.debug('[doLogout] ← done');
 }
 
+/**
+ * Opens the mobile slide-in drawer and updates user info display.
+ */
+function openDrawer() {
+  console.debug('[openDrawer] →');
+  document.getElementById('mobile-drawer').classList.add('open');
+  const backdrop = document.getElementById('mob-sheet-backdrop');
+  backdrop.classList.add('open');
+  backdrop.onclick = closeDrawer;
+  const userBtn = document.getElementById('mob-drawer-user-btn');
+  if (userBtn && state.auth.username) {
+    userBtn.textContent = `👤 ${state.auth.username} · Abmelden`;
+  }
+  console.debug('[openDrawer] ← done');
+}
+
+/**
+ * Closes the mobile slide-in drawer.
+ */
+function closeDrawer() {
+  console.debug('[closeDrawer] →');
+  document.getElementById('mobile-drawer').classList.remove('open');
+  document.getElementById('mob-sheet-backdrop').classList.remove('open');
+  console.debug('[closeDrawer] ← done');
+}
+
+/**
+ * Dismisses the desktop-preferred notice for a page, revealing its full content.
+ * @param {string} pageId - The page id suffix (e.g. 'map', 'ideas', 'wiki')
+ */
+function mobOverridePage(pageId) {
+  console.debug('[mobOverridePage] →', pageId);
+  const el = document.getElementById('page-' + pageId);
+  if (el) el.classList.add('mob-override');
+  console.debug('[mobOverridePage] ← done');
+}
+
 function renderConfigWorlds() {
   const el = document.getElementById('config-worlds-body');
   if (!el) return;
@@ -555,6 +597,19 @@ function renderTopNavWorlds() {
     btn.onclick = () => selectWorld(w.id);
     linksEl.appendChild(btn);
   });
+
+  // Populate mobile drawer world chips
+  const mobWorldsEl = document.getElementById('mob-drawer-worlds');
+  if (mobWorldsEl) {
+    mobWorldsEl.replaceChildren();
+    (state.worlds || []).forEach(w => {
+      const chip = document.createElement('button');
+      chip.className = 'mob-world-chip' + (w.id === state.ui.activeWorldId ? ' active' : '');
+      chip.textContent = w.name;
+      chip.onclick = () => { selectWorld(w.id); closeDrawer(); };
+      mobWorldsEl.appendChild(chip);
+    });
+  }
 }
 
 /**

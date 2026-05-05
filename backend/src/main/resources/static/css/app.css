@@ -4415,4 +4415,46 @@ nav {
     font-size: 0.9rem !important;
   }
 
+  /* ── Global touch targets and typography ── */
+
+  body { font-size: max(0.875rem, 14px) !important; }
+
+  button, [role="button"] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  .collapse-btn,
+  .icon-btn,
+  [class*="close"],
+  [class*="btn-icon"] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .tag-chip,
+  .type-chip,
+  .filter-chip,
+  .chip {
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  input[type="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    cursor: pointer;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
 } /* end @media (max-width: 768px) */

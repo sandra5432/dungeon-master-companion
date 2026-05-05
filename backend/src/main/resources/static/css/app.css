@@ -4457,4 +4457,51 @@ nav {
     min-height: 44px;
   }
 
+  /* ── Desktop-preferred notices ── */
+
+  .desktop-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 24px;
+    gap: 12px;
+    min-height: 50vh;
+  }
+
+  #page-map > *:not(.desktop-notice),
+  #page-ideas > *:not(.desktop-notice),
+  #page-wiki > *:not(.desktop-notice) {
+    display: none !important;
+  }
+
+  #page-map.mob-override > *:not(.desktop-notice) { display: block !important; }
+  #page-map.mob-override > .desktop-notice { display: none !important; }
+  #page-ideas.mob-override > *:not(.desktop-notice) { display: block !important; }
+  #page-ideas.mob-override > .desktop-notice { display: none !important; }
+  #page-wiki.mob-override > *:not(.desktop-notice) { display: block !important; }
+  #page-wiki.mob-override > .desktop-notice { display: none !important; }
+
+  .desktop-notice-icon { font-size: 3rem; line-height: 1; opacity: 0.7; }
+  .desktop-notice-title { font-size: 1rem; color: var(--t1); margin: 0; }
+  .desktop-notice-msg { font-size: 0.85rem; color: var(--t3); line-height: 1.6; max-width: 280px; }
+  .desktop-notice-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+
+  .desktop-notice-btn {
+    background: var(--bg-un);
+    border: 1px solid var(--bd-s);
+    border-radius: 8px;
+    padding: 0 16px;
+    min-height: 44px;
+    font-size: 0.85rem;
+    color: var(--t2);
+    cursor: pointer;
+  }
+
+  .desktop-notice-btn--primary {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
 } /* end @media (max-width: 768px) */

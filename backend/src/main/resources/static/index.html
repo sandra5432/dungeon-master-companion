@@ -333,6 +333,15 @@
 
 <!-- ══ WIKI PAGE ══ -->
 <div class="page" id="page-wiki">
+  <!-- Mobile: desktop-preferred notice -->
+  <div class="desktop-notice" data-page="wiki">
+    <div class="desktop-notice-icon">📖</div>
+    <h3 class="desktop-notice-title">Wiki — Desktop empfohlen</h3>
+    <p class="desktop-notice-msg">Der Wiki-Graph und Artikel-Editor sind für größere Bildschirme optimiert.</p>
+    <div class="desktop-notice-actions">
+      <button class="desktop-notice-btn desktop-notice-btn--primary" onclick="mobOverridePage('wiki')">Trotzdem öffnen</button>
+    </div>
+  </div>
   <div class="wiki-layout">
 
     <!-- Left panel -->
@@ -465,6 +474,16 @@
 
 <!-- ══ MAP PAGE ══ -->
 <div class="page" id="page-map">
+  <!-- Mobile: desktop-preferred notice -->
+  <div class="desktop-notice" data-page="map">
+    <div class="desktop-notice-icon">🗺️</div>
+    <h3 class="desktop-notice-title">Desktop empfohlen</h3>
+    <p class="desktop-notice-msg">Die interaktive Karte benötigt mehr Platz und Maus-Steuerung. Drehe das Gerät ins Querformat oder öffne die App auf einem größeren Bildschirm.</p>
+    <div class="desktop-notice-actions">
+      <button class="desktop-notice-btn" onclick="screen.orientation.lock('landscape').catch(()=>{})">↻ Querformat</button>
+      <button class="desktop-notice-btn desktop-notice-btn--primary" onclick="mobOverridePage('map')">Trotzdem öffnen</button>
+    </div>
+  </div>
   <aside class="map-sidebar" id="map-sidebar">
     <div class="map-sb-section">Werkzeuge</div>
     <button class="map-tool active" id="map-tool-interact" onclick="setMapTool('interact')">
@@ -613,6 +632,15 @@
 
 <!-- ══ IDEAS PAGE ══ -->
 <div class="page" id="page-ideas">
+  <!-- Mobile: desktop-preferred notice -->
+  <div class="desktop-notice" data-page="ideas">
+    <div class="desktop-notice-icon">💡</div>
+    <h3 class="desktop-notice-title">Desktop empfohlen</h3>
+    <p class="desktop-notice-msg">Das Ideen-Board nutzt Drag &amp; Drop, das auf Touch-Geräten nicht unterstützt wird.</p>
+    <div class="desktop-notice-actions">
+      <button class="desktop-notice-btn desktop-notice-btn--primary" onclick="mobOverridePage('ideas')">Trotzdem öffnen</button>
+    </div>
+  </div>
   <div id="ideas-tag-filter-bar" class="ideas-tag-filter-bar"></div>
   <div class="ideas-rope-wrap">
     <div class="ideas-rope-rail">

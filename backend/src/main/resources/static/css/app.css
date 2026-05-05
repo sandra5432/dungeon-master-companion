@@ -4181,4 +4181,77 @@ nav {
     padding: 6px 0;
   }
 
+  /* ── Timeline layout ── */
+
+  /* Collapse the 3-column grid to a single block */
+  #page-timeline.active {
+    display: block !important;
+  }
+
+  /* Hide both sidebars; their content is surfaced via mobile UI */
+  #page-timeline .sidebar-left,
+  #page-timeline .sidebar-right {
+    display: none !important;
+  }
+
+  /* Adjust center column padding for mobile */
+  #page-timeline .tl-center {
+    padding: 12px 12px 80px !important;
+  }
+
+  /* Mobile filter chip row (element added in Task 5) */
+  #mob-tl-filter-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+  }
+
+  #mob-tl-filter-row::-webkit-scrollbar { display: none; }
+
+  .mob-tl-chip {
+    flex-shrink: 0;
+    background: var(--bg-un);
+    border: 1px solid var(--bd-s);
+    border-radius: 16px;
+    padding: 0 12px;
+    min-height: 36px;
+    font-size: 0.8rem;
+    color: var(--t2);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .mob-tl-chip.active {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* Mobile undated events toggle chip */
+  #mob-undated-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-un);
+    border: 1px solid var(--bd-s);
+    border-radius: 8px;
+    padding: 0 12px;
+    min-height: 40px;
+    font-size: 0.82rem;
+    color: var(--t2);
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  #mob-undated-section {
+    margin-bottom: 12px;
+    border: 1px solid var(--bd-s);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
 } /* end @media (max-width: 768px) */

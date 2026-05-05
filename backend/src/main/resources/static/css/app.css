@@ -3982,3 +3982,203 @@ nav {
   .ideas-detail-panel { width: 100vw; }
 }
 .poi-type-edit-link:hover { color: var(--gold); }
+
+/* Mobile-only elements: hidden on desktop */
+#mobile-header,
+#mobile-bottom-nav,
+#mobile-drawer,
+#mob-sheet-backdrop,
+.mob-fab,
+#mob-tl-filter-row,
+#mob-undated-chip,
+#mob-undated-section,
+.desktop-notice { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE LAYER  ·  max-width: 768px
+   All rules here are additive. Desktop layout is unchanged above 768px.
+════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── Hide desktop nav, show mobile header ── */
+  nav { display: none !important; }
+
+  #mobile-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 52px;
+    background: var(--bg-s);
+    border-bottom: 1px solid var(--bd-s);
+  }
+
+  .mob-header-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--t1);
+  }
+
+  .mob-header-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--t2);
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+
+  /* ── Bottom tab bar ── */
+  #mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    background: var(--bg-s);
+    border-top: 1px solid var(--bd-s);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mob-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--t3);
+    padding: 4px 2px;
+  }
+
+  .mob-tab.active { color: var(--gold); }
+  .mob-tab-icon { font-size: 1.2rem; line-height: 1; }
+  .mob-tab-label { font-size: 0.6rem; }
+
+  /* Extra bottom padding on all pages so content isn't hidden by the tab bar */
+  .page { padding-bottom: 64px !important; }
+
+  /* ── Backdrop (drawer + detail sheet) ── */
+  #mob-sheet-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 400;
+  }
+
+  #mob-sheet-backdrop.open { display: block; }
+
+  /* ── Slide-in drawer ── */
+  #mobile-drawer {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: min(300px, 85vw);
+    height: 100%;
+    background: var(--bg-s);
+    border-left: 1px solid var(--bd-s);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.25s ease;
+    overflow-y: auto;
+  }
+
+  #mobile-drawer.open { right: 0; }
+
+  .mob-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 0 16px;
+    height: 52px;
+    border-bottom: 1px solid var(--bd-s);
+    flex-shrink: 0;
+  }
+
+  .mob-drawer-title { font-weight: 700; color: var(--t1); }
+
+  .mob-drawer-close {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--t3);
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+
+  .mob-drawer-section {
+    padding: 14px 16px 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--t3);
+  }
+
+  .mob-drawer-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0 16px;
+    min-height: 48px;
+    background: none;
+    border: none;
+    color: var(--t2);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 0;
+    line-height: 48px;
+  }
+
+  .mob-drawer-item:active { background: var(--bg-un); }
+
+  #mob-drawer-worlds {
+    padding: 8px 16px 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .mob-world-chip {
+    background: var(--bg-un);
+    border: 1px solid var(--bd-s);
+    border-radius: 16px;
+    padding: 0 12px;
+    min-height: 36px;
+    font-size: 0.82rem;
+    color: var(--t2);
+    cursor: pointer;
+  }
+
+  .mob-world-chip.active {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  .mob-drawer-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--bd-s);
+    padding: 6px 0;
+  }
+
+} /* end @media (max-width: 768px) */

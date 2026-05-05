@@ -4164,7 +4164,7 @@ nav {
     border: 1px solid var(--bd-s);
     border-radius: 16px;
     padding: 0 12px;
-    min-height: 36px;
+    min-height: 44px;
     font-size: 0.82rem;
     color: var(--t2);
     cursor: pointer;

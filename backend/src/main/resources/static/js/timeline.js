@@ -450,7 +450,7 @@ function onTLCardClick(e, id) {
     return;
   }
   populateDetail(id, 'tl');
-  openDetailPanel();
+  openDetailSheet(id);
   pushUrl(buildUrl(state.ui.activeWorldId, 'timeline', id));
 }
 
@@ -509,6 +509,38 @@ function populateDetail(id, source) {
 
 function openDetailPanel() {
   document.getElementById('detail-panel').classList.add('open');
+}
+
+/**
+ * Opens the timeline detail panel as a bottom sheet on mobile, or as the
+ * fixed side panel on desktop. Activates the backdrop on mobile.
+ * @param {number|string} eventId - ID of the event to display
+ */
+function openDetailSheet(eventId) {
+  console.debug('[openDetailSheet] →', eventId);
+  openDetailPanel();
+  if (window.innerWidth <= 768) {
+    const backdrop = document.getElementById('mob-sheet-backdrop');
+    if (backdrop) {
+      backdrop.classList.add('open');
+      backdrop.onclick = closeDetailSheet;
+    }
+  }
+  console.debug('[openDetailSheet] ← done');
+}
+
+/**
+ * Closes the timeline detail bottom sheet and hides the backdrop.
+ */
+function closeDetailSheet() {
+  console.debug('[closeDetailSheet] →');
+  closeDetail();
+  const backdrop = document.getElementById('mob-sheet-backdrop');
+  if (backdrop) {
+    backdrop.classList.remove('open');
+    backdrop.onclick = null;
+  }
+  console.debug('[closeDetailSheet] ← done');
 }
 
 function closeDetail() {

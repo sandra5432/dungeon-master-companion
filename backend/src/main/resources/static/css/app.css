@@ -4285,4 +4285,25 @@ nav {
     margin: 10px auto 0;
   }
 
+  /* ── Floating Action Button (FAB) ── */
+  .mob-fab {
+    position: fixed;
+    bottom: 72px;
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #000;
+    font-size: 1.6rem;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    z-index: 250;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
 } /* end @media (max-width: 768px) */

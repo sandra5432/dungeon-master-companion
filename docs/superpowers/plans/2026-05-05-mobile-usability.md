@@ -4,7 +4,9 @@
 
 **Goal:** Add a responsive CSS/JS layer that makes Timeline and Items fully usable at 375px viewport, adds a bottom tab bar + hamburger drawer, and shows graceful fallback notices for Map/Wiki/Ideas — without changing the desktop layout at all.
 
-**Architecture:** All layout changes live in a new `@media (max-width: 768px)` block appended to `app.css`. New HTML elements (bottom nav, drawer, FABs, notices) are added to `index.html` and CSS-hidden on desktop. `core.js`, `timeline.js`, and `wiki.js` each receive small targeted additions. No backend changes, no new files, no new dependencies.
+**Architecture:** All layout changes live in a new `@media (max-width: 768px)` block appended to `app.css`. New HTML elements (bottom nav, drawer, FABs, notices) are added to `index.html` and CSS-hidden on desktop. `core.js` and `timeline.js` each receive small targeted additions. No backend changes, no new files, no new dependencies.
+
+> **Deferred (budget):** Task 5 (Timeline filter chips — requires editing `timeline.js`) and Task 13 (Wiki mobile article list — requires editing `wiki.js`) are deferred to a follow-up session. The app is fully functional on mobile without them — the sidebar filters remain desktop-only and the Wiki shows only the desktop-preferred notice without an article list fallback.
 
 **Tech Stack:** Vanilla JS, HTML5, CSS3 (media queries, flexbox, CSS custom properties). Spring Boot serves static files from `backend/src/main/resources/static/`. Run the app with: `cd backend && "/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/plugins/maven/lib/maven3/bin/mvn" spring-boot:run -Dspring-boot.run.profiles=dev`
 

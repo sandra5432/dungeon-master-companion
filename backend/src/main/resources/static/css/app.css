@@ -4306,4 +4306,67 @@ nav {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
 
+  /* ── Items page layout ── */
+
+  #page-items .toolbar {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  #page-items .toolbar input,
+  #page-items .toolbar select {
+    width: 100%;
+    min-height: 48px;
+    font-size: 0.9rem;
+  }
+
+  #page-items table.it thead {
+    display: none;
+  }
+
+  #page-items table.it,
+  #page-items table.it tbody,
+  #page-items table.it tr {
+    display: block;
+    width: 100%;
+  }
+
+  #page-items table.it tr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-un);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border: 1px solid var(--bd-s);
+    gap: 8px;
+  }
+
+  #page-items table.it td {
+    display: inline;
+    border: none;
+    padding: 0;
+    font-size: 0.85rem;
+  }
+
+  #page-items table.it td:first-child {
+    flex: 1;
+    font-weight: 600;
+    color: var(--t1);
+    display: block;
+  }
+
+  #page-items table.it td.col-price {
+    color: var(--gold);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  #page-items .act-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
 } /* end @media (max-width: 768px) */

@@ -72,6 +72,15 @@
   </aside>
 
   <div class="tl-center">
+    <!-- Mobile-only: type filter chips -->
+    <div id="mob-tl-filter-row"></div>
+    <!-- Mobile-only: undated events toggle -->
+    <button id="mob-undated-chip" style="display:none" onclick="toggleMobUndated()">
+      📅 Undatiert (<span id="mob-undated-count">0</span>)
+    </button>
+    <div id="mob-undated-section" style="display:none">
+      <div id="mob-undated-list"></div>
+    </div>
     <p class="tl-hint world-edit-only" id="tl-hint" style="display:none">Seil anklicken um ein Ereignis einzutragen</p>
     <div class="timeline" id="timeline"></div>
   </div>

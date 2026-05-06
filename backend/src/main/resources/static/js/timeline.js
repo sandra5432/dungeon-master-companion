@@ -111,6 +111,7 @@ function renderTimeline() {
     renderTagList();
     renderCharList();
     renderUndated();
+    renderMobTlFilters();
     return;
   }
 
@@ -217,6 +218,7 @@ function renderTimeline() {
   renderCharList();
   updatePageTitle();
   renderUndated();
+  renderMobTlFilters();
 
   // Refresh detail panel if open
   if (state.ui.detailId !== null) {
@@ -227,6 +229,44 @@ function renderTimeline() {
     if (still) populateDetail(id, src);
     else closeDetail();
   }
+}
+
+/**
+ * Renders horizontally-scrollable type-filter chips in the mobile filter row.
+ * Reads: state.ui.activeTypes, state.events (to derive distinct types present)
+ * Writes: #mob-tl-filter-row
+ */
+function renderMobTlFilters() {
+  console.debug('[renderMobTlFilters] →');
+  const row = document.getElementById('mob-tl-filter-row');
+  if (!row) return;
+  const typeLabels = { world: 'Weltereignis', local: 'Lokales Ereignis' };
+  const allTypes = [...new Set((state.events || []).map(e => e.type).filter(Boolean))].sort();
+  // Clear previous chips via DOM (avoids innerHTML assignment)
+  while (row.firstChild) row.removeChild(row.firstChild);
+  const allChip = document.createElement('button');
+  allChip.className = 'mob-tl-chip' + (state.ui.activeTypes.size === 0 ? ' active' : '');
+  allChip.textContent = 'Alle';
+  allChip.onclick = () => {
+    state.ui.activeTypes.clear();
+    renderTimeline();
+  };
+  row.appendChild(allChip);
+  allTypes.forEach(type => {
+    const chip = document.createElement('button');
+    chip.className = 'mob-tl-chip' + (state.ui.activeTypes.has(type) ? ' active' : '');
+    chip.textContent = typeLabels[type] || type;
+    chip.onclick = () => {
+      if (state.ui.activeTypes.has(type)) {
+        state.ui.activeTypes.delete(type);
+      } else {
+        state.ui.activeTypes.add(type);
+      }
+      renderTimeline();
+    };
+    row.appendChild(chip);
+  });
+  console.debug('[renderMobTlFilters] ← types:', allTypes.length);
 }
 
 /* ══════════════════════════════════════
@@ -339,7 +379,16 @@ function toggleCompact() {
 function renderUndated() {
   const el = document.getElementById('undated-list');
   if (!el) return;
-  if (!state.undated.length) { el.innerHTML = '<div class="undated-empty">Keine Einträge</div>'; return; }
+  if (!state.undated.length) {
+    el.innerHTML = '<div class="undated-empty">Keine Einträge</div>';
+    const mc = document.getElementById('mob-undated-chip');
+    if (mc) mc.style.display = 'none';
+    const ms = document.getElementById('mob-undated-section');
+    if (ms) ms.style.display = 'none';
+    const ml = document.getElementById('mob-undated-list');
+    if (ml) ml.innerHTML = '';
+    return;
+  }
   el.innerHTML = state.undated.map(ev => {
     const isAct   = state.ui.detailId === ev.id && state.ui.detailSource === 'undated';
     const draggable = state.auth.loggedIn ? 'draggable="true"' : '';
@@ -354,6 +403,38 @@ function renderUndated() {
       <div class="undated-tags">${(ev.tags || []).map(t => '<span class="undated-tag">' + escHtml(t) + '</span>').join('')}</div>
     </div>`;
   }).join('');
+  // Sync mobile undated chip
+  const mobChip = document.getElementById('mob-undated-chip');
+  const mobList = document.getElementById('mob-undated-list');
+  const mobCount = document.getElementById('mob-undated-count');
+  if (mobChip) {
+    const count = state.undated.length;
+    mobChip.style.display = count > 0 ? 'flex' : 'none';
+    if (mobCount) mobCount.textContent = count;
+  }
+  if (mobList) {
+    mobList.innerHTML = state.undated.map(ev => {
+      const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'undated';
+      return `<div class="undated-card${isAct ? ' active' : ''}"
+                data-uid="${ev.id}"
+                onclick="onUndatedClick(event,${ev.id})">
+        <div class="undated-ttl">${escHtml(ev.title)}</div>
+        <div class="undated-tags">${(ev.tags || []).map(t => '<span class="undated-tag">' + escHtml(t) + '</span>').join('')}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+/**
+ * Toggles the mobile undated-events section open/closed.
+ */
+function toggleMobUndated() {
+  console.debug('[toggleMobUndated] →');
+  const section = document.getElementById('mob-undated-section');
+  if (!section) return;
+  const isOpen = section.style.display !== 'none';
+  section.style.display = isOpen ? 'none' : 'block';
+  console.debug('[toggleMobUndated] ←', isOpen ? 'closed' : 'opened');
 }
 
 /* ══════════════════════════════════════

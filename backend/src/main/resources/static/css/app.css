@@ -4471,8 +4471,11 @@ nav {
   }
 
   #page-map > *:not(.desktop-notice),
-  #page-ideas > *:not(.desktop-notice),
-  #page-wiki > *:not(.desktop-notice) {
+  #page-ideas > *:not(.desktop-notice) {
+    display: none !important;
+  }
+
+  #page-wiki > *:not(.desktop-notice):not(#mob-wiki-list) {
     display: none !important;
   }
 
@@ -4482,6 +4485,7 @@ nav {
   #page-ideas.mob-override > .desktop-notice { display: none !important; }
   #page-wiki.mob-override > *:not(.desktop-notice) { display: block !important; }
   #page-wiki.mob-override > .desktop-notice { display: none !important; }
+  #page-wiki.mob-override #mob-wiki-list { display: none !important; }
 
   .desktop-notice-icon { font-size: 3rem; line-height: 1; opacity: 0.7; }
   .desktop-notice-title { font-size: 1rem; color: var(--t1); margin: 0; }
@@ -4502,6 +4506,39 @@ nav {
   .desktop-notice-btn--primary {
     border-color: var(--gold);
     color: var(--gold);
+  }
+
+  /* ── Wiki mobile article list ── */
+  .mob-wiki-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 8px 0 80px;
+  }
+
+  .mob-wiki-entry {
+    padding: 12px 16px;
+    background: var(--bg-un);
+    border-bottom: 1px solid var(--bd-s);
+    cursor: pointer;
+    min-height: 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .mob-wiki-entry:active { background: var(--bg-s); }
+
+  .mob-wiki-entry-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--t1);
+  }
+
+  .mob-wiki-entry-type {
+    font-size: 0.72rem;
+    color: var(--t3);
   }
 
 } /* end @media (max-width: 768px) */

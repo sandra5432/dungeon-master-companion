@@ -14,8 +14,37 @@ async function loadWikiEntries() {
     const entries = await api('GET', `/wiki?worldId=${wid}`);
     if (state.ui.wikiActiveWorldId !== wid) return; // stale — world changed while loading
     state.wikiAllEntries = entries;
+    renderWikiMobileList();
     applyWikiFilter();
   } catch(e) { console.error(e); }
+}
+
+/**
+ * Renders a flat, alphabetically-sorted article list for the mobile wiki fallback.
+ * Reads: state.wikiAllEntries
+ * Writes: #mob-wiki-list
+ */
+function renderWikiMobileList() {
+  console.debug('[renderWikiMobileList] →');
+  const container = document.getElementById('mob-wiki-list');
+  if (!container) return;
+  const entries = state.wikiAllEntries || [];
+  if (entries.length === 0) {
+    container.innerHTML = '<p style="padding:16px;color:var(--t3);font-size:0.85rem">Keine Artikel vorhanden.</p>';
+    console.debug('[renderWikiMobileList] ← empty');
+    return;
+  }
+  container.innerHTML = entries
+    .slice()
+    .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'de'))
+    .map(e => `
+      <div class="mob-wiki-entry" onclick="loadWikiArticle(${e.id})">
+        <div class="mob-wiki-entry-title">${escHtml(e.title || 'Unbenannt')}</div>
+        <div class="mob-wiki-entry-type">${escHtml(e.type || '')}</div>
+      </div>
+    `)
+    .join('');
+  console.debug('[renderWikiMobileList] ← entries:', entries.length);
 }
 
 async function loadWikiGraph(worldId) {

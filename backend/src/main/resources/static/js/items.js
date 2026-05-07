@@ -105,7 +105,7 @@ function renderItems() {
       <td><span class="i-name">${escHtml(it.name)}</span></td>
       <td class="col-price"><span class="i-price">${(it.price || 0).toLocaleString('de-DE')} ⚜</span></td>
       <td><div class="it-tags">${(it.tags || []).map(t => `<span class="ev-tag">${escHtml(t)}</span>`).join('')}</div></td>
-      <td class="i-link"><a href="${escHtml(it.url || '#')}" target="_blank">${escHtml(it.url || '—')}</a></td>
+      <td class="i-link">${it.url ? `<a href="${escHtml(it.url)}" target="_blank" title="${escHtml(it.url)}">🔗</a>` : '<span style="color:var(--t3)">—</span>'}</td>
       ${isAdmin ? `<td><div class="act-btns">
         <button class="act-btn" title="Bearbeiten" onclick="openEditItem(${it.id})">✎</button>
         <button class="act-btn del" title="Löschen" onclick="openDeleteItem(${it.id})">✕</button>

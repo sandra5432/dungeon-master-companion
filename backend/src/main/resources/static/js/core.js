@@ -385,6 +385,7 @@ function applyAuthUI() {
     navUser.style.display = loggedIn ? '' : 'none';
     navUser.textContent   = username || '';
   }
+  syncDrawerUserBtn();
 }
 
 // keep old name as alias so nothing else breaks
@@ -493,6 +494,7 @@ async function doLogout() {
     // ignore logout errors
   }
   state.auth = { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false };
+  syncDrawerUserBtn();
   state.events = [];
   state.undated = [];
   state.ui.activeWorldId = null;
@@ -523,6 +525,21 @@ async function doLogout() {
 }
 
 /**
+ * Syncs the mobile drawer user button label and action to the current auth state.
+ */
+function syncDrawerUserBtn() {
+  const btn = document.getElementById('mob-drawer-user-btn');
+  if (!btn) return;
+  if (state.auth.loggedIn) {
+    btn.textContent = `👤 ${state.auth.username} · Abmelden`;
+    btn.onclick = doLogout;
+  } else {
+    btn.textContent = '👤 Anmelden';
+    btn.onclick = () => { showLoginModal(); closeDrawer(); };
+  }
+}
+
+/**
  * Opens the mobile slide-in drawer and updates user info display.
  */
 function openDrawer() {
@@ -531,10 +548,7 @@ function openDrawer() {
   const backdrop = document.getElementById('mob-sheet-backdrop');
   backdrop.classList.add('open');
   backdrop.onclick = closeDrawer;
-  const userBtn = document.getElementById('mob-drawer-user-btn');
-  if (userBtn && state.auth.username) {
-    userBtn.textContent = `👤 ${state.auth.username} · Abmelden`;
-  }
+  syncDrawerUserBtn();
   console.debug('[openDrawer] ← done');
 }
 
@@ -598,16 +612,32 @@ function renderTopNavWorlds() {
     linksEl.appendChild(btn);
   });
 
-  // Populate mobile drawer world chips
+  // Populate mobile drawer world hierarchy (each world with its enabled sections)
   const mobWorldsEl = document.getElementById('mob-drawer-worlds');
   if (mobWorldsEl) {
     mobWorldsEl.replaceChildren();
     (state.worlds || []).forEach(w => {
-      const chip = document.createElement('button');
-      chip.className = 'mob-world-chip' + (w.id === state.ui.activeWorldId ? ' active' : '');
-      chip.textContent = w.name;
-      chip.onclick = () => { selectWorld(w.id); closeDrawer(); };
-      mobWorldsEl.appendChild(chip);
+      const isActive = w.id === state.ui.activeWorldId;
+
+      const worldRow = document.createElement('button');
+      worldRow.className = 'mob-drawer-world-row' + (isActive ? ' active' : '');
+      worldRow.textContent = '🌍 ' + w.name;
+      worldRow.onclick = () => { selectWorld(w.id); closeDrawer(); };
+      mobWorldsEl.appendChild(worldRow);
+
+      const sections = [
+        { key: 'timeline', prop: 'chronicleEnabled', icon: '📜', label: 'Timeline' },
+        { key: 'map',      prop: 'mapEnabled',        icon: '🗺️', label: 'Karte' },
+        { key: 'wiki',     prop: 'wikiEnabled',       icon: '📖', label: 'Wiki'     },
+      ];
+      sections.forEach(s => {
+        if (w[s.prop] === false) return;
+        const sub = document.createElement('button');
+        sub.className = 'mob-drawer-world-sub' + (isActive && state.ui.currentPage === s.key ? ' active' : '');
+        sub.textContent = s.icon + ' ' + s.label;
+        sub.onclick = () => { navigateToUrl({ page: s.key, worldId: w.id, subId: null }, true); closeDrawer(); };
+        mobWorldsEl.appendChild(sub);
+      });
     });
   }
 }

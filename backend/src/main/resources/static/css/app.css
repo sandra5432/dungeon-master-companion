@@ -3992,6 +3992,7 @@ nav {
 #mob-tl-filter-row,
 #mob-undated-chip,
 #mob-undated-section,
+#mob-wiki-list,
 .desktop-notice { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -4005,9 +4006,11 @@ nav {
 
   #mobile-header {
     display: flex;
-    position: sticky;
+    position: fixed;
     top: 0;
     z-index: 200;
+    left: 0;
+    right: 0;
     align-items: center;
     justify-content: space-between;
     padding: 0 16px;
@@ -4036,17 +4039,16 @@ nav {
     border-radius: 8px;
   }
 
-  /* ── Bottom tab bar ── */
+  /* ── Top tab bar (below the fixed header) ── */
   #mobile-bottom-nav {
     display: flex;
     position: fixed;
-    bottom: 0;
+    top: 52px;
     left: 0;
     right: 0;
     z-index: 300;
     background: var(--bg-s);
-    border-top: 1px solid var(--bd-s);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-bottom: 1px solid var(--bd-s);
   }
 
   .mob-tab {
@@ -4068,8 +4070,8 @@ nav {
   .mob-tab-icon { font-size: 1.2rem; line-height: 1; }
   .mob-tab-label { font-size: 0.6rem; }
 
-  /* Extra bottom padding on all pages so content isn't hidden by the tab bar */
-  .page { padding-bottom: 64px !important; }
+  /* Push content below the fixed header (52px) + fixed tab bar (52px) */
+  .page { padding-top: 104px !important; padding-bottom: 16px !important; }
 
   /* ── Backdrop (drawer + detail sheet) ── */
   #mob-sheet-backdrop {
@@ -4127,7 +4129,7 @@ nav {
   }
 
   .mob-drawer-section {
-    padding: 14px 16px 4px;
+    padding: 10px 16px 2px;
     font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -4140,43 +4142,62 @@ nav {
     width: 100%;
     text-align: left;
     padding: 0 16px;
-    min-height: 48px;
+    min-height: 44px;
     background: none;
     border: none;
     color: var(--t2);
     font-size: 0.9rem;
     cursor: pointer;
     border-radius: 0;
-    line-height: 48px;
+    line-height: 44px;
   }
 
   .mob-drawer-item:active { background: var(--bg-un); }
 
   #mob-drawer-worlds {
-    padding: 8px 16px 4px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-direction: column;
   }
 
-  .mob-world-chip {
-    background: var(--bg-un);
-    border: 1px solid var(--bd-s);
-    border-radius: 16px;
-    padding: 0 12px;
-    min-height: 44px;
-    font-size: 0.82rem;
+  .mob-drawer-world-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0 16px;
+    min-height: 40px;
+    background: none;
+    border: none;
     color: var(--t2);
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
+    line-height: 40px;
   }
 
-  .mob-world-chip.active {
-    border-color: var(--gold);
-    color: var(--gold);
+  .mob-drawer-world-row.active { color: var(--gold); }
+  .mob-drawer-world-row:active { background: var(--bg-un); }
+
+  .mob-drawer-world-sub {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0 16px 0 36px;
+    min-height: 34px;
+    background: none;
+    border: none;
+    color: var(--t3);
+    font-size: 0.85rem;
+    cursor: pointer;
+    line-height: 34px;
   }
+
+  .mob-drawer-world-sub.active { color: var(--gold); }
+  .mob-drawer-world-sub:active { background: var(--bg-un); }
 
   .mob-drawer-footer {
-    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-s);
     border-top: 1px solid var(--bd-s);
     padding: 6px 0;
   }
@@ -4196,7 +4217,7 @@ nav {
 
   /* Adjust center column padding for mobile */
   #page-timeline .tl-center {
-    padding: 12px 12px 80px !important;
+    padding: 12px 12px 16px !important;
   }
 
   /* Mobile filter chip row (element added in Task 5) */
@@ -4288,7 +4309,7 @@ nav {
   /* ── Floating Action Button (FAB) ── */
   .mob-fab {
     position: fixed;
-    bottom: 72px;
+    bottom: 16px;
     right: 16px;
     width: 52px;
     height: 52px;
@@ -4367,6 +4388,24 @@ nav {
     display: flex;
     gap: 4px;
     flex-shrink: 0;
+  }
+
+  /* FAB replaces the header add-button on mobile */
+  #items-add-btn { display: none !important; }
+
+  /* Hide tags column — too dense on narrow screens */
+  #page-items table.it td:nth-child(3) { display: none !important; }
+
+  /* Link column: icon only, no raw URL overflow */
+  #page-items table.it td.i-link {
+    flex-shrink: 0;
+    text-align: center;
+    width: 32px;
+  }
+
+  #page-items table.it td.i-link a {
+    font-size: 1rem;
+    text-decoration: none;
   }
 
   /* ── Modals → bottom sheet on mobile ── */

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astral Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=27">
+<link rel="stylesheet" href="/css/app.css?v=33">
 <script src="/js/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -135,7 +135,7 @@
   <div class="items-wrap">
     <div class="t-footer">
       <span class="t-count" id="item-count"></span>
-      <button class="btn btn-sm admin-only" onclick="openAddModal()" style="display:none">+ Hinzufügen</button>
+      <button class="btn btn-sm admin-only" id="items-add-btn" onclick="openAddModal()" style="display:none">+ Hinzufügen</button>
       <button class="btn btn-sm admin-only" onclick="exportItems()" style="display:none">⤓ Exportieren</button>
     </div>
     <table class="it">
@@ -745,9 +745,9 @@
   <button class="wiki-stub-toast-close" onclick="closeWikiStubToast()">✕</button>
 </div>
 
-<script src="/js/core.js?v=27"></script>
+<script src="/js/core.js?v=33"></script>
 <script src="/js/timeline.js?v=27"></script>
-<script src="/js/items.js?v=27"></script>
+<script src="/js/items.js?v=28"></script>
 <script src="/js/users.js?v=27"></script>
 <script src="/js/wiki.js?v=27"></script>
 <script src="/js/map.js?v=27"></script>
@@ -763,16 +763,8 @@
   <button class="mob-header-btn" onclick="openDrawer()" aria-label="Menü öffnen">☰</button>
 </header>
 
-<!-- Bottom tab bar -->
+<!-- Top tab bar -->
 <nav id="mobile-bottom-nav" aria-label="Hauptnavigation">
-  <button class="mob-tab" data-page="timeline" onclick="showPage('timeline')">
-    <span class="mob-tab-icon">📜</span>
-    <span class="mob-tab-label">Timeline</span>
-  </button>
-  <button class="mob-tab" data-page="map" onclick="showPage('map')">
-    <span class="mob-tab-icon">🗺️</span>
-    <span class="mob-tab-label">Karte</span>
-  </button>
   <button class="mob-tab" data-page="items" onclick="showPage('items')">
     <span class="mob-tab-icon">⚔️</span>
     <span class="mob-tab-label">Items</span>
@@ -780,6 +772,14 @@
   <button class="mob-tab" data-page="ideas" onclick="showPage('ideas')">
     <span class="mob-tab-icon">💡</span>
     <span class="mob-tab-label">Ideen</span>
+  </button>
+  <button class="mob-tab" data-page="timeline" onclick="showPage('timeline')">
+    <span class="mob-tab-icon">📜</span>
+    <span class="mob-tab-label">Timeline</span>
+  </button>
+  <button class="mob-tab" data-page="map" onclick="showPage('map')">
+    <span class="mob-tab-icon">🗺️</span>
+    <span class="mob-tab-label">Karte</span>
   </button>
   <button class="mob-tab" data-page="wiki" onclick="showPage('wiki')">
     <span class="mob-tab-icon">📖</span>
@@ -796,16 +796,13 @@
     <span class="mob-drawer-title">⚔️ Pardur</span>
     <button class="mob-drawer-close" onclick="closeDrawer()" aria-label="Menü schließen">✕</button>
   </div>
-  <div class="mob-drawer-section">Seiten</div>
-  <button class="mob-drawer-item" onclick="showPage('timeline'); closeDrawer()">📜 Timeline</button>
-  <button class="mob-drawer-item" onclick="showPage('map'); closeDrawer()">🗺️ Karte</button>
+  <div class="mob-drawer-section">Allgemein</div>
   <button class="mob-drawer-item" onclick="showPage('items'); closeDrawer()">⚔️ Items</button>
-  <button class="mob-drawer-item" onclick="showPage('ideas'); closeDrawer()">💡 Ideen</button>
-  <button class="mob-drawer-item" onclick="showPage('wiki'); closeDrawer()">📖 Wiki</button>
+  <button class="mob-drawer-item" onclick="showPage('ideas'); closeDrawer()">💡 Ideenkammer</button>
   <div class="mob-drawer-section">Welten</div>
   <div id="mob-drawer-worlds"></div>
   <div class="mob-drawer-footer">
-    <button class="mob-drawer-item" id="mob-drawer-user-btn" onclick="doLogout()">👤 Abmelden</button>
+    <button class="mob-drawer-item" id="mob-drawer-user-btn">👤 Anmelden</button>
   </div>
 </aside>
 

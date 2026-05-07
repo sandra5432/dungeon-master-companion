@@ -14,27 +14,27 @@
 
 ---
 
-## Session Status — 2026-05-05
+## Session Status — 2026-05-06
 
-**Resume SHA:** `1e59cbc2798871566c1e8221a69676a625b33595`
+**HEAD SHA:** `f4cb50b`
 
 | Task | Status | Commit |
 |---|---|---|
 | Task 1: Mobile nav HTML | ✅ Done | `160151e` |
 | Task 2: Mobile nav CSS | ✅ Done | `36bf913` + fix `1e59cbc` |
-| Task 3: Mobile nav JS | ⏳ Next — not started |  |
-| Task 4: Timeline layout CSS | ⏳ Pending |  |
-| Task 5: Timeline filter chips | 🚫 Deferred |  |
-| Task 6: Timeline detail sheet | ⏳ Pending |  |
-| Task 7: Timeline FAB | ⏳ Pending |  |
-| Task 8: Items layout CSS | ⏳ Pending |  |
-| Task 9: Items FAB | ⏳ Pending |  |
-| Task 10: Modals + forms CSS | ⏳ Pending |  |
-| Task 11: Global touch targets | ⏳ Pending |  |
-| Task 12: Desktop-preferred notices | ⏳ Pending |  |
-| Task 13: Wiki article list | 🚫 Deferred |  |
+| Task 3: Mobile nav JS | ✅ Done | `8a259ee` |
+| Task 4: Timeline layout CSS | ✅ Done | `7b68288` |
+| Task 5: Timeline filter chips | ✅ Done | `d9a67dc` |
+| Task 6: Timeline detail sheet | ✅ Done | `a060643` |
+| Task 7: Timeline FAB | ✅ Done | `529b101` |
+| Task 8: Items layout CSS | ✅ Done | `3b99777` |
+| Task 9: Items FAB | ✅ Done | `f9928fc` |
+| Task 10: Modals + forms CSS | ✅ Done | `b74f80c` |
+| Task 11: Global touch targets | ✅ Done | `b4fe80c` |
+| Task 12: Desktop-preferred notices | ✅ Done | `f4cb50b` |
+| Task 13: Wiki article list | ✅ Done | `1278eb5` |
 
-**To resume:** Start a new session, open this plan, and use `superpowers:subagent-driven-development` starting from Task 3. The CSS media query block and all mobile HTML elements are already in place — Task 3 just wires the JS in `core.js`.
+**All tasks complete.** Mobile usability sprint finished 2026-05-06.
 
 ---
 

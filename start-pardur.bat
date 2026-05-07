@@ -19,7 +19,7 @@ set DB_USER=root
 set DB_PASSWORD=02SL20
 
 :: --- Remember-me secret ---
-set REMEMBER_ME_KEY=pardur-dev-key-replace-in-prod
+set REMEMBER_ME_KEY=Pardur!RmKey-2026_xK9vQ3mN8wLpZ7rY2tA5bJ0cH4dF6eG
 
 :: --- App port ---
 set PORT=3000

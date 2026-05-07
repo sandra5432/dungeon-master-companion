@@ -112,6 +112,7 @@ function renderTimeline() {
     renderCharList();
     renderUndated();
     renderMobTlFilters();
+    renderTimelineMobileList();
     return;
   }
 
@@ -219,6 +220,7 @@ function renderTimeline() {
   updatePageTitle();
   renderUndated();
   renderMobTlFilters();
+  renderTimelineMobileList();
 
   // Refresh detail panel if open
   if (state.ui.detailId !== null) {
@@ -232,41 +234,123 @@ function renderTimeline() {
 }
 
 /**
- * Renders horizontally-scrollable type-filter chips in the mobile filter row.
- * Reads: state.ui.activeTypes, state.events (to derive distinct types present)
- * Writes: #mob-tl-filter-row
+ * Renders type and tag filter chips in the collapsible mobile filter panel.
+ * Reads: state.ui.activeTypes, state.ui.activeTags, state.events
+ * Writes: #mob-tl-filter-row, #mob-tl-tag-row, #mob-tl-filter-badge
  */
 function renderMobTlFilters() {
   console.debug('[renderMobTlFilters] →');
   const row = document.getElementById('mob-tl-filter-row');
   if (!row) return;
+
   const typeLabels = { world: 'Weltereignis', local: 'Lokales Ereignis' };
   const allTypes = [...new Set((state.events || []).map(e => e.type).filter(Boolean))].sort();
-  // Clear previous chips via DOM (avoids innerHTML assignment)
   while (row.firstChild) row.removeChild(row.firstChild);
   const allChip = document.createElement('button');
   allChip.className = 'mob-tl-chip' + (state.ui.activeTypes.size === 0 ? ' active' : '');
-  allChip.textContent = 'Alle';
-  allChip.onclick = () => {
-    state.ui.activeTypes.clear();
-    renderTimeline();
-  };
+  allChip.textContent = 'Alle Typen';
+  allChip.onclick = () => { state.ui.activeTypes.clear(); renderTimeline(); };
   row.appendChild(allChip);
   allTypes.forEach(type => {
     const chip = document.createElement('button');
     chip.className = 'mob-tl-chip' + (state.ui.activeTypes.has(type) ? ' active' : '');
     chip.textContent = typeLabels[type] || type;
     chip.onclick = () => {
-      if (state.ui.activeTypes.has(type)) {
-        state.ui.activeTypes.delete(type);
-      } else {
-        state.ui.activeTypes.add(type);
-      }
+      state.ui.activeTypes.has(type) ? state.ui.activeTypes.delete(type) : state.ui.activeTypes.add(type);
       renderTimeline();
     };
     row.appendChild(chip);
   });
+
+  // Tag chips
+  const tagRow = document.getElementById('mob-tl-tag-row');
+  if (tagRow) {
+    while (tagRow.firstChild) tagRow.removeChild(tagRow.firstChild);
+    const counts = allTagCounts();
+    const tags = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (tags.length > 0) {
+      const clearTagChip = document.createElement('button');
+      clearTagChip.className = 'mob-tl-chip' + (state.ui.activeTags.size === 0 ? ' active' : '');
+      clearTagChip.textContent = 'Alle Tags';
+      clearTagChip.onclick = () => { state.ui.activeTags.clear(); renderTimeline(); };
+      tagRow.appendChild(clearTagChip);
+      tags.forEach(([t, c]) => {
+        const chip = document.createElement('button');
+        chip.className = 'mob-tl-chip' + (state.ui.activeTags.has(t) ? ' active' : '');
+        chip.textContent = t + ' ' + c;
+        chip.onclick = () => {
+          state.ui.activeTags.has(t) ? state.ui.activeTags.delete(t) : state.ui.activeTags.add(t);
+          renderTimeline();
+        };
+        tagRow.appendChild(chip);
+      });
+    }
+  }
+
+  // Update badge on toggle button
+  const activeCount = state.ui.activeTypes.size + state.ui.activeTags.size + state.ui.activeChars.size;
+  const badge = document.getElementById('mob-tl-filter-badge');
+  if (badge) {
+    badge.style.display = activeCount > 0 ? '' : 'none';
+    badge.className = 'mob-tl-filter-badge';
+    badge.textContent = activeCount;
+  }
+
   console.debug('[renderMobTlFilters] ← types:', allTypes.length);
+}
+
+/**
+ * Toggles the mobile timeline filter panel open/closed.
+ */
+function toggleMobTlFilter() {
+  console.debug('[toggleMobTlFilter] →');
+  const panel = document.getElementById('mob-tl-filter-panel');
+  const toggle = document.getElementById('mob-tl-filter-toggle');
+  if (!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  if (toggle) toggle.classList.toggle('open', open);
+  console.debug('[toggleMobTlFilter] ←', open ? 'opened' : 'closed');
+}
+
+/**
+ * Renders a flat list of timeline events for mobile (no rope).
+ * Reads: state.events, state.ui (activeTags, activeTypes, activeChars, detailId, detailSource)
+ * Writes: #mob-tl-list
+ */
+function renderTimelineMobileList() {
+  console.debug('[renderTimelineMobileList] →');
+  const container = document.getElementById('mob-tl-list');
+  if (!container) return;
+
+  const visible = state.events.filter(ev => isVisible(ev)).slice().reverse();
+
+  if (visible.length === 0) {
+    const p = document.createElement('p');
+    p.style.cssText = 'padding:16px;color:var(--t3);font-size:0.85rem';
+    p.textContent = state.events.length === 0 ? 'Keine Ereignisse vorhanden.' : 'Kein Ereignis entspricht den aktiven Filtern.';
+    container.replaceChildren(p);
+    console.debug('[renderTimelineMobileList] ← empty');
+    return;
+  }
+
+  const html = visible.map(ev => {
+    const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'tl';
+    const dateLbl = ev.displayDate || ev.dateLabel || '';
+    const dateBadge = dateLbl ? `<span class="ev-date-badge">${escHtml(dateLbl)}</span>` : '';
+    return `<div class="mob-tl-card${isAct ? ' active' : ''}" data-id="${ev.id}" onclick="onTLCardClick(event,${ev.id})">
+      <div class="mob-tl-card-dot ${escHtml(ev.type)}"></div>
+      <div class="mob-tl-card-body">
+        <div class="ev-title">${dateBadge}${escHtml(ev.title)}</div>
+        <div class="ev-tags">${(ev.tags || []).map(t => '<span class="ev-tag">' + escHtml(t) + '</span>').join('')}</div>
+        ${ev.description ? '<div class="ev-desc-preview">' + escHtml(ev.description) + '</div>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const frag = document.createRange().createContextualFragment(html);
+  container.replaceChildren(frag);
+  console.debug('[renderTimelineMobileList] ← rendered:', visible.length);
 }
 
 /* ══════════════════════════════════════
@@ -409,7 +493,7 @@ function renderUndated() {
   const mobCount = document.getElementById('mob-undated-count');
   if (mobChip) {
     const count = state.undated.length;
-    mobChip.style.display = count > 0 ? 'flex' : 'none';
+    mobChip.style.display = count > 0 ? '' : 'none';
     if (mobCount) mobCount.textContent = count;
   }
   if (mobList) {

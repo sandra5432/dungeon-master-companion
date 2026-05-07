@@ -37,6 +37,7 @@ function renderIdeasBoard() {
   console.debug('[renderIdeasBoard] →');
   renderIdeasTagFilterBar();
   renderIdeasColumns();
+  renderIdeasMobileList();
   // re-render detail panel if open
   if (state.ideas.detailId) {
     const idea = state.ideas.list.find(i => i.id === state.ideas.detailId);
@@ -145,6 +146,54 @@ function renderIdeasColumns() {
     card.classList.toggle('compact', !!state.ideas.compact);
   });
   console.debug('[renderIdeasColumns] ← done');
+}
+
+/**
+ * Renders a flat list of all ideas for the mobile view (no status grouping).
+ * Reads: state.ideas.list, state.ideas.tagFilter, state.ideas.onlyMine, state.ideas.sortByVotes
+ * Writes: #mob-ideas-list
+ */
+function renderIdeasMobileList() {
+  console.debug('[renderIdeasMobileList] →');
+  const container = document.getElementById('mob-ideas-list');
+  if (!container) return;
+
+  let ideas = [...state.ideas.list];
+  if (state.ideas.tagFilter.size > 0) {
+    ideas = ideas.filter(i => (i.tags || []).some(t => state.ideas.tagFilter.has(t)));
+  }
+  if (state.ideas.onlyMine && state.auth.userId != null) {
+    ideas = ideas.filter(i => i.createdByUserId === state.auth.userId);
+  }
+  if (state.ideas.sortByVotes) {
+    ideas.sort((a, b) => b.voteCount - a.voteCount);
+  }
+
+  if (ideas.length === 0) {
+    const p = document.createElement('p');
+    p.style.cssText = 'padding:16px;color:var(--t3);font-size:0.85rem';
+    p.textContent = 'Keine Ideen vorhanden.';
+    container.replaceChildren(p);
+    console.debug('[renderIdeasMobileList] ← empty');
+    return;
+  }
+
+  const html = ideas.map(idea => renderIdeaCardHtml(idea)).join('');
+  const frag = document.createRange().createContextualFragment(html);
+  container.replaceChildren(frag);
+
+  container.querySelectorAll('.icard').forEach(card => {
+    const id = parseInt(card.dataset.id, 10);
+    card.onclick = ev => {
+      if (ev.target.closest('.icard-vote-btn')) return;
+      openIdeaDetail(id);
+    };
+  });
+  container.querySelectorAll('.icard-vote-btn').forEach(btn => {
+    const id = parseInt(btn.dataset.id, 10);
+    btn.onclick = e => { e.stopPropagation(); toggleIdeaVote(id); };
+  });
+  console.debug('[renderIdeasMobileList] ←', ideas.length, 'ideas');
 }
 
 /**

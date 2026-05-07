@@ -3989,10 +3989,13 @@ nav {
 #mobile-drawer,
 #mob-sheet-backdrop,
 .mob-fab,
+#mob-tl-filter-bar,
+#mob-tl-list,
 #mob-tl-filter-row,
 #mob-undated-chip,
 #mob-undated-section,
 #mob-wiki-list,
+#mob-ideas-list,
 .desktop-notice { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -4001,8 +4004,9 @@ nav {
 ════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* ── Hide desktop nav, show mobile header ── */
+  /* ── Hide desktop nav and desktop section tabs ── */
   nav { display: none !important; }
+  #section-tabs { display: none !important; }
 
   #mobile-header {
     display: flex;
@@ -4204,9 +4208,10 @@ nav {
 
   /* ── Timeline layout ── */
 
-  /* Collapse the 3-column grid to a single block */
+  /* Collapse the 3-column grid to a single block; sit right below the fixed header */
   #page-timeline.active {
     display: block !important;
+    padding-top: 60px !important;
   }
 
   /* Hide both sidebars; their content is surfaced via mobile UI */
@@ -4217,7 +4222,7 @@ nav {
 
   /* Adjust center column padding for mobile */
   #page-timeline .tl-center {
-    padding: 12px 12px 16px !important;
+    padding: 8px 12px 16px !important;
   }
 
   /* Mobile filter chip row (element added in Task 5) */
@@ -4274,6 +4279,101 @@ nav {
     border-radius: 8px;
     overflow: hidden;
   }
+
+  /* ── Mobile timeline: hide rope, show flat list ── */
+  #page-timeline .tl-center .timeline { display: none !important; }
+  #page-timeline .tl-center #tl-hint  { display: none !important; }
+
+  #mob-tl-filter-bar {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  #mob-tl-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-un);
+    border: 1px solid var(--bd-s);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: var(--t2);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  #mob-tl-filter-toggle::after { content: ' ▾'; }
+  #mob-tl-filter-toggle.open::after { content: ' ▲'; }
+
+  #mob-tl-filter-toggle.open {
+    border-color: var(--gold);
+    color: var(--t1);
+  }
+
+  .mob-tl-filter-badge {
+    background: var(--gold);
+    color: #000;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  #mob-tl-filter-panel {
+    padding: 6px 0 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  #mob-tl-tag-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 6px;
+  }
+
+  #mob-tl-tag-row::-webkit-scrollbar { display: none; }
+
+  #mob-tl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 80px;
+    margin-bottom: 8px;
+  }
+
+  .mob-tl-card {
+    background: var(--bg-un);
+    border: 1px solid var(--bd-s);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+
+  .mob-tl-card.active { border-color: var(--gold); }
+  .mob-tl-card:active { background: var(--bg-s); }
+
+  .mob-tl-card-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .mob-tl-card-dot.world { background: var(--blue2); }
+  .mob-tl-card-dot.local { background: var(--gold); }
+
+  .mob-tl-card-body { flex: 1; min-width: 0; }
 
   /* ── Timeline detail panel → bottom sheet on mobile ── */
   #detail-panel {
@@ -4509,19 +4609,28 @@ nav {
     min-height: 50vh;
   }
 
-  #page-map > *:not(.desktop-notice),
-  #page-ideas > *:not(.desktop-notice) {
+  /* Map: show desktop-notice only */
+  #page-map > *:not(.desktop-notice) {
     display: none !important;
   }
+  #page-map.mob-override > *:not(.desktop-notice) { display: block !important; }
+  #page-map.mob-override > .desktop-notice { display: none !important; }
 
+  /* Ideas: show mobile flat list only (no kanban, no desktop-notice) */
+  #page-ideas > *:not(#mob-ideas-list) {
+    display: none !important;
+  }
+  #mob-ideas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 12px 80px;
+  }
+
+  /* Wiki: show mobile article list only */
   #page-wiki > *:not(.desktop-notice):not(#mob-wiki-list) {
     display: none !important;
   }
-
-  #page-map.mob-override > *:not(.desktop-notice) { display: block !important; }
-  #page-map.mob-override > .desktop-notice { display: none !important; }
-  #page-ideas.mob-override > *:not(.desktop-notice) { display: block !important; }
-  #page-ideas.mob-override > .desktop-notice { display: none !important; }
   #page-wiki.mob-override > *:not(.desktop-notice) { display: block !important; }
   #page-wiki.mob-override > .desktop-notice { display: none !important; }
   #page-wiki.mob-override #mob-wiki-list { display: none !important; }

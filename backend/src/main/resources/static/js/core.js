@@ -279,6 +279,7 @@ async function navigateToUrl({ page, worldId, subId }, push) {
     if (state.ui.activeWorldId !== worldId) return;
     if (push) pushUrl(buildUrl(worldId, 'timeline', subId));
     showPage('timeline');
+    renderTimeline();
     if (subId) {
       const inTl      = state.events.find(e => e.id === subId);
       const inUndated = !inTl && state.undated.find(e => e.id === subId);
@@ -705,6 +706,7 @@ function selectSection(section) {
  * navigateToUrl() uses a separate awaited path for deep links — see that function for details.
  */
 function selectIdeas() {
+  if (!state.auth.loggedIn) return;
   pushUrl('/ideas');
   showPage('ideas');
   initIdeasPage(); // unawaited — the board renders when data arrives, same as before

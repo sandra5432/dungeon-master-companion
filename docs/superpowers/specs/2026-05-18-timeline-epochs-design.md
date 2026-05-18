@@ -47,6 +47,10 @@ Same as events: any user with edit rights to the world can create, edit, and del
 
 Stored in `localStorage` per world, per user's session. Never persisted server-side.
 
+### Epochs are visual only — no selection
+
+Epochs are purely a visual grouping of events. They cannot be selected, activated, or used as filters. The only user interaction with an epoch is **collapse / expand**. The sidebar epoch list is a management panel (create, rename, delete) — not a filter control. Epoch list items must not behave like the tag/type filter chips.
+
 ---
 
 ## Data Model
@@ -346,7 +350,7 @@ Added to the left sidebar in `index.html`, below the Charaktere section:
 </div>
 ```
 
-`renderEpochList()` — renders epoch entries with edit/delete buttons (edit-only users). Called from `renderTimeline()`.
+`renderEpochList()` — renders epoch entries with edit/delete buttons (edit-only users). Called from `renderTimeline()`. Epoch list items must **not** be styled as clickable filter chips — they are plain rows with a coloured label and management icons only. No hover-select or active state.
 
 ### Epoch modal
 
@@ -410,3 +414,5 @@ Collapsed epochs show only the chip with a count; all their events are skipped.
 - Epoch reordering via drag-and-drop (order is implicit from `start_position`)
 - Epoch visibility in the wiki or map sections
 - Mobile drag-and-drop within collapsed epochs
+- Epoch filtering — epochs are never used as a filter; they are visual groupings only
+- Selecting or highlighting an epoch — the only interaction is collapse/expand on the band

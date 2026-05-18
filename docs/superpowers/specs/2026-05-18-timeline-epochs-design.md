@@ -63,6 +63,7 @@ CREATE TABLE timeline_epochs (
     id                   INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
     world_id             INT          NOT NULL,
     label                VARCHAR(100) NOT NULL,
+    color                VARCHAR(7)   NOT NULL DEFAULT '#c8a84b',
     start_position       DECIMAL(20,10) NOT NULL,
     end_position         DECIMAL(20,10) NULL,
     created_by_user_id   INT          NULL,
@@ -92,14 +93,15 @@ AND (K.end_position IS NULL OR E.sequence_order < K.end_position)
 com.pardur.model.TimelineEpoch
 ```
 
-Fields: `id` (Integer), `world` (ManyToOne World), `label` (String, 100), `startPosition` (BigDecimal NOT NULL), `endPosition` (BigDecimal nullable), `createdBy` (ManyToOne User nullable), `createdAt` (LocalDateTime).
+Fields: `id` (Integer), `world` (ManyToOne World), `label` (String, 100), `color` (String, 7, NOT NULL), `startPosition` (BigDecimal NOT NULL), `endPosition` (BigDecimal nullable), `createdBy` (ManyToOne User nullable), `createdAt` (LocalDateTime).
 
 ### DTOs
 
-**`EpochDto`** (response): `id`, `worldId`, `label`, `startPosition`, `endPosition`, `createdByUserId`
+**`EpochDto`** (response): `id`, `worldId`, `label`, `color`, `startPosition`, `endPosition`, `createdByUserId`
 
 **`CreateEpochRequest`** (request):
 - `label` — `@NotBlank @Size(max=100)`
+- `color` — `@NotBlank @Pattern(regexp = "^#[0-9a-fA-F]{6}$")` — hex colour string (e.g. `#c8a84b`)
 - `startAtEventId` — `@NotNull` — the oldest/first event **in** the epoch
 - `endAfterEventId` — nullable — the newest/last event **in** the epoch; null = open-ended
 
@@ -213,9 +215,20 @@ For each `epochSection`:
 
 ### HTML structure
 
+Epoch colour is set via inline CSS custom properties derived from the stored `color` hex. A helper converts the hex to an rgba background:
+
+```js
+function epochBgRgba(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},0.09)`;
+}
+```
+
 **Expanded epoch:**
 ```html
-<div class="epoch-band" data-epoch-id="1" data-color-idx="0">
+<div class="epoch-band" data-epoch-id="1" style="--ep-color:#c8a84b;--ep-bg:rgba(200,168,75,0.09)">
   <div class="epoch-band-strip">
     <button class="epoch-collapse-btn" onclick="toggleEpochCollapse(1)">▼</button>
     <span class="epoch-band-label">Zeitalter der Magie</span>
@@ -228,7 +241,7 @@ For each `epochSection`:
 
 **Collapsed epoch:**
 ```html
-<div class="epoch-band collapsed" data-epoch-id="2" data-color-idx="1">
+<div class="epoch-band collapsed" data-epoch-id="2" style="--ep-color:#3c6fa8;--ep-bg:rgba(60,111,168,0.09)">
   <div class="epoch-band-strip">
     <button class="epoch-collapse-btn" onclick="toggleEpochCollapse(2)">▶</button>
   </div>
@@ -245,14 +258,9 @@ For each `epochSection`:
 
 ### CSS
 
-```css
-/* Colour palette — indexed 0–4 */
-.epoch-band[data-color-idx="0"] { --ep-color: #c8a84b; --ep-bg: rgba(200,168,75,0.09); }
-.epoch-band[data-color-idx="1"] { --ep-color: #3c6fa8; --ep-bg: rgba(60,111,168,0.09); }
-.epoch-band[data-color-idx="2"] { --ep-color: #4a9b6f; --ep-bg: rgba(74,155,111,0.09); }
-.epoch-band[data-color-idx="3"] { --ep-color: #7850b0; --ep-bg: rgba(120,80,176,0.09); }
-.epoch-band[data-color-idx="4"] { --ep-color: #9b4a6f; --ep-bg: rgba(155,74,111,0.09); }
+`--ep-color` and `--ep-bg` are set via inline style on each `.epoch-band` element (see HTML structure above). No palette class needed.
 
+```css
 .epoch-band {
   display: flex;
 }
@@ -317,10 +325,6 @@ For each `epochSection`:
 .epoch-band-spacer { width: 28px; flex-shrink: 0; }
 ```
 
-### Colour index assignment
-
-Assigned by the epoch's position in `state.epochs` (sorted by `startPosition ASC`), modulo 5. Computed at render time — not stored.
-
 ### `toggleEpochCollapse(epochId)`
 
 ```js
@@ -338,10 +342,13 @@ function toggleEpochCollapse(epochId) {
 
 ### Sidebar — Epochs section
 
-Added to the left sidebar in `index.html`, below the Charaktere section:
+Added to the **right sidebar** in `index.html`, below the "Datum Unbekannt" (undated events) section, separated by a divider:
 
 ```html
-<div style="margin-top:16px" id="epoch-section">
+<!-- Divider -->
+<div style="border-top:1px solid rgba(255,255,255,0.08);margin:8px 0"></div>
+
+<div id="epoch-section">
   <div class="sb-title">
     <span>Epochen</span>
     <button class="world-edit-only" onclick="openAddEpochModal()" style="display:none">+</button>
@@ -350,7 +357,21 @@ Added to the left sidebar in `index.html`, below the Charaktere section:
 </div>
 ```
 
-`renderEpochList()` — renders epoch entries with edit/delete buttons (edit-only users). Called from `renderTimeline()`. Epoch list items must **not** be styled as clickable filter chips — they are plain rows with a coloured label and management icons only. No hover-select or active state.
+The left sidebar is not changed. Epoch management does **not** appear there.
+
+`renderEpochList()` — renders epoch entries with a colour swatch, label, and edit/delete buttons (edit-only users). Called from `renderTimeline()`. Epoch list items must **not** be styled as clickable filter chips — they are plain rows with a coloured label and management icons only. No hover-select or active state.
+
+Each epoch row:
+```html
+<div class="ep-list-row">
+  <div class="ep-list-swatch" style="background:#c8a84b"></div>
+  <span class="ep-list-label" style="color:#c8a84b">Zeitalter der Magie</span>
+  <button class="world-edit-only ep-list-btn" onclick="openEditEpochModal(1)" title="Bearbeiten">✎</button>
+  <button class="world-edit-only ep-list-btn" onclick="openDeleteEpochModal(1)" title="Löschen">✕</button>
+</div>
+```
+
+Open-ended epochs show a `∞` indicator between the label and the edit button.
 
 ### Epoch modal
 
@@ -363,6 +384,12 @@ Reuses the existing `#modal` pattern. New form `#f-ep` (hidden by default):
     <input id="fe-label" class="fl-inp" maxlength="100" />
   </div>
   <div class="fl-row">
+    <label>Farbe</label>
+    <div id="fe-color-picker" class="ep-color-picker">
+      <!-- 7 swatches rendered by renderEpochColorPicker() -->
+    </div>
+  </div>
+  <div class="fl-row">
     <label>Erstes Ereignis <span class="fl-hint">(ältestes in der Epoche)</span></label>
     <select id="fe-start" class="fl-inp"></select>
   </div>
@@ -372,16 +399,25 @@ Reuses the existing `#modal` pattern. New form `#f-ep` (hidden by default):
       <option value="">— Offen (bis heute) —</option>
     </select>
   </div>
+  <div id="fe-preview" class="ep-preview" style="display:none"></div>
 </div>
 ```
 
-Both dropdowns list `state.events` sorted oldest-first (by `sequenceOrder ASC`). The end dropdown has a leading "open-ended" option.
+**Colour picker** — 7 fixed swatches, no free-text input:
+
+```js
+const EPOCH_PALETTE = ['#c8a84b','#3c6fa8','#4a9b6f','#7850b0','#9b4a6f','#3a8fa0','#b87340'];
+```
+
+`renderEpochColorPicker(selectedColor)` renders a swatch `<button>` per colour. The active swatch gets class `ep-swatch--active` (ring outline). Clicking a swatch updates `state.ui.epochDraftColor` and re-renders the picker.
+
+Both dropdowns list `state.events` sorted oldest-first (by `sequenceOrder ASC`). The end dropdown has a leading "open-ended" option. When start and end are both selected, `#fe-preview` shows the count of covered events.
 
 `showForms()` gains an `ep` parameter.
 
 ### Mobile (`renderTimelineMobileList()`)
 
-Between consecutive events where the epoch changes, insert an epoch header chip:
+Between consecutive events where the epoch changes, insert an epoch header chip using the stored `epoch.color`:
 ```html
 <div class="mob-epoch-chip" style="--ep-color: #c8a84b">Zeitalter der Magie</div>
 ```
@@ -410,7 +446,6 @@ Collapsed epochs show only the chip with a count; all their events are skipped.
 ## Out of Scope
 
 - Epochs on undated (unpositioned) events — only positioned events are covered
-- Per-user custom epoch colours
 - Epoch reordering via drag-and-drop (order is implicit from `start_position`)
 - Epoch visibility in the wiki or map sections
 - Mobile drag-and-drop within collapsed epochs

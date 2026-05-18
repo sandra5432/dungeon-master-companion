@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Astral Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=37">
+<link rel="stylesheet" href="/css/app.css?v=38">
 <script src="/js/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -650,6 +650,7 @@
 
 <!-- ══ IDEAS PAGE ══ -->
 <div class="page" id="page-ideas">
+  <div id="ideas-tag-filter-bar" class="ideas-tag-filter-bar"></div>
   <!-- Mobile: flat list (replaces kanban on small screens) -->
   <div id="mob-ideas-list" class="mob-ideas-list"></div>
   <!-- Mobile: desktop-preferred notice -->
@@ -661,7 +662,6 @@
       <button class="desktop-notice-btn desktop-notice-btn--primary" onclick="mobOverridePage('ideas')">Trotzdem öffnen</button>
     </div>
   </div>
-  <div id="ideas-tag-filter-bar" class="ideas-tag-filter-bar"></div>
   <div class="ideas-rope-wrap">
     <div class="ideas-rope-rail">
 
@@ -700,6 +700,8 @@
 
     </div>
   </div>
+  <!-- Mobile FAB: create new idea -->
+  <button class="mob-fab user-action-only" id="ideas-fab" onclick="openIdeaModal(null)" aria-label="Neue Idee">+</button>
 </div><!-- #page-ideas -->
 
 <!-- ══ IDEAS DETAIL PANEL ══ -->
@@ -769,7 +771,7 @@
 
 <!-- Simplified top header for mobile -->
 <header id="mobile-header">
-  <span class="mob-header-title">⚔️ Pardur</span>
+  <span class="mob-header-title" id="mob-header-title">Astral Library</span>
   <button class="mob-header-btn" onclick="openDrawer()" aria-label="Menü öffnen">☰</button>
 </header>
 
@@ -803,12 +805,12 @@
 <!-- Slide-in drawer -->
 <aside id="mobile-drawer" aria-label="Seitenmenü">
   <div class="mob-drawer-header">
-    <span class="mob-drawer-title">⚔️ Pardur</span>
+    <span class="mob-drawer-title">Astral Library</span>
     <button class="mob-drawer-close" onclick="closeDrawer()" aria-label="Menü schließen">✕</button>
   </div>
   <div class="mob-drawer-section">Allgemein</div>
-  <button class="mob-drawer-item" onclick="showPage('items'); closeDrawer()">⚔️ Items</button>
-  <button class="mob-drawer-item" onclick="selectIdeas(); closeDrawer()">💡 Ideenkammer</button>
+  <button class="mob-drawer-item" onclick="showPage('items'); closeDrawer()">⚔️ Marktplatz</button>
+  <button class="mob-drawer-item user-action-only" onclick="selectIdeas(); closeDrawer()">💡 Ideenkammer</button>
   <div class="mob-drawer-section">Welten</div>
   <div id="mob-drawer-worlds"></div>
   <div class="mob-drawer-footer">

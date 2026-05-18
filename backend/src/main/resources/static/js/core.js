@@ -338,6 +338,20 @@ function showPage(p) {
   // so they can await it before opening a detail panel (needed for deep link support).
 
   renderSectionTabs();
+  updateMobHeaderTitle(p);
+}
+
+/**
+ * Updates the mobile header title to "Astral Library – <section>".
+ * World-scoped pages show the active world name; top-level pages show their own label.
+ */
+function updateMobHeaderTitle(p) {
+  const el = document.getElementById('mob-header-title');
+  if (!el) return;
+  const worldName = (state.worlds.find(w => w.id === state.ui.activeWorldId) || {}).name;
+  const labels = { items: 'Marktplatz', ideas: 'Ideenkammer', users: 'Benutzer', config: 'Einstellungen' };
+  const section = labels[p] || worldName || '';
+  el.textContent = section ? `Astral Library - ${section}` : 'Astral Library';
 }
 
 /* ══════════════════════════════════════

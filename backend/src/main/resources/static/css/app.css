@@ -137,6 +137,7 @@ body {
   min-height: 100vh;
   transition: background var(--transition), color var(--transition);
   overflow-x: hidden;
+  overflow-y: scroll;
   line-height: 1.5;
 }
 
@@ -4005,7 +4006,7 @@ nav {
 @media (max-width: 768px) {
 
   /* ── Hide desktop nav and desktop section tabs ── */
-  nav { display: none !important; }
+  nav:not(#mobile-bottom-nav) { display: none !important; }
   #section-tabs { display: none !important; }
 
   #mobile-header {
@@ -4025,8 +4026,11 @@ nav {
 
   .mob-header-title {
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.85rem;
     color: var(--t1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .mob-header-btn {
@@ -4044,16 +4048,7 @@ nav {
   }
 
   /* ── Top tab bar (below the fixed header) ── */
-  #mobile-bottom-nav {
-    display: flex;
-    position: fixed;
-    top: 52px;
-    left: 0;
-    right: 0;
-    z-index: 300;
-    background: var(--bg-s);
-    border-bottom: 1px solid var(--bd-s);
-  }
+  #mobile-bottom-nav { display: none !important; }
 
   .mob-tab {
     flex: 1;
@@ -4075,7 +4070,7 @@ nav {
   .mob-tab-label { font-size: 0.6rem; }
 
   /* Push content below the fixed header (52px) + fixed tab bar (52px) */
-  .page { padding-top: 104px !important; padding-bottom: 16px !important; }
+  .page { padding-top: 52px !important; padding-bottom: 16px !important; }
 
   /* ── Backdrop (drawer + detail sheet) ── */
   #mob-sheet-backdrop {
@@ -4208,10 +4203,9 @@ nav {
 
   /* ── Timeline layout ── */
 
-  /* Collapse the 3-column grid to a single block; sit right below the fixed header */
+  /* Collapse the 3-column grid to a single block */
   #page-timeline.active {
     display: block !important;
-    padding-top: 60px !important;
   }
 
   /* Hide both sidebars; their content is surfaced via mobile UI */
@@ -4432,6 +4426,7 @@ nav {
   #page-items .toolbar {
     grid-template-columns: 1fr !important;
     gap: 8px !important;
+    margin-top: 12px;
   }
 
   #page-items .toolbar input,
@@ -4439,6 +4434,21 @@ nav {
     width: 100%;
     min-height: 48px;
     font-size: 0.9rem;
+  }
+
+  /* Remove card chrome from items-wrap — rows carry their own borders */
+  #page-items .items-wrap {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  /* t-footer: give it proper padding and separate count from export button */
+  #page-items .t-footer {
+    padding: 8px 4px;
+    gap: 8px;
   }
 
   #page-items table.it thead {
@@ -4457,11 +4467,12 @@ nav {
     justify-content: space-between;
     align-items: center;
     background: var(--bg-un);
-    border-radius: 8px;
+    border-radius: 0;
     padding: 10px 12px;
     margin-bottom: 6px;
     border: 1px solid var(--bd-s);
     gap: 8px;
+    box-sizing: border-box;
   }
 
   #page-items table.it td {
@@ -4476,12 +4487,15 @@ nav {
     font-weight: 600;
     color: var(--t1);
     display: block;
+    min-width: 0;
   }
 
   #page-items table.it td.col-price {
     color: var(--gold);
     font-weight: 700;
     white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   #page-items .act-btns {
@@ -4616,15 +4630,34 @@ nav {
   #page-map.mob-override > *:not(.desktop-notice) { display: block !important; }
   #page-map.mob-override > .desktop-notice { display: none !important; }
 
-  /* Ideas: show mobile flat list only (no kanban, no desktop-notice) */
-  #page-ideas > *:not(#mob-ideas-list) {
+  /* Ideas: show filter bar + mobile flat list (no kanban, no desktop-notice) */
+  #page-ideas > *:not(#mob-ideas-list):not(#ideas-tag-filter-bar):not(#ideas-fab) {
     display: none !important;
   }
   #mob-ideas-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 12px 12px 80px;
+    padding: 8px 12px 80px;
+  }
+  #page-ideas #ideas-tag-filter-bar {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding: 8px 12px;
+    margin-bottom: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+  }
+  #page-ideas #ideas-tag-filter-bar::-webkit-scrollbar { display: none; }
+  #page-ideas #ideas-tag-filter-bar > * {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   /* Wiki: show mobile article list only */

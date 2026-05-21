@@ -882,6 +882,28 @@ nav {
   top: 2px;
   left: 50%;
   transform: translateX(-50%);
+  pointer-events: none;
+}
+.epoch-strip-btn {
+  background: none;
+  border: none;
+  color: var(--ep-color);
+  opacity: 0.45;
+  font-size: 0.6rem;
+  padding: 1px 3px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.epoch-strip-btn:hover { opacity: 1; }
+.epoch-strip-btn--del:hover { color: #e05555; opacity: 1; }
+.epoch-row-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.epoch-row-actions .epoch-strip-btn {
+  font-size: 0.7rem;
 }
 .epoch-band-spacer {
   width: 28px;

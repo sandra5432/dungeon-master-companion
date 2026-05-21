@@ -265,7 +265,9 @@ function selectEpochColor(color) {
 
 /**
  * Populates the start/end event dropdowns in the epoch modal (oldest-first).
- * Reads: state.events
+ * Events already covered by another epoch are excluded to prevent overlap.
+ * In edit mode (editEpochId set) the current epoch's own events remain available.
+ * Reads: state.events, state.epochs, editEpochId
  * Writes: #fe-start, #fe-end
  */
 function populateEpochDropdowns() {
@@ -274,10 +276,15 @@ function populateEpochDropdowns() {
     .filter(e => e.sequenceOrder != null)
     .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
 
+  const otherEpochs = editEpochId != null
+    ? state.epochs.filter(ep => ep.id !== editEpochId)
+    : state.epochs;
+  const available = sorted.filter(e => !epochForEvent(e, otherEpochs));
+
   const startEl = document.getElementById('fe-start');
   const endEl   = document.getElementById('fe-end');
 
-  const makeOpts = () => sorted.map(e => {
+  const makeOpts = () => available.map(e => {
     const opt = document.createElement('option');
     opt.value = e.id;
     opt.textContent = e.title + (e.dateLabel ? ' (' + e.dateLabel + ')' : '');
@@ -516,6 +523,10 @@ function renderTimeline() {
       const collapsed = state.ui.collapsedEpochs.has(ep.id);
       const bgRgba = epochBgRgba(ep.color);
       const openClass = ep.endPosition == null ? ' epoch-band--open' : '';
+      const canEditEpoch = canEditActiveWorld();
+      const epochEditBtns = canEditEpoch
+        ? `<button class="epoch-strip-btn" onclick="openEditEpochModal(${ep.id})" title="Bearbeiten">✎</button><button class="epoch-strip-btn epoch-strip-btn--del" onclick="openDeleteEpochModal(${ep.id})" title="Löschen">✕</button>`
+        : '';
       if (collapsed) {
         const count = section.groups.reduce((n, g) => n + (g.type === 'single' ? 1 : (g.events ? g.events.length : 0)), 0);
         html += `<div class="epoch-band collapsed${openClass}" data-epoch-id="${ep.id}" style="--ep-color:${escHtml(ep.color)};--ep-bg:${bgRgba}">
@@ -525,6 +536,7 @@ function renderTimeline() {
           <div class="epoch-band-collapsed-row">
             <span class="epoch-band-collapsed-name">${escHtml(ep.label)}</span>
             <span class="epoch-band-collapsed-count">${count} Ereignis${count === 1 ? '' : 'se'}</span>
+            ${epochEditBtns ? `<span class="epoch-row-actions">${epochEditBtns}</span>` : ''}
           </div>
         </div>`;
       } else {
@@ -532,6 +544,7 @@ function renderTimeline() {
           <div class="epoch-band-strip">
             <button class="epoch-collapse-btn" onclick="toggleEpochCollapse(${ep.id})">▼</button>
             <span class="epoch-band-label">${escHtml(ep.label)}</span>
+            ${epochEditBtns}
           </div>
           <div class="epoch-band-events">${innerHtml}</div>
         </div>`;

@@ -4,6 +4,7 @@
 const state = {
   worlds: [],
   events: [],
+  epochs: [],
   undated: [],
   items: [],
   auth: { loggedIn: false, isAdmin: false, userId: null, username: null, colorHex: null, mustChangePassword: false },
@@ -39,6 +40,8 @@ const state = {
     wikiCollapsedTypes: new Set(),
     wikiCollapsedNodes: new Set(),
     wikiEditParentId: null,
+    collapsedEpochs: new Set(),
+    epochDraftColor: '#c8a84b',
   },
   wikiTitles: [],
   wikiAllEntries: [],
@@ -73,9 +76,10 @@ const state = {
 
 // Modal edit state
 let editId       = null;
-let editSource   = null; // 'tl'|'undated'|'item'|'item-del'|'tl-del'|'undated-del'|'drop'|'world'|'world-del'|'login'
+let editSource   = null; // 'tl'|'undated'|'item'|'item-del'|'tl-del'|'undated-del'|'drop'|'world'|'world-del'|'login'|'ep'|'ep-del'
 let editItemId   = null;
 let editWorldId  = null;
+let editEpochId  = null;
 let dropEventId  = null;   // undated event id being dropped
 let dropAfterEventId = null; // predecessor event id (null = top)
 let undatedMode  = false;
@@ -734,10 +738,14 @@ async function selectWorld(worldId) {
   state.ui.wikiActiveWorldId = worldId;
   localStorage.setItem('activeWorldId', worldId);
   state.events  = [];
+  state.epochs  = [];
   state.undated = [];
-  state.ui.activeTags    = new Set();
-  state.ui.activeChars   = new Set();
-  state.ui.activeTypes   = new Set();
+  state.ui.activeTags      = new Set();
+  state.ui.activeChars     = new Set();
+  state.ui.activeTypes     = new Set();
+  state.ui.epochDraftColor = '#c8a84b';
+  const storedEpochCollapse = localStorage.getItem('collapsedEpochs_' + worldId);
+  state.ui.collapsedEpochs = new Set(storedEpochCollapse ? JSON.parse(storedEpochCollapse) : []);
 
   const world = state.worlds.find(w => w.id === worldId);
   // Always land on the first visible section tab for this world
@@ -758,14 +766,16 @@ async function selectWorld(worldId) {
 
   if (section === 'timeline') {
     try {
-      const [events, undated] = await Promise.all([
+      const [events, undated, epochs] = await Promise.all([
         api('GET', `/worlds/${worldId}/events`),
         api('GET', `/worlds/${worldId}/events/unpositioned`),
+        api('GET', `/worlds/${worldId}/epochs`),
       ]);
       // Stale-check: another navigation may have changed the active world while we were loading
       if (state.ui.activeWorldId !== worldId) return;
       state.events  = events;
       state.undated = undated;
+      state.epochs  = epochs || [];
     } catch (e) { console.error('Failed to load world events', e); }
     if (state.ui.activeWorldId !== worldId) return;
     renderTimeline();

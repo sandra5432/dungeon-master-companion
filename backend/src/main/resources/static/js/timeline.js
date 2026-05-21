@@ -102,6 +102,325 @@ function groupEvents(events) {
   return groups;
 }
 
+// ── Epoch helpers ────────────────────────────────────────────────────────────
+
+/** Fixed palette of 7 epoch colours. */
+const EPOCH_PALETTE = ['#c8a84b','#3c6fa8','#4a9b6f','#7850b0','#9b4a6f','#3a8fa0','#b87340'];
+
+/**
+ * Converts a hex colour string to an rgba string with 0.09 alpha.
+ * @param {string} hex
+ * @returns {string}
+ */
+function epochBgRgba(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},0.09)`;
+}
+
+/**
+ * Returns the epoch that contains this event, or null.
+ * @param {Object} ev - event with sequenceOrder field
+ * @param {Array}  epochs - sorted by startPosition ASC
+ * @returns {Object|null}
+ */
+function epochForEvent(ev, epochs) {
+  if (!ev || ev.sequenceOrder == null) return null;
+  return epochs.find(ep =>
+    ev.sequenceOrder > ep.startPosition &&
+    (ep.endPosition == null || ev.sequenceOrder < ep.endPosition)
+  ) ?? null;
+}
+
+/**
+ * Groups annotated group objects into epoch sections.
+ * Returns array of { epoch, groups[] }.
+ * @param {Array} groups - each must have _firstEvent set
+ * @param {Array} epochs
+ * @returns {Array}
+ */
+function buildEpochSections(groups, epochs) {
+  const sections = [];
+  let current = null;
+  for (const g of groups) {
+    const ep = epochForEvent(g._firstEvent, epochs);
+    const epId = ep ? ep.id : null;
+    if (!current || (current.epoch ? current.epoch.id : null) !== epId) {
+      current = { epoch: ep, groups: [] };
+      sections.push(current);
+    }
+    current.groups.push(g);
+  }
+  return sections;
+}
+
+/**
+ * Toggles collapsed state of an epoch band and persists to localStorage.
+ * @param {number} epochId
+ */
+function toggleEpochCollapse(epochId) {
+  console.debug('[toggleEpochCollapse] →', epochId);
+  if (state.ui.collapsedEpochs.has(epochId)) {
+    state.ui.collapsedEpochs.delete(epochId);
+  } else {
+    state.ui.collapsedEpochs.add(epochId);
+  }
+  localStorage.setItem(
+    'collapsedEpochs_' + state.ui.activeWorldId,
+    JSON.stringify([...state.ui.collapsedEpochs])
+  );
+  renderTimeline();
+  console.debug('[toggleEpochCollapse] ← done');
+}
+
+/**
+ * Renders the epoch management list in the right sidebar (#epoch-list).
+ * Reads: state.epochs, state.auth
+ * Writes: #epoch-list
+ */
+function renderEpochList() {
+  console.debug('[renderEpochList] → epochs:', state.epochs.length);
+  const el = document.getElementById('epoch-list');
+  if (!el) return;
+  const canEdit = canEditActiveWorld();
+  if (state.epochs.length === 0) {
+    el.textContent = '';
+    const empty = document.createElement('div');
+    empty.style.cssText = 'font-size:0.7rem;color:var(--t3);font-style:italic';
+    empty.textContent = 'Keine Epochen';
+    el.appendChild(empty);
+    return;
+  }
+  const rows = state.epochs.map(ep => {
+    const isOpen = ep.endPosition == null;
+    const row = document.createElement('div');
+    row.className = 'ep-list-row';
+    const swatch = document.createElement('div');
+    swatch.className = 'ep-list-swatch';
+    swatch.style.background = ep.color;
+    row.appendChild(swatch);
+    const lbl = document.createElement('span');
+    lbl.className = 'ep-list-label';
+    lbl.style.color = ep.color;
+    lbl.textContent = ep.label;
+    row.appendChild(lbl);
+    if (isOpen) {
+      const inf = document.createElement('span');
+      inf.className = 'ep-list-infinity';
+      inf.textContent = '∞';
+      row.appendChild(inf);
+    }
+    if (canEdit) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'world-edit-only ep-list-btn';
+      editBtn.title = 'Bearbeiten';
+      editBtn.textContent = '✎';
+      editBtn.onclick = () => openEditEpochModal(ep.id);
+      row.appendChild(editBtn);
+      const delBtn = document.createElement('button');
+      delBtn.className = 'world-edit-only ep-list-btn';
+      delBtn.title = 'Löschen';
+      delBtn.textContent = '✕';
+      delBtn.onclick = () => openDeleteEpochModal(ep.id);
+      row.appendChild(delBtn);
+    }
+    return row;
+  });
+  el.replaceChildren(...rows);
+  console.debug('[renderEpochList] ← done');
+}
+
+/**
+ * Renders the 7-swatch colour picker into #fe-color-picker.
+ * Reads: state.ui.epochDraftColor
+ * Writes: #fe-color-picker
+ */
+function renderEpochColorPicker() {
+  console.debug('[renderEpochColorPicker] →', state.ui.epochDraftColor);
+  const el = document.getElementById('fe-color-picker');
+  if (!el) return;
+  const swatches = EPOCH_PALETTE.map(c => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ep-swatch' + (c === state.ui.epochDraftColor ? ' ep-swatch--active' : '');
+    btn.style.background = c;
+    btn.style.color = c;
+    btn.title = c;
+    btn.onclick = () => selectEpochColor(c);
+    return btn;
+  });
+  el.replaceChildren(...swatches);
+}
+
+/**
+ * Selects an epoch colour swatch, updates draft state, re-renders picker.
+ * @param {string} color - hex colour string
+ */
+function selectEpochColor(color) {
+  state.ui.epochDraftColor = color;
+  renderEpochColorPicker();
+  updateEpochPreview();
+}
+
+/**
+ * Populates the start/end event dropdowns in the epoch modal (oldest-first).
+ * Reads: state.events
+ * Writes: #fe-start, #fe-end
+ */
+function populateEpochDropdowns() {
+  console.debug('[populateEpochDropdowns] →');
+  const sorted = [...state.events]
+    .filter(e => e.sequenceOrder != null)
+    .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+
+  const startEl = document.getElementById('fe-start');
+  const endEl   = document.getElementById('fe-end');
+
+  const makeOpts = () => sorted.map(e => {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = e.title + (e.dateLabel ? ' (' + e.dateLabel + ')' : '');
+    return opt;
+  });
+
+  if (startEl) startEl.replaceChildren(...makeOpts());
+  if (endEl) {
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '— Offen (bis heute) —';
+    endEl.replaceChildren(blank, ...makeOpts());
+  }
+
+  startEl?.addEventListener('change', updateEpochPreview);
+  endEl?.addEventListener('change', updateEpochPreview);
+}
+
+/**
+ * Updates the epoch preview strip based on current dropdown selections.
+ * Reads: #fe-start, #fe-end, state.events, state.ui.epochDraftColor
+ * Writes: #fe-preview
+ */
+function updateEpochPreview() {
+  const startId = parseInt(document.getElementById('fe-start')?.value, 10);
+  const endId   = parseInt(document.getElementById('fe-end')?.value, 10);
+  const prev    = document.getElementById('fe-preview');
+  if (!prev || isNaN(startId)) { if (prev) prev.style.display = 'none'; return; }
+
+  const sorted = [...state.events]
+    .filter(e => e.sequenceOrder != null)
+    .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+
+  const startEv = sorted.find(e => e.id === startId);
+  if (!startEv) { prev.style.display = 'none'; return; }
+
+  let covered;
+  if (!endId || isNaN(endId)) {
+    covered = sorted.filter(e => e.sequenceOrder >= startEv.sequenceOrder);
+  } else {
+    const endEv = sorted.find(e => e.id === endId);
+    if (!endEv) { prev.style.display = 'none'; return; }
+    covered = sorted.filter(e =>
+      e.sequenceOrder >= startEv.sequenceOrder && e.sequenceOrder <= endEv.sequenceOrder
+    );
+  }
+
+  const color = state.ui.epochDraftColor;
+  prev.style.display = 'block';
+  prev.style.setProperty('--ep-preview-color', color);
+  prev.style.borderLeftColor = color;
+  const endTitle = endId && !isNaN(endId) ? (sorted.find(e => e.id === endId) || {}).title || '' : 'offen';
+  prev.textContent = '';
+  const strong = document.createElement('strong');
+  strong.textContent = covered.length + ' Ereignis' + (covered.length === 1 ? '' : 'se');
+  prev.append('Umfasst: ', strong, ' — ' + (startEv.title || '') + ' → ' + endTitle);
+}
+
+/**
+ * Opens the modal to create a new epoch.
+ */
+function openAddEpochModal() {
+  console.debug('[openAddEpochModal] →');
+  editEpochId = null;
+  editSource  = 'ep';
+  state.ui.epochDraftColor = '#c8a84b';
+  document.getElementById('m-title').textContent = 'Epoche anlegen';
+  showForms(false, false, false, false, false, false, true);
+  setSaveBtn('Anlegen', false);
+  document.getElementById('fe-label').value = '';
+  populateEpochDropdowns();
+  renderEpochColorPicker();
+  document.getElementById('fe-preview').style.display = 'none';
+  openModal();
+  console.debug('[openAddEpochModal] ← done');
+}
+
+/**
+ * Opens the modal to edit an existing epoch, pre-filled with current values.
+ * @param {number} epochId
+ */
+function openEditEpochModal(epochId) {
+  console.debug('[openEditEpochModal] →', epochId);
+  const ep = state.epochs.find(e => e.id === epochId);
+  if (!ep) return;
+  editEpochId = epochId;
+  editSource  = 'ep';
+  state.ui.epochDraftColor = ep.color;
+  document.getElementById('m-title').textContent = 'Epoche bearbeiten';
+  showForms(false, false, false, false, false, false, true);
+  setSaveBtn('Speichern', false);
+  document.getElementById('fe-label').value = ep.label;
+  populateEpochDropdowns();
+  renderEpochColorPicker();
+
+  const sorted = [...state.events]
+    .filter(e => e.sequenceOrder != null)
+    .sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+  const startEv = sorted.find(e =>
+    e.sequenceOrder > ep.startPosition &&
+    (ep.endPosition == null || e.sequenceOrder < ep.endPosition)
+  );
+  if (startEv) document.getElementById('fe-start').value = startEv.id;
+
+  if (ep.endPosition != null) {
+    const endEv = [...sorted].reverse().find(e =>
+      e.sequenceOrder < ep.endPosition && e.sequenceOrder > ep.startPosition
+    );
+    if (endEv) document.getElementById('fe-end').value = endEv.id;
+  }
+
+  updateEpochPreview();
+  openModal();
+  console.debug('[openEditEpochModal] ← done');
+}
+
+/**
+ * Opens the delete confirmation modal for an epoch.
+ * @param {number} epochId
+ */
+function openDeleteEpochModal(epochId) {
+  console.debug('[openDeleteEpochModal] →', epochId);
+  const ep = state.epochs.find(e => e.id === epochId);
+  if (!ep) return;
+  editEpochId = epochId;
+  editSource  = 'ep-del';
+  document.getElementById('m-title').textContent = 'Epoche löschen';
+  showForms(false, false, true, false, false, false);
+  const fDel = document.getElementById('f-del');
+  fDel.textContent = '';
+  const p1 = document.createElement('p');
+  const strong = document.createElement('strong');
+  strong.textContent = '"' + ep.label + '"';
+  p1.append('Soll die Epoche ', strong, ' wirklich entfernt werden?');
+  const p2 = document.createElement('p');
+  p2.style.cssText = 'font-size:0.78rem;color:var(--t3)';
+  p2.textContent = 'Die Ereignisse selbst bleiben erhalten — nur die Epochen-Markierung wird gelöscht.';
+  fDel.append(p1, p2);
+  setSaveBtn('Endgültig löschen', true);
+  openModal();
+  console.debug('[openDeleteEpochModal] ← done');
+}
+
 function renderTimeline() {
   const tl  = document.getElementById('timeline');
   if (!tl) return;
@@ -119,25 +438,20 @@ function renderTimeline() {
   const isAdmin = state.auth.isAdmin;
   // Reversed: newest events on top
   const groups = groupEvents(state.events).reverse();
-  let html = '';
 
   function lastEventId(grp) {
     return grp.type === 'single' ? grp.event.id : grp.events[grp.events.length - 1].id;
   }
 
-  groups.forEach((grp, gi) => {
+  /** Renders HTML for one group (rope gap + event row), using grp._gi for side/delay. */
+  function renderGroupHtml(grp) {
+    const gi = grp._gi;
     const side = gi % 2 === 0 ? 'right' : 'left';
-    // In reversed display the gap at gi sits above grp[gi].
-    // Predecessor = last event of grp[gi] (the group directly below = older in timeline),
-    // except for the very top gap which uses grp[0] (newest group = insert after newest).
-    const predecessorId = lastEventId(groups[gi]);
+    const predecessorId = lastEventId(grp);
     const predStr = predecessorId !== null ? predecessorId : 'null';
-
-    if (canEditActiveWorld()) {
-      html += `<div class="rope-gap" data-gap="${gi}" data-predecessor="${predStr}" onclick="onRopeClick(event,${predStr})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`;
-    } else {
-      html += `<div class="rope-gap" style="pointer-events:none"></div>`;
-    }
+    let h = canEditActiveWorld()
+      ? `<div class="rope-gap" data-gap="${gi}" data-predecessor="${predStr}" onclick="onRopeClick(event,${predStr})"><div class="rope-gap-hint">✦ Hier eintragen</div></div>`
+      : `<div class="rope-gap" style="pointer-events:none"></div>`;
 
     if (grp.type === 'single') {
       const ev = grp.event;
@@ -146,7 +460,7 @@ function renderTimeline() {
       const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'tl';
       const dateBadge = dateLbl ? `<span class="ev-date-badge">${escHtml(dateLbl)}</span>` : '';
       const dragAttrs = state.auth.loggedIn ? `draggable="true" ondragstart="onTLDragStart(event,${ev.id})" ondragend="onTLDragEnd(event)"` : '';
-      html += `<div class="event-row ${side}${vis ? '' : ' hidden'}" data-id="${ev.id}">
+      h += `<div class="event-row ${side}${vis ? '' : ' hidden'}" data-id="${ev.id}">
         <div class="event-node ${escHtml(ev.type)}">${ev.type === 'world' ? wSVG() : lSVG()}</div>
         <div class="event-conn"></div>
         <div class="event-card${isAct ? ' active' : ''}" style="animation-delay:${gi * .05}s" ${dragAttrs} onclick="onTLCardClick(event,${ev.id})">
@@ -172,7 +486,7 @@ function renderTimeline() {
           </div>
         </div>`;
       }).join('');
-      html += `<div class="event-row ${side}${anyVisible ? '' : ' hidden'}">
+      h += `<div class="event-row ${side}${anyVisible ? '' : ' hidden'}">
         <div class="event-node ${escHtml(firstType)}">${firstType === 'world' ? wSVG() : lSVG()}</div>
         <div class="event-conn"></div>
         <div class="event-card event-group-card${groupActive ? ' active' : ''}" style="animation-delay:${gi * .05}s">
@@ -181,7 +495,49 @@ function renderTimeline() {
         </div>
       </div>`;
     }
+    return h;
+  }
+
+  // Annotate groups with global index and firstEvent for epoch assignment
+  groups.forEach((grp, gi) => {
+    grp._gi = gi;
+    grp._firstEvent = grp.type === 'single' ? grp.event : (grp.events ? grp.events[0] : null);
   });
+
+  const sections = buildEpochSections(groups, state.epochs);
+  let html = '';
+
+  for (const section of sections) {
+    const innerHtml = section.groups.map(renderGroupHtml).join('');
+    if (!section.epoch) {
+      html += `<div class="epoch-plain-row"><div class="epoch-band-spacer"></div><div class="epoch-plain-events">${innerHtml}</div></div>`;
+    } else {
+      const ep = section.epoch;
+      const collapsed = state.ui.collapsedEpochs.has(ep.id);
+      const bgRgba = epochBgRgba(ep.color);
+      const openClass = ep.endPosition == null ? ' epoch-band--open' : '';
+      if (collapsed) {
+        const count = section.groups.reduce((n, g) => n + (g.type === 'single' ? 1 : (g.events ? g.events.length : 0)), 0);
+        html += `<div class="epoch-band collapsed${openClass}" data-epoch-id="${ep.id}" style="--ep-color:${escHtml(ep.color)};--ep-bg:${bgRgba}">
+          <div class="epoch-band-strip">
+            <button class="epoch-collapse-btn" onclick="toggleEpochCollapse(${ep.id})">▶</button>
+          </div>
+          <div class="epoch-band-collapsed-row">
+            <span class="epoch-band-collapsed-name">${escHtml(ep.label)}</span>
+            <span class="epoch-band-collapsed-count">${count} Ereignis${count === 1 ? '' : 'se'}</span>
+          </div>
+        </div>`;
+      } else {
+        html += `<div class="epoch-band${openClass}" data-epoch-id="${ep.id}" style="--ep-color:${escHtml(ep.color)};--ep-bg:${bgRgba}">
+          <div class="epoch-band-strip">
+            <button class="epoch-collapse-btn" onclick="toggleEpochCollapse(${ep.id})">▼</button>
+            <span class="epoch-band-label">${escHtml(ep.label)}</span>
+          </div>
+          <div class="epoch-band-events">${innerHtml}</div>
+        </div>`;
+      }
+    }
+  }
 
   // Final rope gap (bottom = oldest slot, predecessor null = insert before everything)
   if (canEditActiveWorld()) {
@@ -221,6 +577,7 @@ function renderTimeline() {
   renderUndated();
   renderMobTlFilters();
   renderTimelineMobileList();
+  renderEpochList();
 
   // Refresh detail panel if open
   if (state.ui.detailId !== null) {
@@ -334,11 +691,26 @@ function renderTimelineMobileList() {
     return;
   }
 
+  let prevEpochId = undefined;
   const html = visible.map(ev => {
+    const ep = epochForEvent(ev, state.epochs);
+    const epId = ep ? ep.id : null;
+    let chipHtml = '';
+    if (epId !== prevEpochId) {
+      prevEpochId = epId;
+      if (ep) {
+        const collapsed = state.ui.collapsedEpochs.has(ep.id);
+        const count = collapsed
+          ? visible.filter(e => epochForEvent(e, state.epochs)?.id === ep.id).length
+          : 0;
+        chipHtml = `<div class="mob-epoch-chip" style="--ep-color:${escHtml(ep.color)}">${escHtml(ep.label)}${collapsed ? `<span class="mob-epoch-chip-count">(${count} Ereignisse)</span>` : ''}</div>`;
+      }
+    }
+    if (ep && state.ui.collapsedEpochs.has(ep.id)) return chipHtml; // collapsed: only show chip on first entry
     const isAct = state.ui.detailId === ev.id && state.ui.detailSource === 'tl';
     const dateLbl = ev.displayDate || ev.dateLabel || '';
     const dateBadge = dateLbl ? `<span class="ev-date-badge">${escHtml(dateLbl)}</span>` : '';
-    return `<div class="mob-tl-card${isAct ? ' active' : ''}" data-id="${ev.id}" onclick="onTLCardClick(event,${ev.id})">
+    return chipHtml + `<div class="mob-tl-card${isAct ? ' active' : ''}" data-id="${ev.id}" onclick="onTLCardClick(event,${ev.id})">
       <div class="mob-tl-card-dot ${escHtml(ev.type)}"></div>
       <div class="mob-tl-card-body">
         <div class="ev-title">${dateBadge}${escHtml(ev.title)}</div>
@@ -727,13 +1099,15 @@ document.addEventListener('click', e => {
 /* ══════════════════════════════════════
    MODAL HELPERS
 ══════════════════════════════════════ */
-function showForms(tl, it, del, drop, world, login) {
+function showForms(tl, it, del, drop, world, login, ep = false) {
   document.getElementById('f-tl').style.display    = tl    ? 'grid'  : 'none';
   document.getElementById('f-it').style.display    = it    ? 'grid'  : 'none';
   document.getElementById('f-del').style.display   = del   ? 'block' : 'none';
   document.getElementById('f-drop').style.display  = drop  ? 'block' : 'none';
   document.getElementById('f-world').style.display = world ? 'block' : 'none';
   document.getElementById('f-login').style.display = login ? 'block' : 'none';
+  const epEl = document.getElementById('f-ep');
+  if (epEl) epEl.style.display = ep ? 'grid' : 'none';
 }
 
 function setSaveBtn(label, danger) {
@@ -1042,6 +1416,44 @@ async function _saveEntry() {
     return;
   }
 
+  // EPOCH create/edit
+  if (editSource === 'ep') {
+    const label   = document.getElementById('fe-label').value.trim();
+    const color   = state.ui.epochDraftColor;
+    const startId = parseInt(document.getElementById('fe-start').value, 10);
+    const endVal  = document.getElementById('fe-end').value;
+    const endId   = endVal ? parseInt(endVal, 10) : null;
+    if (!label)       { alert('Epochenname ist Pflicht'); return; }
+    if (isNaN(startId)) { alert('Erstes Ereignis ist Pflicht'); return; }
+    const body = { label, color, startAtEventId: startId, endAfterEventId: endId || null };
+    try {
+      const wid = state.ui.activeWorldId;
+      if (editEpochId != null) {
+        const updated = await api('PUT', `/worlds/${wid}/epochs/${editEpochId}`, body);
+        const idx = state.epochs.findIndex(e => e.id === editEpochId);
+        if (idx > -1) state.epochs[idx] = updated; else state.epochs.push(updated);
+      } else {
+        const created = await api('POST', `/worlds/${wid}/epochs`, body);
+        state.epochs.push(created);
+        state.epochs.sort((a, b) => a.startPosition - b.startPosition);
+      }
+      closeModal();
+      renderTimeline();
+    } catch (e) { alert('Fehler: ' + e.message); }
+    return;
+  }
+
+  // EPOCH delete
+  if (editSource === 'ep-del') {
+    try {
+      await api('DELETE', `/worlds/${state.ui.activeWorldId}/epochs/${editEpochId}`);
+      state.epochs = state.epochs.filter(e => e.id !== editEpochId);
+      closeModal();
+      renderTimeline();
+    } catch (e) { alert('Fehler: ' + e.message); }
+    return;
+  }
+
   // ITEM delete
   if (editSource === 'item-del') {
     try {
@@ -1161,6 +1573,10 @@ async function _saveEntry() {
     ]);
     state.events  = events;
     state.undated = undated;
+    // Reload epochs — positional fences may reference updated sequence orders
+    try {
+      state.epochs = await api('GET', `/worlds/${state.ui.activeWorldId}/epochs`);
+    } catch (epErr) { console.warn('[_saveEntry] epoch reload failed', epErr); }
     closeModal();
     renderTimeline();
   } catch (e) { alert('Fehler: ' + e.message); }

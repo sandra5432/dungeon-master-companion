@@ -98,6 +98,15 @@
     <button class="undated-add-btn world-edit-only" onclick="openUndatedAdd()" style="display:none">+ Neuer Eintrag</button>
     <div class="undated-list" id="undated-list"></div>
     <div class="undated-hint world-edit-only" style="display:none">⠿ Ziehen zum Einordnen</div>
+
+    <div class="ep-sidebar-divider"></div>
+    <div id="epoch-section">
+      <div class="sb-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Epochen</span>
+        <button class="world-edit-only ep-add-btn" onclick="openAddEpochModal()" style="display:none">+</button>
+      </div>
+      <div id="epoch-list"></div>
+    </div>
   </aside>
   <!-- Mobile FAB: create new timeline event -->
   <button class="mob-fab" id="tl-fab" onclick="openTLModal(null)" aria-label="Neues Ereignis">+</button>
@@ -190,6 +199,27 @@
       <div class="f-grp"><label class="f-lbl">Preis ⚜</label><input class="f-inp" id="fi-p" type="number" placeholder="0"></div>
       <div class="f-grp"><label class="f-lbl">Tags (kommagetrennt)</label><input class="f-inp" id="fi-tags" type="text" placeholder="z.B. rare, melee, warrior"></div>
       <div class="f-grp"><label class="f-lbl">Link</label><input class="f-inp" id="fi-u" type="url" placeholder="https://…"></div>
+    </div>
+    <div id="f-ep" style="display:none;grid-template-columns:1fr;gap:12px">
+      <div class="fl-row">
+        <label>Epochenname</label>
+        <input id="fe-label" class="fl-inp" maxlength="100" placeholder="Name der Epoche" />
+      </div>
+      <div class="fl-row">
+        <label>Farbe</label>
+        <div id="fe-color-picker" class="ep-color-picker"></div>
+      </div>
+      <div class="fl-row">
+        <label>Erstes Ereignis <span class="fl-hint">(ältestes in der Epoche)</span></label>
+        <select id="fe-start" class="fl-inp"></select>
+      </div>
+      <div class="fl-row">
+        <label>Letztes Ereignis <span class="fl-hint">(leer = offen bis heute)</span></label>
+        <select id="fe-end" class="fl-inp">
+          <option value="">— Offen (bis heute) —</option>
+        </select>
+      </div>
+      <div id="fe-preview" class="ep-preview" style="display:none"></div>
     </div>
     <div id="f-del" style="display:none">
       <div class="del-confirm"><div class="del-confirm-txt" id="del-txt"></div></div>

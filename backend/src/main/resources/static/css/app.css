@@ -810,6 +810,91 @@ nav {
   margin-bottom: 16px;
 }
 
+/* ── EPOCH BANDS ── */
+.epoch-band {
+  display: flex;
+}
+.epoch-band-strip {
+  width: 28px;
+  flex-shrink: 0;
+  background: var(--ep-bg);
+  border-left: 3px solid var(--ep-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+  gap: 4px;
+  position: relative;
+}
+.epoch-band-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: var(--ep-color);
+  opacity: 0.65;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.epoch-collapse-btn {
+  background: color-mix(in srgb, var(--ep-color) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ep-color) 50%, transparent);
+  border-radius: 2px;
+  color: var(--ep-color);
+  font-size: 0.6rem;
+  padding: 1px 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+.epoch-band-events {
+  flex: 1;
+  min-width: 0;
+}
+.epoch-band.collapsed .epoch-band-strip {
+  padding: 6px 0;
+}
+.epoch-band-collapsed-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--ep-bg);
+}
+.epoch-band-collapsed-name {
+  color: var(--ep-color);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.epoch-band-collapsed-count {
+  color: var(--t3);
+  font-size: 0.7rem;
+}
+.epoch-band--open .epoch-band-strip::before {
+  content: '⋯';
+  color: var(--ep-color);
+  opacity: 0.5;
+  font-size: 0.75rem;
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.epoch-band-spacer {
+  width: 28px;
+  flex-shrink: 0;
+}
+.epoch-plain-row {
+  display: flex;
+}
+.epoch-plain-events {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ══════════════════════════════════════════════
    TIMELINE ROPE
 ══════════════════════════════════════════════ */
@@ -4723,3 +4808,135 @@ nav {
   }
 
 } /* end @media (max-width: 768px) */
+
+/* ── EPOCH SIDEBAR ── */
+.ep-sidebar-divider {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 8px 0;
+}
+.ep-list-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.72rem;
+}
+.ep-list-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.ep-list-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+}
+.ep-list-infinity {
+  color: rgba(255,255,255,0.25);
+  font-size: 0.65rem;
+}
+.ep-list-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.ep-list-btn:hover {
+  color: rgba(255,255,255,0.7);
+}
+.ep-add-btn {
+  background: rgba(200,168,75,0.2);
+  border: 1px solid rgba(200,168,75,0.45);
+  border-radius: 3px;
+  color: var(--gold);
+  font-size: 0.8rem;
+  padding: 0 5px;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+/* ── EPOCH COLOUR PICKER ── */
+.ep-color-picker {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ep-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  opacity: 0.65;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+.ep-swatch:hover {
+  opacity: 1;
+}
+.ep-swatch--active {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--bg-s), 0 0 0 3.5px currentColor;
+}
+.ep-preview {
+  background: rgba(200,168,75,0.07);
+  border: 1px solid rgba(200,168,75,0.2);
+  border-left: 3px solid var(--ep-preview-color, var(--gold));
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  color: rgba(200,168,75,0.7);
+}
+
+/* ── MODAL EPOCH FORM ROWS ── */
+.fl-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fl-row label {
+  font-size: 0.75rem;
+  color: var(--t3);
+}
+.fl-inp {
+  background: var(--bg-s);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  color: var(--t1);
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.fl-hint {
+  color: var(--t3);
+  font-size: 0.7rem;
+}
+
+/* ── MOBILE EPOCH CHIP ── */
+.mob-epoch-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--ep-color) 12%, transparent);
+  border-left: 3px solid var(--ep-color);
+  color: var(--ep-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mob-epoch-chip-count {
+  color: rgba(255,255,255,0.4);
+  font-size: 0.65rem;
+  font-weight: normal;
+}

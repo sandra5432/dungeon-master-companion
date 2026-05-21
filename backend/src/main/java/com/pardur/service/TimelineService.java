@@ -1,8 +1,11 @@
 package com.pardur.service;
 
 import com.pardur.dto.request.AssignPositionRequest;
+import com.pardur.dto.request.CreateEpochRequest;
 import com.pardur.dto.request.CreateEventRequest;
+import com.pardur.dto.request.UpdateEpochRequest;
 import com.pardur.dto.request.UpdateEventRequest;
+import com.pardur.dto.response.EpochDto;
 import com.pardur.dto.response.EventDto;
 import com.pardur.dto.response.TagCountDto;
 import com.pardur.exception.ResourceNotFoundException;
@@ -20,22 +23,27 @@ import java.util.Optional;
 @Service
 public class TimelineService {
 
+    private static final BigDecimal TWO = new BigDecimal("2");
+
     private final TimelineEventRepository eventRepository;
     private final EventTagRepository eventTagRepository;
     private final WorldRepository worldRepository;
     private final UserRepository userRepository;
     private final WorldPermissionChecker checker;
+    private final TimelineEpochRepository epochRepository;
 
     public TimelineService(TimelineEventRepository eventRepository,
                            EventTagRepository eventTagRepository,
                            WorldRepository worldRepository,
                            UserRepository userRepository,
-                           WorldPermissionChecker checker) {
+                           WorldPermissionChecker checker,
+                           TimelineEpochRepository epochRepository) {
         this.eventRepository = eventRepository;
         this.eventTagRepository = eventTagRepository;
         this.worldRepository = worldRepository;
         this.userRepository = userRepository;
         this.checker = checker;
+        this.epochRepository = epochRepository;
     }
 
     private World requireWorld(Integer worldId) {
@@ -214,6 +222,167 @@ public class TimelineService {
                 }
             }
         }
+    }
+
+    // ── Epoch CRUD ──────────────────────────────────────────────────────────
+
+    /**
+     * Returns all epochs for a world, ordered by start position.
+     *
+     * @param worldId target world
+     * @return list of epoch DTOs
+     */
+    @Transactional(readOnly = true)
+    public List<EpochDto> getEpochs(Integer worldId) {
+        return epochRepository.findAllByWorldIdOrderByStartPositionAsc(worldId)
+            .stream().map(this::toEpochDto).toList();
+    }
+
+    /**
+     * Creates a new epoch for the given world.
+     *
+     * @param worldId target world
+     * @param req     validated create request
+     * @param userId  authenticated user's ID
+     * @return the persisted epoch as a DTO
+     * @throws ResourceNotFoundException if start/end event not found
+     * @throws IllegalArgumentException  if end precedes start or overlap detected
+     */
+    @Transactional
+    public EpochDto createEpoch(Integer worldId, CreateEpochRequest req, Integer userId) {
+        World world = worldRepository.findById(worldId)
+            .orElseThrow(() -> new ResourceNotFoundException("World not found: " + worldId));
+        User user = userId != null ? userRepository.findById(userId).orElse(null) : null;
+
+        BigDecimal[] positions = computePositions(worldId, req.startAtEventId, req.endAfterEventId);
+        validateNoOverlap(worldId, -1, positions[0], positions[1]);
+
+        TimelineEpoch epoch = new TimelineEpoch();
+        epoch.setWorld(world);
+        epoch.setLabel(req.label);
+        epoch.setColor(req.color);
+        epoch.setStartPosition(positions[0]);
+        epoch.setEndPosition(positions[1]);
+        epoch.setCreatedBy(user);
+
+        return toEpochDto(epochRepository.save(epoch));
+    }
+
+    /**
+     * Updates an existing epoch's label, colour, and/or boundaries.
+     *
+     * @param worldId target world
+     * @param epochId epoch to update
+     * @param req     validated update request
+     * @return the updated epoch as a DTO
+     * @throws ResourceNotFoundException if epoch or boundary events not found
+     * @throws IllegalArgumentException  if end precedes start or overlap detected
+     */
+    @Transactional
+    public EpochDto updateEpoch(Integer worldId, Integer epochId, UpdateEpochRequest req) {
+        TimelineEpoch epoch = epochRepository.findById(epochId)
+            .orElseThrow(() -> new ResourceNotFoundException("Epoch not found: " + epochId));
+        if (!epoch.getWorld().getId().equals(worldId))
+            throw new ResourceNotFoundException("Epoch not found in world " + worldId);
+
+        BigDecimal[] positions = computePositions(worldId, req.startAtEventId, req.endAfterEventId);
+        validateNoOverlap(worldId, epochId, positions[0], positions[1]);
+
+        epoch.setLabel(req.label);
+        epoch.setColor(req.color);
+        epoch.setStartPosition(positions[0]);
+        epoch.setEndPosition(positions[1]);
+
+        return toEpochDto(epochRepository.save(epoch));
+    }
+
+    /**
+     * Deletes an epoch. Events are unaffected.
+     *
+     * @param worldId target world
+     * @param epochId epoch to delete
+     * @throws ResourceNotFoundException if epoch not found in the given world
+     */
+    @Transactional
+    public void deleteEpoch(Integer worldId, Integer epochId) {
+        TimelineEpoch epoch = epochRepository.findById(epochId)
+            .orElseThrow(() -> new ResourceNotFoundException("Epoch not found: " + epochId));
+        if (!epoch.getWorld().getId().equals(worldId))
+            throw new ResourceNotFoundException("Epoch not found in world " + worldId);
+        epochRepository.delete(epoch);
+    }
+
+    /**
+     * Computes start and end fence positions from the given event IDs.
+     *
+     * @param worldId         target world
+     * @param startAtEventId  oldest event in the epoch
+     * @param endAfterEventId newest event in the epoch; null = open-ended
+     * @return array [startPosition, endPosition] (endPosition may be null)
+     * @throws ResourceNotFoundException if an event ID is not found
+     * @throws IllegalArgumentException  if end event precedes start event
+     */
+    private BigDecimal[] computePositions(Integer worldId,
+                                          Integer startAtEventId,
+                                          Integer endAfterEventId) {
+        TimelineEvent startEvent = eventRepository.findById(startAtEventId)
+            .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + startAtEventId));
+
+        Optional<TimelineEvent> pred = eventRepository
+            .findTopByWorldIdAndSequenceOrderLessThanOrderBySequenceOrderDesc(
+                worldId, startEvent.getSequenceOrder());
+        BigDecimal startPos = pred.isPresent()
+            ? startEvent.getSequenceOrder()
+                  .add(pred.get().getSequenceOrder())
+                  .divide(TWO, 10, RoundingMode.HALF_UP)
+            : startEvent.getSequenceOrder().subtract(new BigDecimal("1000"));
+
+        BigDecimal endPos = null;
+        if (endAfterEventId != null) {
+            TimelineEvent endEvent = eventRepository.findById(endAfterEventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + endAfterEventId));
+            if (endEvent.getSequenceOrder().compareTo(startEvent.getSequenceOrder()) <= 0)
+                throw new IllegalArgumentException("Letztes Ereignis muss nach dem ersten liegen");
+
+            Optional<TimelineEvent> succ = eventRepository
+                .findTopByWorldIdAndSequenceOrderGreaterThanOrderBySequenceOrderAsc(
+                    worldId, endEvent.getSequenceOrder());
+            endPos = succ.isPresent()
+                ? endEvent.getSequenceOrder()
+                      .add(succ.get().getSequenceOrder())
+                      .divide(TWO, 10, RoundingMode.HALF_UP)
+                : endEvent.getSequenceOrder().add(new BigDecimal("1000"));
+        }
+
+        return new BigDecimal[]{startPos, endPos};
+    }
+
+    /**
+     * Throws if any existing epoch (excluding excludeId) overlaps the given range.
+     *
+     * @param worldId   target world
+     * @param excludeId epoch ID to exclude (use -1 for create)
+     * @param start     candidate start position
+     * @param end       candidate end position (null = open-ended)
+     * @throws IllegalArgumentException if overlap detected
+     */
+    private void validateNoOverlap(Integer worldId, Integer excludeId,
+                                   BigDecimal start, BigDecimal end) {
+        if (epochRepository.existsOverlap(worldId, excludeId, start, end))
+            throw new IllegalArgumentException("Epoche überschneidet sich mit einer bestehenden");
+    }
+
+    /** Maps a TimelineEpoch entity to its DTO. */
+    private EpochDto toEpochDto(TimelineEpoch e) {
+        return new EpochDto(
+            e.getId(),
+            e.getWorld().getId(),
+            e.getLabel(),
+            e.getColor(),
+            e.getStartPosition(),
+            e.getEndPosition(),
+            e.getCreatedBy() != null ? e.getCreatedBy().getId() : null
+        );
     }
 
     private EventDto toDto(TimelineEvent e) {

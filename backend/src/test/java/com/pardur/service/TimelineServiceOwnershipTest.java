@@ -37,6 +37,7 @@ class TimelineServiceOwnershipTest {
     @Mock private WorldRepository worldRepository;
     @Mock private UserRepository userRepository;
     @Mock private WorldPermissionChecker checker;
+    @Mock private TimelineEpochRepository epochRepository;
 
     private TimelineService timelineService;
 
@@ -47,7 +48,7 @@ class TimelineServiceOwnershipTest {
     @BeforeEach
     void setUp() {
         timelineService = new TimelineService(eventRepository, eventTagRepository,
-                worldRepository, userRepository, checker);
+                worldRepository, userRepository, checker, epochRepository);
 
         world = new World();
         world.setUserCanEdit(true);

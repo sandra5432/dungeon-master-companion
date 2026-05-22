@@ -134,6 +134,30 @@ function epochForEvent(ev, epochs) {
 }
 
 /**
+ * Returns the default collapsed-epoch Set for a fresh page load.
+ * All epochs are collapsed except the one that contains the event with the
+ * highest sequenceOrder. If the latest event belongs to no epoch, every
+ * epoch is collapsed.
+ * @param {Array} events
+ * @param {Array} epochs
+ * @returns {Set<number>}
+ */
+function defaultCollapsedEpochs(events, epochs) {
+  console.debug('[defaultCollapsedEpochs] →', epochs.length, 'epochs');
+  if (!epochs || epochs.length === 0) return new Set();
+  const positioned = events.filter(e => e.sequenceOrder != null);
+  const latest = positioned.length
+    ? positioned.reduce((a, b) => a.sequenceOrder > b.sequenceOrder ? a : b)
+    : null;
+  const activeEpoch = epochForEvent(latest, epochs);
+  const collapsed = new Set(
+    epochs.filter(ep => !activeEpoch || ep.id !== activeEpoch.id).map(ep => ep.id)
+  );
+  console.debug('[defaultCollapsedEpochs] ← active epoch:', activeEpoch?.id ?? 'none', 'collapsed:', [...collapsed]);
+  return collapsed;
+}
+
+/**
  * Groups annotated group objects into epoch sections.
  * Returns array of { epoch, groups[] }.
  * @param {Array} groups - each must have _firstEvent set

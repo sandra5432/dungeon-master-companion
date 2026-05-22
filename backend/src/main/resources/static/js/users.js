@@ -25,16 +25,22 @@ async function init() {
     }
 
     if (state.ui.activeWorldId) {
-      const [events, undated, items, tagCounts] = await Promise.all([
+      const [events, undated, epochs, items, tagCounts] = await Promise.all([
         api('GET', `/worlds/${state.ui.activeWorldId}/events`),
         api('GET', `/worlds/${state.ui.activeWorldId}/events/unpositioned`),
+        api('GET', `/worlds/${state.ui.activeWorldId}/epochs`),
         api('GET', '/items'),
         api('GET', '/items/tags'),
       ]);
       state.events  = events     || [];
       state.undated = undated    || [];
+      state.epochs  = epochs     || [];
       state.items   = items      || [];
       itemTagCounts = tagCounts  || [];
+      const storedCollapse = localStorage.getItem('collapsedEpochs_' + state.ui.activeWorldId);
+      state.ui.collapsedEpochs = storedCollapse
+        ? new Set(JSON.parse(storedCollapse))
+        : defaultCollapsedEpochs(state.events, state.epochs);
     } else {
       const [items, tagCounts] = await Promise.all([
         api('GET', '/items'),

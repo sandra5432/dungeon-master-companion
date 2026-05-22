@@ -341,7 +341,7 @@ public class TimelineService {
         if (endAfterEventId != null) {
             TimelineEvent endEvent = eventRepository.findById(endAfterEventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + endAfterEventId));
-            if (endEvent.getSequenceOrder().compareTo(startEvent.getSequenceOrder()) <= 0)
+            if (endEvent.getSequenceOrder().compareTo(startEvent.getSequenceOrder()) < 0)
                 throw new IllegalArgumentException("Letztes Ereignis muss nach dem ersten liegen");
 
             Optional<TimelineEvent> succ = eventRepository

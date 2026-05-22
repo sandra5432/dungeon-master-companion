@@ -246,15 +246,18 @@ async function navigateToUrl({ page, worldId, subId }, push) {
 
   // Update world state without triggering selectWorld's own URL push
   const worldChanged = state.ui.activeWorldId !== worldId;
+  const storedEpochCollapse = localStorage.getItem('collapsedEpochs_' + worldId);
   if (worldChanged) {
     state.ui.activeWorldId     = worldId;
     state.ui.wikiActiveWorldId = worldId;
     localStorage.setItem('activeWorldId', worldId);
     state.events  = [];
     state.undated = [];
+    state.epochs  = [];
     state.ui.activeTags  = new Set();
     state.ui.activeChars = new Set();
     state.ui.activeTypes = new Set();
+    state.ui.collapsedEpochs = new Set(storedEpochCollapse ? JSON.parse(storedEpochCollapse) : []);
   }
 
   // Redirect to first enabled section if the requested page is disabled for this world
@@ -270,14 +273,19 @@ async function navigateToUrl({ page, worldId, subId }, push) {
   if (page === 'timeline') {
     if (worldChanged || !state.events.length) {
       try {
-        const [ev, und] = await Promise.all([
+        const [ev, und, eps] = await Promise.all([
           api('GET', `/worlds/${worldId}/events`),
           api('GET', `/worlds/${worldId}/events/unpositioned`),
+          api('GET', `/worlds/${worldId}/epochs`),
         ]);
         // Stale-check: bail if another navigation changed the world while we were loading
         if (state.ui.activeWorldId !== worldId) return;
         state.events  = ev  || [];
         state.undated = und || [];
+        state.epochs  = eps || [];
+        if (!storedEpochCollapse) {
+          state.ui.collapsedEpochs = defaultCollapsedEpochs(state.events, state.epochs);
+        }
       } catch (e) { console.error('[navigateToUrl] load events failed', e); }
     }
     if (state.ui.activeWorldId !== worldId) return;
@@ -776,6 +784,9 @@ async function selectWorld(worldId) {
       state.events  = events;
       state.undated = undated;
       state.epochs  = epochs || [];
+      if (!storedEpochCollapse) {
+        state.ui.collapsedEpochs = defaultCollapsedEpochs(state.events, state.epochs);
+      }
     } catch (e) { console.error('Failed to load world events', e); }
     if (state.ui.activeWorldId !== worldId) return;
     renderTimeline();

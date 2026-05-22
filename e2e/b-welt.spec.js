@@ -628,6 +628,282 @@ test.describe('AL-B1-014 — Deep-Link zu Ereignis', () => {
 
 });
 
+// ── AL-B1-015: Epochen auf Zeitleiste anzeigen ───────────────────────────────
+
+test.describe('AL-B1-015 — Epochen auf Zeitleiste anzeigen', () => {
+  let epochId;
+  let epochLabel;
+  let anchorId;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    epochLabel = `E2E-Epoche-${Date.now()}`;
+    const evRes = await apiCtx.get('/api/worlds/1/events', { headers: ADMIN_HEADERS });
+    const events = await evRes.json();
+    const anchor = events.find(e => e.title === 'Ankunft der Erbauer');
+    expect(anchor).toBeTruthy();
+    anchorId = anchor.id;
+    const res = await apiCtx.post('/api/worlds/1/epochs', {
+      headers: ADMIN_HEADERS,
+      data: { label: epochLabel, color: '#c8a84b', startAtEventId: anchorId },
+    });
+    expect(res.ok()).toBeTruthy();
+    epochId = (await res.json()).id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    if (epochId) {
+      await apiCtx.delete(`/api/worlds/1/epochs/${epochId}`, { headers: ADMIN_HEADERS }).catch(() => {});
+      epochId = null;
+    }
+  });
+
+  // Regression A: navigateToUrl (direct URL / popstate) was missing the epochs
+  // fetch, so state.epochs stayed [] after a cold page.goto().
+  test('epoch label appears in sidebar after direct URL navigation (regression A)', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    await expect(page.locator('#page-timeline')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#epoch-list')).toContainText(epochLabel, { timeout: 5000 });
+  });
+
+  test('epoch band is rendered in timeline after direct URL navigation', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    await expect(page.locator(`.epoch-band[data-epoch-id="${epochId}"]`)).toBeVisible({ timeout: 5000 });
+  });
+
+  // Regression B: init() pre-fetched events but not epochs. After the first load
+  // localStorage holds activeWorldId, so on F5 init() sets state.ui.activeWorldId
+  // before calling navigateToUrl — making worldChanged=false and skipping the fetch
+  // block entirely. epochs was never loaded.
+  test('epoch label appears in sidebar after F5 reload (regression B)', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    await expect(page.locator('#epoch-list')).toContainText(epochLabel, { timeout: 5000 });
+    await page.reload();
+    await expect(page.locator('#page-timeline')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#epoch-list')).toContainText(epochLabel, { timeout: 5000 });
+  });
+
+  test('epoch band is rendered in timeline after F5 reload', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    await expect(page.locator(`.epoch-band[data-epoch-id="${epochId}"]`)).toBeVisible({ timeout: 5000 });
+    await page.reload();
+    await expect(page.locator(`.epoch-band[data-epoch-id="${epochId}"]`)).toBeVisible({ timeout: 5000 });
+  });
+
+  test('epoch label appears in sidebar after world-click navigation', async ({ page }) => {
+    await goToPardurChronik(page);
+    await expect(page.locator('#epoch-list')).toContainText(epochLabel, { timeout: 5000 });
+  });
+
+});
+
+// ── AL-B1-016: Epoche anlegen ─────────────────────────────────────────────────
+
+test.describe('AL-B1-016 — Epoche anlegen', () => {
+  let epochLabel;
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    if (!epochLabel) return;
+    const res = await apiCtx.get('/api/worlds/1/epochs', { headers: ADMIN_HEADERS });
+    if (!res.ok()) return;
+    const epochs = await res.json();
+    const ep = epochs.find(e => e.label === epochLabel);
+    if (ep) await apiCtx.delete(`/api/worlds/1/epochs/${ep.id}`, { headers: ADMIN_HEADERS }).catch(() => {});
+  });
+
+  test('+ button is visible for admin in the epoch sidebar section', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await expect(page.locator('.ep-add-btn')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('+ button opens the epoch form in the modal', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await page.locator('.ep-add-btn').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#fe-label')).toBeVisible();
+    await page.locator('#modal .m-close').click();
+  });
+
+  test('admin can create an epoch and it appears in the sidebar list', async ({ page }) => {
+    epochLabel = `E2E-Neu-${Date.now()}`;
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await page.locator('.ep-add-btn').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await page.locator('#fe-label').fill(epochLabel);
+    await page.locator('#fe-start option:not([value=""])').first().waitFor({ timeout: 3000 });
+    await page.locator('#fe-start').selectOption({ index: 1 });
+    await page.locator('#m-save').click();
+    await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+    await expect(page.locator('#epoch-list')).toContainText(epochLabel, { timeout: 5000 });
+  });
+
+  // Regression: backend previously rejected epochs where startAtEventId === endAfterEventId
+  // (used <= 0 comparison instead of < 0). Fixed to allow single-event epochs.
+  test('admin can create a single-event epoch (start and end are the same event)', async ({ page }) => {
+    epochLabel = `E2E-Single-${Date.now()}`;
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await page.locator('.ep-add-btn').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await page.locator('#fe-label').fill(epochLabel);
+    await page.locator('#fe-start option:not([value=""])').first().waitFor({ timeout: 3000 });
+    const eventValue = await page.locator('#fe-start option:not([value=""])').first().getAttribute('value');
+    await page.locator('#fe-start').selectOption(eventValue);
+    await page.locator('#fe-end').selectOption(eventValue);
+    await page.locator('#m-save').click();
+    await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+    await expect(page.locator('#epoch-list')).toContainText(epochLabel, { timeout: 5000 });
+  });
+
+});
+
+// ── AL-B1-017: Epoche bearbeiten ─────────────────────────────────────────────
+
+test.describe('AL-B1-017 — Epoche bearbeiten', () => {
+  let epochId;
+  const originalLabel = `E2E-Edit-Ep-${Date.now()}`;
+  const updatedLabel  = `E2E-Edit-Up-${Date.now()}`;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    const evRes = await apiCtx.get('/api/worlds/1/events', { headers: ADMIN_HEADERS });
+    const events = await evRes.json();
+    const anchor = events.find(e => e.title === 'Ankunft der Erbauer');
+    const res = await apiCtx.post('/api/worlds/1/epochs', {
+      headers: ADMIN_HEADERS,
+      data: { label: originalLabel, color: '#3c6fa8', startAtEventId: anchor.id },
+    });
+    epochId = (await res.json()).id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    await apiCtx.delete(`/api/worlds/1/epochs/${epochId}`, { headers: ADMIN_HEADERS }).catch(() => {});
+  });
+
+  test('edit button opens modal pre-filled with epoch label', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await expect(page.locator('#epoch-list')).toContainText(originalLabel, { timeout: 5000 });
+    await page.locator('.ep-list-row').filter({ hasText: originalLabel }).locator('.ep-list-btn[title="Bearbeiten"]').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('#fe-label')).toHaveValue(originalLabel);
+    await page.locator('#modal .m-close').click();
+  });
+
+  test('admin can update the epoch label', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await expect(page.locator('#epoch-list')).toContainText(originalLabel, { timeout: 5000 });
+    await page.locator('.ep-list-row').filter({ hasText: originalLabel }).locator('.ep-list-btn[title="Bearbeiten"]').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await page.locator('#fe-label').fill(updatedLabel);
+    await page.locator('#m-save').click();
+    await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+    await expect(page.locator('#epoch-list')).toContainText(updatedLabel, { timeout: 5000 });
+  });
+
+});
+
+// ── AL-B1-018: Epoche löschen ─────────────────────────────────────────────────
+
+test.describe('AL-B1-018 — Epoche löschen', () => {
+  let epochId;
+  const deleteLabel = `E2E-Del-Ep-${Date.now()}`;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    const evRes = await apiCtx.get('/api/worlds/1/events', { headers: ADMIN_HEADERS });
+    const events = await evRes.json();
+    const anchor = events.find(e => e.title === 'Ankunft der Erbauer');
+    const res = await apiCtx.post('/api/worlds/1/epochs', {
+      headers: ADMIN_HEADERS,
+      data: { label: deleteLabel, color: '#4a9b6f', startAtEventId: anchor.id },
+    });
+    epochId = (await res.json()).id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    if (epochId) await apiCtx.delete(`/api/worlds/1/epochs/${epochId}`, { headers: ADMIN_HEADERS }).catch(() => {});
+  });
+
+  test('delete button opens confirmation modal and cancel preserves the epoch', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await expect(page.locator('#epoch-list')).toContainText(deleteLabel, { timeout: 5000 });
+    await page.locator('.ep-list-row').filter({ hasText: deleteLabel }).locator('.ep-list-btn[title="Löschen"]').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await page.locator('#modal .m-close').click();
+    await expect(page.locator('#epoch-list')).toContainText(deleteLabel);
+  });
+
+  test('admin can delete an epoch', async ({ page }) => {
+    await page.goto('/');
+    await loginAsAdmin(page);
+    await goToPardurChronik(page);
+    await expect(page.locator('#epoch-list')).toContainText(deleteLabel, { timeout: 5000 });
+    await page.locator('.ep-list-row').filter({ hasText: deleteLabel }).locator('.ep-list-btn[title="Löschen"]').click();
+    await expect(page.locator('#modal')).toBeVisible({ timeout: 3000 });
+    await page.locator('#m-save').click();
+    await expect(page.locator('#modal')).toBeHidden({ timeout: 5000 });
+    await expect(page.locator('#epoch-list')).not.toContainText(deleteLabel, { timeout: 5000 });
+    epochId = null;
+  });
+
+});
+
+// ── AL-B1-019: Epoche ein-/ausklappen ────────────────────────────────────────
+
+test.describe('AL-B1-019 — Epoche ein-/ausklappen', () => {
+  let epochId;
+
+  test.beforeEach(async ({ request: apiCtx }) => {
+    const evRes = await apiCtx.get('/api/worlds/1/events', { headers: ADMIN_HEADERS });
+    const events = await evRes.json();
+    const anchor = events.find(e => e.title === 'Ankunft der Erbauer');
+    const res = await apiCtx.post('/api/worlds/1/epochs', {
+      headers: ADMIN_HEADERS,
+      data: { label: `E2E-Collapse-${Date.now()}`, color: '#7850b0', startAtEventId: anchor.id },
+    });
+    epochId = (await res.json()).id;
+  });
+
+  test.afterEach(async ({ request: apiCtx }) => {
+    await apiCtx.delete(`/api/worlds/1/epochs/${epochId}`, { headers: ADMIN_HEADERS }).catch(() => {});
+  });
+
+  test('epoch band has a collapse button', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    await expect(page.locator(`.epoch-band[data-epoch-id="${epochId}"] .epoch-collapse-btn`)).toBeVisible({ timeout: 5000 });
+  });
+
+  test('clicking collapse button adds .collapsed class to the epoch band', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    const band = page.locator(`.epoch-band[data-epoch-id="${epochId}"]`);
+    await expect(band).toBeVisible({ timeout: 5000 });
+    await expect(band).not.toHaveClass(/collapsed/);
+    await band.locator('.epoch-collapse-btn').click();
+    await expect(band).toHaveClass(/collapsed/);
+  });
+
+  test('collapsed state persists after page reload', async ({ page }) => {
+    await page.goto('/world/1/timeline');
+    const band = page.locator(`.epoch-band[data-epoch-id="${epochId}"]`);
+    await expect(band).toBeVisible({ timeout: 5000 });
+    await band.locator('.epoch-collapse-btn').click();
+    await expect(band).toHaveClass(/collapsed/);
+    await page.goto('/world/1/timeline');
+    await expect(page.locator(`.epoch-band[data-epoch-id="${epochId}"]`)).toHaveClass(/collapsed/, { timeout: 5000 });
+  });
+
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 // B2 — Wiki
 // ══════════════════════════════════════════════════════════════════════════════

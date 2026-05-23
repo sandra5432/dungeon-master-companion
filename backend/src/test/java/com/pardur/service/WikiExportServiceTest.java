@@ -15,19 +15,24 @@ import java.util.*;
 import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 class WikiExportServiceTest {
 
     WikiEntryRepository wikiEntryRepo;
     WorldRepository worldRepo;
+    ChronicleExportService chronicleSvc;
     WikiExportService service;
 
     @BeforeEach
     void setUp() {
         wikiEntryRepo = mock(WikiEntryRepository.class);
         worldRepo     = mock(WorldRepository.class);
-        service       = new WikiExportService(wikiEntryRepo, worldRepo);
+        chronicleSvc  = mock(ChronicleExportService.class);
+        service       = new WikiExportService(wikiEntryRepo, worldRepo, chronicleSvc);
+        // default: no chronicle
+        when(chronicleSvc.buildChronicleMarkdown(anyInt())).thenReturn(null);
     }
 
     // ── sanitize ─────────────────────────────────────────────────────────────
@@ -152,6 +157,33 @@ class WikiExportServiceTest {
 
         assertThat(readZipEntryNames(zip))
                 .containsExactlyInAnyOrder("gods/gods.md", "gods/odin/odin.md", "gods/odin/valhalla.md");
+    }
+
+    // ── chronicle in ZIP ─────────────────────────────────────────────────────
+
+    @Test
+    void exportWikiAsZip_includesChronicle_whenChronicleServiceReturnsContent() throws Exception {
+        World world = buildWorld(1, "Testworld");
+        when(worldRepo.findById(1)).thenReturn(Optional.of(world));
+        when(wikiEntryRepo.findAllByWorldIdOrderByTitleAsc(1)).thenReturn(List.of());
+        when(chronicleSvc.buildChronicleMarkdown(1)).thenReturn("## Ein Ereignis\n\n");
+
+        byte[] zip = service.exportWikiAsZip(1);
+
+        assertThat(readZipEntryNames(zip)).containsExactly("chronic.md");
+    }
+
+    @Test
+    void exportWikiAsZip_omitsChronicle_whenChronicleServiceReturnsNull() throws Exception {
+        World world = buildWorld(1, "Testworld");
+        WikiEntry entry = buildEntry(10, "Odin", null, WikiEntryType.PERSON, "admin", "Allvater");
+        when(worldRepo.findById(1)).thenReturn(Optional.of(world));
+        when(wikiEntryRepo.findAllByWorldIdOrderByTitleAsc(1)).thenReturn(List.of(entry));
+        when(chronicleSvc.buildChronicleMarkdown(1)).thenReturn(null);
+
+        byte[] zip = service.exportWikiAsZip(1);
+
+        assertThat(readZipEntryNames(zip)).doesNotContain("chronic.md");
     }
 
     // ── buildZipFilename ─────────────────────────────────────────────────────

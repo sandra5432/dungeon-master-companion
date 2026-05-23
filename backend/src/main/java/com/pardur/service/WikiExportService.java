@@ -17,18 +17,21 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Builds wiki export ZIP archives for a given world.
+ * Builds wiki export ZIP archives for a given world, including an optional chronicle.
  */
 @Service
 public class WikiExportService {
 
     private final WikiEntryRepository wikiEntryRepository;
     private final WorldRepository worldRepository;
+    private final ChronicleExportService chronicleExportService;
 
     public WikiExportService(WikiEntryRepository wikiEntryRepository,
-                             WorldRepository worldRepository) {
+                             WorldRepository worldRepository,
+                             ChronicleExportService chronicleExportService) {
         this.wikiEntryRepository = wikiEntryRepository;
         this.worldRepository = worldRepository;
+        this.chronicleExportService = chronicleExportService;
     }
 
     /**
@@ -57,10 +60,17 @@ public class WikiExportService {
             }
         }
 
+        String chronicle = chronicleExportService.buildChronicleMarkdown(worldId);
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
             for (WikiEntry root : roots) {
                 addEntryToZip(zos, root, "", childrenMap);
+            }
+            if (chronicle != null) {
+                zos.putNextEntry(new ZipEntry("chronic.md"));
+                zos.write(chronicle.getBytes(StandardCharsets.UTF_8));
+                zos.closeEntry();
             }
         }
         return baos.toByteArray();

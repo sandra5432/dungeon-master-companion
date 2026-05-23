@@ -1,11 +1,13 @@
 package com.pardur.controller;
 
 import com.pardur.model.Item;
+import com.pardur.model.TimelineEvent;
 import com.pardur.model.User;
 import com.pardur.model.WikiEntry;
 import com.pardur.model.WikiEntryType;
 import com.pardur.model.World;
 import com.pardur.repository.ItemRepository;
+import com.pardur.repository.TimelineEventRepository;
 import com.pardur.repository.UserRepository;
 import com.pardur.repository.WikiEntryRepository;
 import com.pardur.repository.WorldRepository;
@@ -42,6 +44,7 @@ class ExportControllerTest {
     @Autowired MockMvc mvc;
     @Autowired WorldRepository worldRepository;
     @Autowired WikiEntryRepository wikiEntryRepository;
+    @Autowired TimelineEventRepository timelineEventRepository;
     @Autowired UserRepository userRepository;
     @Autowired BCryptPasswordEncoder passwordEncoder;
     @Autowired ItemRepository itemRepository;
@@ -67,6 +70,12 @@ class ExportControllerTest {
         if (testWorld != null) {
             wikiEntryRepository.deleteAll(
                     wikiEntryRepository.findAllByWorldIdOrderByTitleAsc(testWorld.getId()));
+            var ordered = timelineEventRepository
+                    .findAllByWorldIdAndSequenceOrderIsNotNullOrderBySequenceOrderAsc(testWorld.getId());
+            var unordered = timelineEventRepository
+                    .findAllByWorldIdAndSequenceOrderIsNullOrderByCreatedAtAsc(testWorld.getId());
+            timelineEventRepository.deleteAll(ordered);
+            timelineEventRepository.deleteAll(unordered);
             worldRepository.delete(testWorld);
         }
         if (adminUser != null) {
@@ -186,6 +195,46 @@ class ExportControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ── chronicle in ZIP ──────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+    void exportWiki_chronicleOmitted_whenWorldHasNoEvents() throws Exception {
+        MvcResult result = mvc.perform(get("/api/export/worlds/{id}/wiki", testWorld.getId()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(readZip(result).keySet()).doesNotContain("chronic.md");
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+    void exportWiki_chronicleIncluded_whenWorldHasEvents() throws Exception {
+        saveEvent("Sturmfall", "5. Mond", null, null);
+
+        MvcResult result = mvc.perform(get("/api/export/worlds/{id}/wiki", testWorld.getId()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertThat(readZip(result).keySet()).contains("chronic.md");
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+    void exportWiki_chronicleContent_containsDateTitleDescriptionCharacters() throws Exception {
+        saveEvent("Die Belagerung", "3. Zyklus", "Die Festung fiel nach sieben Tagen.", "Arion, Bran");
+
+        MvcResult result = mvc.perform(get("/api/export/worlds/{id}/wiki", testWorld.getId()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String chronic = readZip(result).get("chronic.md");
+        assertThat(chronic).isNotNull();
+        assertThat(chronic).contains("## 3. Zyklus Die Belagerung");
+        assertThat(chronic).contains("Die Festung fiel nach sieben Tagen.");
+        assertThat(chronic).contains("Beteiligte Charaktere: Arion, Bran");
+    }
+
     // ── /api/export/items ────────────────────────────────────────────────────────
 
     @Test
@@ -248,6 +297,18 @@ class ExportControllerTest {
             }
         }
         return files;
+    }
+
+    /** Saves a timeline event to testWorld with the given fields. */
+    TimelineEvent saveEvent(String title, String dateLabel, String description, String characters) {
+        TimelineEvent e = new TimelineEvent();
+        e.setWorld(testWorld);
+        e.setTitle(title);
+        e.setDateLabel(dateLabel);
+        e.setDescription(description);
+        e.setCharacters(characters);
+        e.setSequenceOrder(new java.math.BigDecimal("1.0"));
+        return timelineEventRepository.save(e);
     }
 
     /** Saves a wiki entry to testWorld, created by adminUser. */

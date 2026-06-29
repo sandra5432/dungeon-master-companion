@@ -14,6 +14,7 @@ async function loadWikiEntries() {
     const entries = await api('GET', `/wiki?worldId=${wid}`);
     if (state.ui.wikiActiveWorldId !== wid) return; // stale — world changed while loading
     state.wikiAllEntries = entries;
+    if (state.ui.wikiView === 'hierarchy') collapseAllWikiParents();
     renderWikiMobileList();
     applyWikiFilter();
   } catch(e) { console.error(e); }
@@ -161,7 +162,7 @@ function renderWikiRecentList(entries) {
       const hasChildren = children.length > 0;
       const indent = depth * 16;
       let html = `
-        <div class="wiki-list-item wiki-hierarchy-item" style="padding-left:${12 + indent}px" onclick="loadWikiArticle(${e.id})">
+        <div class="wiki-list-item wiki-hierarchy-item" style="padding-left:${12 + indent}px" onclick="onWikiHierarchyItemClick(${e.id})">
           ${hasChildren
             ? `<span class="wiki-hierarchy-toggle" onclick="event.stopPropagation();toggleWikiNode(${e.id})">${collapsed ? '▶' : '▼'}</span>`
             : `<span class="wiki-hierarchy-spacer"></span>`}
@@ -216,8 +217,19 @@ function wikiListItemHtml(e, showBadge) {
   `;
 }
 
+function collapseAllWikiParents() {
+  const entries = state.wikiAllEntries || [];
+  const idSet = new Set(entries.map(e => e.id));
+  const parents = new Set();
+  entries.forEach(e => {
+    if (e.parentId && idSet.has(e.parentId)) parents.add(e.parentId);
+  });
+  state.ui.wikiCollapsedNodes = parents;
+}
+
 function setWikiView(view) {
   state.ui.wikiView = view;
+  if (view === 'hierarchy') collapseAllWikiParents();
   ['hierarchy', 'alpha', 'type'].forEach(v => {
     const btn = document.getElementById(`wiki-view-${v}`);
     if (btn) btn.classList.toggle('active', v === view);
@@ -241,6 +253,49 @@ function toggleWikiNode(id) {
     state.ui.wikiCollapsedNodes.add(id);
   }
   applyWikiFilter();
+}
+
+/**
+ * Handles clicking a hierarchy entry: expands the entry's direct children,
+ * collapses any other currently-expanded nodes that are not ancestors of the
+ * clicked entry, then loads the article.
+ * @param {number} id - id of the clicked entry
+ */
+function onWikiHierarchyItemClick(id) {
+  const entries = state.wikiAllEntries || [];
+  const idSet = new Set(entries.map(e => e.id));
+
+  // Build parent lookup and children map
+  const parentMap = {};
+  const childrenMap = {};
+  entries.forEach(e => {
+    if (e.parentId && idSet.has(e.parentId)) {
+      parentMap[e.id] = e.parentId;
+      if (!childrenMap[e.parentId]) childrenMap[e.parentId] = true;
+    }
+  });
+
+  // Collect ancestors of the clicked entry
+  const ancestors = new Set();
+  let cur = parentMap[id];
+  while (cur !== undefined) {
+    ancestors.add(cur);
+    cur = parentMap[cur];
+  }
+
+  // Collapse any expanded parent that is not an ancestor of (and is not) the clicked entry
+  const allParentIds = Object.keys(childrenMap).map(Number);
+  allParentIds.forEach(pid => {
+    if (!state.ui.wikiCollapsedNodes.has(pid) && !ancestors.has(pid) && pid !== id) {
+      state.ui.wikiCollapsedNodes.add(pid);
+    }
+  });
+
+  // Expand clicked entry so its direct children become visible
+  state.ui.wikiCollapsedNodes.delete(id);
+
+  applyWikiFilter();
+  loadWikiArticle(id);
 }
 
 function onWikiSearch(value) {
